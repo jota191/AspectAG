@@ -47,6 +47,11 @@ module Data.AspectAG (
 
 import HList hiding ((.+.), hUpdateAtLabel)
 import FakePrelude
+import HArray
+import HListPrelude
+import Record hiding (hUpdateAtLabel)
+import GhcSyntax
+
 
 import Control.Monad.Reader
 

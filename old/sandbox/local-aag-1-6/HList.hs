@@ -10,41 +10,7 @@ can be used instead, but the chosen look better in types.
 -}
 
 
-module HList (
-
- --module Data.HList.CommonMain,
- --module Data.HList.GhcSyntax,
- --module Data.HList.GhcRecord,
- --module Data.HList.GhcExperiments,
- --module Data.STRef,
- --module Data.IORef,
- --module Data.Typeable,
- --module Control.Monad,
- --module Control.Monad.ST,
- --module Control.Monad.Fix,
--- module GHC.IOBase,
--- module DeepNarrow,
--- module Nominal,
--- module New,
- module GhcSyntax,
- module HArray,
- module Record,
- module HListPrelude,
- module FakePrelude
- --concrete,
- --(#)
-) where
-
-
---import Data.HList.CommonMain hiding ( HDeleteMany
---                         , hDeleteMany
---                         , TypeCast
---                         , typeCast
---                         )
-
---import Data.HList.GhcSyntax
---import Data.HList.GhcRecord
---import Data.HList.GhcExperiments
+module HList where
 
 import Data.STRef
 import Data.IORef
@@ -58,7 +24,7 @@ import HListPrelude
 import FakePrelude
 import GhcSyntax
 --import GHC.IOBase hiding (stToIO, writeIORef, readIORef, newIORef, IORef,unsafeIOToST,unsafeSTToIO)
-{-
+
 infixr 9 #
 (#) :: (HasField l r v) => r -> l -> v
 m # field = (m .!. field)
@@ -68,4 +34,3 @@ concrete generator self = generator self
  where
   _ = mfix generator
 
--}
