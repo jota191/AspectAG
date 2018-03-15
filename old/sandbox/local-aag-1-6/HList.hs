@@ -26,6 +26,7 @@ module HList (
 -- module DeepNarrow,
 -- module Nominal,
 -- module New,
+ module GhcSyntax,
  module HArray,
  module Record,
  module HListPrelude,
@@ -55,6 +56,7 @@ import HArray
 import Record
 import HListPrelude
 import FakePrelude
+import GhcSyntax
 --import GHC.IOBase hiding (stToIO, writeIORef, readIORef, newIORef, IORef,unsafeIOToST,unsafeSTToIO)
 {-
 infixr 9 #
