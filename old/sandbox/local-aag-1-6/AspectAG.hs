@@ -16,36 +16,10 @@
 -}
 
 
-module Data.AspectAG (
+module Data.AspectAG where
 
-              -- * Rules
-              Att, Fam(..), Chi, Rule, 
-              inhdef, syndef, 
-              inhmod, synmod,
-              ext,
 
-              -- ** Monadic
-              At(..), lhs, def,
-              inhdefM, syndefM,
-              inhmodM, synmodM,
-
-              -- * Aspects
-              Prd, (.+.),
-
-              -- * Semantic Functions
-              sem_Lit, knit,
-
-              -- * Common Patterns
-              copy, use, chain,
-
-              -- * Defining Aspects
-              inhAspect, synAspect, chnAspect,
-              attAspect, defAspect,
-
-              module Data.HList
-            ) where
-
-import HList hiding ((.+.), hUpdateAtLabel)
+import HList
 import FakePrelude
 import HArray
 import HListPrelude
