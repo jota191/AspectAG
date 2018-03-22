@@ -8,7 +8,9 @@
 {-| 
     Library for First-Class Attribute Grammars.
 
-    The library is documented in the paper: /Attribute Grammars Fly First-Class. How to do aspect oriented programming in Haskell/
+    The library is documented in the paper:
+/Attribute Grammars Fly First-Class.
+How to do aspect oriented programming in Haskell/
 
 
     For more documentation see the AspectAG webpage: 
@@ -80,7 +82,7 @@ inhdef att nts vals (Fam ic sp) =
 --   containing the new definitions. 
 --   The function 'defs' inserts each definition into the attribution 
 --   of the corresponding child. 
-class Defs att nts vals ic ic'  | vals ic -> ic' where
+class Defs att nts vals ic ic'  | att nts vals ic -> ic' where
   defs :: att -> nts -> vals -> ic -> ic'
 
 instance Defs att nts (Record HNil) ic ic where
@@ -105,7 +107,7 @@ instance  ( Defs att nts (Record vs) ic ic'
 
 
 class  SingleDef mch mnts att pv ic ic' 
-       | mch mnts pv ic -> ic' 
+       | mch mnts att pv ic -> ic' 
   where singledef :: mch -> mnts -> att -> pv -> ic -> ic'
 
 
@@ -114,13 +116,13 @@ data UndefNT t
 data UndefProd t
 data UndefAtt t
 
-instance Fail (IncorrectDef l lch (UndefNT t)) 
-         => SingleDef HTrue HFalse (Proxy l) (LVPair (Proxy (lch,t)) c) r r' where
- singledef = undefined
+--instance Fail (IncorrectDef l lch (UndefNT t)) 
+--         => SingleDef HTrue HFalse (Proxy l) (LVPair (Proxy (lch,t)) c) r r' where
+-- singledef = undefined
 
-instance Fail (IncorrectDef l lch (UndefProd (lch,t))) 
-         => SingleDef HFalse HTrue (Proxy l) (LVPair (Proxy (lch,t)) c) r r' where
- singledef = undefined
+--instance Fail (IncorrectDef l lch (UndefProd (lch,t))) 
+--         => SingleDef HFalse HTrue (Proxy l) (LVPair (Proxy (lch,t)) c) r r' where
+-- singledef = undefined
 
 
 instance  ( HasField lch ic och
@@ -156,7 +158,7 @@ inhmod att nts vals (Fam ic sp) =
 --   containing the new definitions. 
 --   The function 'mods' inserts each definition into the attribution 
 --   of the corresponding child. 
-class Mods att nts vals ic ic'  | vals ic -> ic' where
+class Mods att nts vals ic ic'  | att nts vals ic -> ic' where
   mods :: att -> nts -> vals -> ic -> ic'
 
 instance Mods att nts (Record HNil) ic ic where
@@ -182,19 +184,19 @@ instance  ( Mods att nts (Record vs) ic ic'
 
 
 class  SingleMod mch mnts att pv ic ic' 
-       | mch mnts pv ic -> ic' 
+       | mch mnts att pv ic -> ic' 
   where singlemod :: mch -> mnts -> att -> pv -> ic -> ic'
 
 
 data IncorrectMod l lch err
 
-instance Fail (IncorrectMod l lch (UndefNT t)) 
-         => SingleMod HTrue HFalse (Proxy l) (LVPair (Proxy (lch,t)) c) r r' where
- singlemod = undefined
+--instance Fail (IncorrectMod l lch (UndefNT t)) 
+--         => SingleMod HTrue HFalse (Proxy l) (LVPair (Proxy (lch,t)) c) r r' where
+-- singlemod = undefined
 
-instance Fail (IncorrectMod l lch (UndefProd (lch,t))) 
-         => SingleMod HFalse HTrue (Proxy l) (LVPair (Proxy (lch,t)) c) r r' where
- singlemod = undefined
+--instance Fail (IncorrectMod l lch (UndefProd (lch,t))) 
+--         => SingleMod HFalse HTrue (Proxy l) (LVPair (Proxy (lch,t)) c) r r' where
+-- singlemod = undefined
 
 
 instance  ( HasField lch ic och
@@ -222,7 +224,7 @@ data Lhs
 lhs :: Proxy Lhs
 lhs = proxy 
 
-class At l m v | l -> v where
+class At l m v | l m -> v where
   at :: l -> m v
 
 instance (HasField (Proxy (lch,nt)) chi v, MonadReader (Fam chi par) m) 
@@ -375,7 +377,7 @@ defcp  ::  Copy att nts vp ic ic'
 defcp att nts vp (Fam ic sp)  = 
         Fam (cpychi att nts vp ic) sp
 
-class  Copy att nts vp ic ic' | ic -> ic' where
+class  Copy att nts vp ic ic' | att nts vp ic -> ic' where
   cpychi  ::  att -> nts -> vp -> ic -> ic'
 
 instance Copy att nts vp (Record HNil) (Record HNil) where
@@ -400,7 +402,7 @@ instance  ( Copy att nts vp (Record ics) ics'
                   mnts  = hMember lch nts
                   mvch  = hasLabel att vch
 
-class Copy' mnts mvch att vp pch pch'  | mnts mvch pch -> pch' 
+class Copy' mnts mvch att vp pch pch' | mnts mvch att vp pch -> pch' 
   where
    cpychi'  ::  mnts -> mvch -> att -> vp -> pch -> pch'
 
@@ -481,7 +483,7 @@ chain  ::  (  Chain att nts val sc ic sp ic' sp'
 chain att nts (Fam sc ip) = defchn att nts (ip # att) sc
 
 
-class Chain att nts val sc ic sp ic' sp' | sc ic sp -> ic' sp' where
+class Chain att nts val sc ic sp ic' sp' | att nts val sc ic sp -> ic' sp' where
   defchn :: att -> nts -> val -> sc -> (Fam ic sp -> Fam ic' sp')
 
 instance  (  Chain' msp att nts val sc ic sp ic' sp' 
@@ -493,7 +495,7 @@ instance  (  Chain' msp att nts val sc ic sp ic' sp'
                
 
 
-class Chain' msp att nts val sc ic sp ic' sp' | msp sc ic sp -> ic' sp' where
+class Chain' msp att nts val sc ic sp ic' sp' | msp att nts val sc ic sp -> ic' sp' where
   defchn' :: msp -> att -> nts -> val -> sc -> Fam ic sp -> Fam ic' sp'
 
 
@@ -513,7 +515,7 @@ instance   (  ChnChi att nts val sc ic ic' )
         in  Fam ic' sp
 
 
-class ChnChi att nts val sc ic ic' | sc ic -> ic' where
+class ChnChi att nts val sc ic ic' | att nts val sc ic -> ic' where
   chnchi :: att -> nts -> val -> sc -> ic -> (val,ic')
 
 
@@ -539,7 +541,7 @@ instance  ( ChnChi att nts val (Record scs) (Record ics) ics'
                   lch   = sndProxy (labelLVPair psch)
                   mnts  = hMember lch nts
 
-class ChnChi' mnts att val sch ich ich'  | mnts sch ich -> ich' 
+class ChnChi' mnts att val sch ich ich'  | mnts att val sch ich -> ich' 
   where
    chnchi'  ::  mnts -> att -> val -> sch -> ich -> (val,ich')
 
@@ -565,19 +567,19 @@ instance  ( HasLabel att sch msch
                   mich  = hasLabel att ich
 
 
-class ChnChi'' msch mich att val sch ich ich'  | msch mich sch ich -> ich' 
+class ChnChi'' msch mich att val sch ich ich'  | msch mich att val sch ich -> ich' 
   where
    chnchi''  ::  msch -> mich -> att -> val -> sch -> ich -> (val,ich')
 
 
 
-instance Fail (IncorrectDef att lch (UndefAtt att)) 
-        => ChnChi'' HFalse HTrue att val sch (Chi lch ich) ich' where 
-  chnchi'' _ _ _ _ _ _ = undefined
+--instance Fail (IncorrectDef att lch (UndefAtt att)) 
+--        => ChnChi'' HFalse HTrue att val sch (Chi lch ich) ich' where 
+--  chnchi'' _ _ _ _ _ _ = undefined
 
-instance Fail (IncorrectDef att lch (UndefAtt att)) 
-        => ChnChi'' HFalse HFalse att val sch (Chi lch ich) ich' where 
-  chnchi'' _ _ _ _ _ _ = undefined
+--instance Fail (IncorrectDef att lch (UndefAtt att)) 
+--        => ChnChi'' HFalse HFalse att val sch (Chi lch ich) ich' where 
+--  chnchi'' _ _ _ _ _ _ = undefined
 
 instance HasField att sch val
         => ChnChi'' HTrue HTrue att val (Chi lch sch) ich ich where 
