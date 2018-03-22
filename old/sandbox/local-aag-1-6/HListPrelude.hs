@@ -220,11 +220,18 @@ True
 
 -- A heterogeneous apply operator
 
+
+
 class Apply f a r | f a -> r where
   apply :: f -> a -> r
   apply = undefined                     -- In case we use Apply for
                                         -- type-level computations only
 
+
+
+class Apply2 f a r where
+  apply2 :: f -> a -> r
+  apply2 = undefined         
 
 -- Normal function application
 
@@ -259,7 +266,6 @@ instance ( HFoldr f v l r
  where
   hFoldr f v (HCons e l) = apply f (e,hFoldr f v l)
 
-
 {-----------------------------------------------------------------------------}
 
 class HMap f l l' | f l -> l'
@@ -277,6 +283,8 @@ instance (
       => HMap f (HCons x xs) (HCons y ys)
  where
   hMap f ~(HCons x xs) = HCons (apply f x) (hMap f xs)
+
+
 
 {-----------------------------------------------------------------------------}
 
@@ -666,3 +674,4 @@ ERROR - Unresolved overloading
 
 
 {-----------------------------------------------------------------------------}
+

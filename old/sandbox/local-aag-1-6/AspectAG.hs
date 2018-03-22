@@ -47,6 +47,7 @@ type Chi ch atts = LVPair ch atts
 --   |ic| and synthesized attributes of the parent 'sp') to the extended output.
 type Rule sc ip ic sp ic' sp' = Fam sc ip -> Fam ic sp -> Fam ic' sp'
 
+
 -- | The function 'syndef' adds the definition of a synthesized attribute.
 --   It takes a label 'att' representing the name of the new attribute, 
 --   a value 'val' to be assigned to this attribute, and it builds a function which 
@@ -457,7 +458,8 @@ instance ( HMember (Proxy t) nts mnts
 class Use' mnts att nts a sc where
  usechi' :: mnts -> att -> nts -> (a -> a -> a) -> sc -> Maybe a
 
-instance (HasField att (Record vch) a, Use att nts a scr)  => 
+instance (HasField att (Record vch) a, Use att nts a scr,
+         (HasField att vch a))  => 
          Use' HTrue att nts a (HCons (LVPair lch (Record vch)) scr) where
  usechi' _ att nts oper ~(HCons fa scr) = Just $ case usechi att nts oper scr of
                                                    Just r  -> oper a r
@@ -674,16 +676,16 @@ instance  (Defs att nts vals ic ic', TypeCast (Rule sc ip ic sp ic' sp) r)
 data FnSyn att = FnSyn att
 
 instance  HExtend (LVPair att val) sp sp'
-         => Apply  (FnSyn att) (Fam sc ip -> val) 
+         => Apply2 (FnSyn att) (Fam sc ip -> val) 
                    (Rule sc ip ic sp ic sp') where 
-  apply (FnSyn att) f =  syndef att . f 
+  apply2 (FnSyn att) f =  syndef att . f
 
 data FnInh att nt = FnInh att nt
 
 instance  Defs att nts vals ic ic'
-         => Apply  (FnInh att nts) (Fam sc ip -> vals) 
-                   (Rule sc ip ic sp ic' sp) where 
-  apply (FnInh att nts) f = inhdef att nts . f 
+         => Apply2  (FnInh att nts) (Fam sc ip -> vals) 
+                    (Rule sc ip ic sp ic' sp) where 
+  apply2 (FnInh att nts) f = inhdef att nts . f 
 
 
 
@@ -693,12 +695,14 @@ class DefAspect deff prds rules | deff prds -> rules
 instance DefAspect deff HNil (Record HNil) where
   defAspect _ _ = emptyRecord
 
-instance  (  Poly deff deff'
-          ,  DefAspect deff prds rules
-          ,  HExtend (Prd prd deff') rules rules' )  
+
+{- aca falla la LCC-}
+instance  (  Poly deff deff,
+               DefAspect deff prds rules
+          ,  HExtend (Prd prd deff {- ' -}) rules rules')  
          => DefAspect deff (HCons prd prds) rules' where
   defAspect deff (HCons prd prds)  =
-              prd .=. poly deff  .*.  defAspect deff prds   
+              prd .=. poly deff  .*.  defAspect deff prds
 
 
 class Poly a b where
@@ -718,7 +722,7 @@ data FnUse att nt op unit = FnUse att nt op unit
 instance  (  Use att nts a sc
           ,  HExtend (LVPair att a) sp sp'
           ,  TypeCast (Rule sc ip ic sp ic sp') r) 
-         => Poly  (FnUse att nts (a -> a -> a) a) r where 
+         => Poly (FnUse att nts (a -> a -> a) a) r where 
   poly (FnUse att nts op unit)  = typeCast $ use att nts op unit 
 
 
