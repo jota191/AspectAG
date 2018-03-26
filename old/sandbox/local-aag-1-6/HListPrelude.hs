@@ -229,7 +229,7 @@ class Apply f a r | f a -> r where
 
 
 
-class Apply2 f a r where
+class Apply2 f a r | f a -> r where
   apply2 :: f -> a -> r
   apply2 = undefined         
 

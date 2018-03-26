@@ -18,7 +18,7 @@ How to do aspect oriented programming in Haskell/
 -}
 
 
-module Data.AspectAG where
+module AspectAG where
 
 
 import HList
