@@ -1,3 +1,8 @@
+.log
+.pdf
+.aux
+*~
+*#
 dist
 dist-*
 cabal-dev
