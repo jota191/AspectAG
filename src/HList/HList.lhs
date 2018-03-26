@@ -581,6 +581,7 @@ TODO: reimplementar con el indexed type y ver si anda
 
 HECHO:
 
+> {-
 > class Apply f a where
 >   type ApplyR f a :: Type
 >   apply :: f -> a -> ApplyR f a
@@ -591,7 +592,7 @@ una posible instancia trivial:
 > instance Apply (x -> y) x where
 >   type ApplyR (x -> y) x = y
 >   apply f x = f x
-
+> -}
 
 Aca hay algo interesante para ver cuando tenga tiempo.
 
