@@ -13,7 +13,8 @@
 >              MultiParamTypeClasses,
 >              FunctionalDependencies,
 >              UndecidableInstances,
->              ScopedTypeVariables
+>              ScopedTypeVariables,
+>              TypeFamilies
 > #-}
 
 > import Data.Kind 
@@ -87,8 +88,21 @@ We are ready to define Attributions.
 >    Attribute att val -> Attribution atts -> Attribution ( '(att,val) ': atts)
                                                   
 > newtype Attribute label value = Attribute { getVal :: value }
->                               deriving (Eq, Ord)
+>                               deriving (Eq, Ord,Show)
 
+
+%if False
+Some boilerplate to show Attributes and Attributions
+
+> instance Show (Attribution '[]) where
+>   show _ = "«»"
+
+> instance (Show val, Show (Attribution atts)) =>
+>          Show (Attribution  ( '(att,val) ': atts ) ) where
+>   show (ConsAtt att atts) = let tail = show atts
+>                             in "«" ++ show (getVal att) ++ "," ++ drop 1 tail 
+
+%endif
 
 
 %if False
@@ -134,32 +148,27 @@ test2 = (Proxy :: Proxy 'True ,True) .*. (Proxy :: Proxy 'False,'r') .*. EmptyR
 >    hLookupByLabel' _ _ (ConsAtt (Attribute v) _) = v
 > instance HasField l r v => HasField' False l ( '(l2,v2) ': r) v where
 >    hLookupByLabel' _ l (ConsAtt _ r) = hLookupByLabel l r
-> 
+ 
+
+UpdateAtLabel
 
 
->  {-
-> class HasField (l::k) (r :: [Type]) v | l r -> v where
->    hLookupByLabel:: Label l -> Record r -> v
+> class UpdateAtLabel (l :: k) (v :: Type) (r :: [(k,Type)]) where
+>   type UpdateAtLabelR l v r :: [(k,Type)]
+>   updateAtLabel :: Label l -> v -> Attribution r
+>                 -> Attribution (UpdateAtLabelR l v r)
 
+> instance (HEqK l l' True) => UpdateAtLabel l v '[ '(l',v' )] where
+>   type UpdateAtLabelR l v '[ '(l',v' )] = '[ '(l,v)]
+>   updateAtLabel Label v (ConsAtt _ EmptyAtt) = ConsAtt (Attribute v) EmptyAtt
 
-> instance (HEqK l l1 b, HasField' b l (Tagged l1 v1 ': r) v)
->     => HasField l (Tagged l1 v1 ': r) v where
->     hLookupByLabel l (Record r) =
->              hLookupByLabel' (Proxy::Proxy b) l r
+> {-
 
+Since we have to decide 
 
-> class HasField' (b::Bool) (l :: k) (r::[*]) v | b l r -> v where
->     hLookupByLabel':: Proxy b -> Label l -> HList r -> v
+> class UpdateAtLabel' (b::Bool) (l :: k) (v :: Type) (r :: [(k,Type)]) where
+>   type UpdateAtLabelR' b l v r :: [(k,Type)]
+>   updateAtLabel :: Proxy b -> Label l -> v -> Attribution r
+>                 -> Attribution (UpdateAtLabelR l v r)
 
-> instance HasField' True l (Tagged l v ': r) v where
->    hLookupByLabel' _ _ (HCons (Tagged v) _) = v
-> instance HasField l r v => HasField' False l (fld ': r) v where
->    hLookupByLabel' _ l (HCons _ r) = hLookupByLabel l (Record r)
 > -}
-
-
-
-
-
-
-
