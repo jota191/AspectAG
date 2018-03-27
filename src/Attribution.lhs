@@ -12,7 +12,9 @@
 >              ConstraintKinds,
 >              MultiParamTypeClasses,
 >              FunctionalDependencies,
->              UndecidableInstances#-}
+>              UndecidableInstances,
+>              ScopedTypeVariables
+> #-}
 
 > import Data.Kind 
 > import Data.Type.Equality (type (==))
@@ -55,20 +57,20 @@ TODO: explain better this
 
 %if False
 
-> class HLabelSet (l :: [(k,Type)])
-> instance HLabelSet '[] -- empty set
-> instance HLabelSet '[ '(x,v)] -- singleton set
+> class LabelSet (l :: [(k,Type)])
+> instance LabelSet '[] -- empty set
+> instance LabelSet '[ '(x,v)] -- singleton set
 
 > instance ( HEqK l1 l2 leq
->          , HLabelSet' '(l1,v1) '(l2,v2) leq r)
->         => HLabelSet ( '(l1,v1) ': '(l2,v2) ': r)
+>          , LabelSet' '(l1,v1) '(l2,v2) leq r)
+>         => LabelSet ( '(l1,v1) ': '(l2,v2) ': r)
 
-> class HLabelSet' l1v1 l2v2 (leq::Bool) r
-> instance ( HLabelSet ( '(l2,v2) ': r)
->          , HLabelSet ( '(l1,v1) ': r)
->          ) => HLabelSet' '(l1,v1) '(l2,v2) False r
+> class LabelSet' l1v1 l2v2 (leq::Bool) r
+> instance ( LabelSet ( '(l2,v2) ': r)
+>          , LabelSet ( '(l1,v1) ': r)
+>          ) => LabelSet' '(l1,v1) '(l2,v2) False r
 
-> instance ( Fail (DuplicatedLabel l1) ) => HLabelSet' l1 l2 True r
+> instance ( Fail (DuplicatedLabel l1) ) => LabelSet' l1 l2 True r
 
 > class Fail l
 > class DuplicatedLabel l
@@ -81,7 +83,7 @@ We are ready to define Attributions.
 
 > data Attribution :: forall k . [(k,Type)] -> Type where
 >   EmptyAtt :: Attribution '[]
->   ConsAtt  :: HLabelSet ( '(att, val) ': atts) =>
+>   ConsAtt  :: LabelSet ( '(att, val) ': atts) =>
 >    Attribute att val -> Attribution atts -> Attribution ( '(att,val) ': atts)
                                                   
 > newtype Attribute label value = Attribute { getVal :: value }
@@ -92,12 +94,18 @@ We are ready to define Attributions.
 %if False
 
 Some tests:
+TODO: move this..
 
 > data Label1; data Label2; data Label3
-> --field1
+> att1 = Attribute 3   :: Attribute Label1 Int 
+> att2 = Attribute '4' :: Attribute Label2 Char
+> att3 = Attribute '4' :: Attribute Label3 Char
 
+> test1 = ConsAtt att2 EmptyAtt
+> -- test2 = ConsAtt att2 test1 does not compile because of label duplication
+> test2 = ConsAtt att1 test1
+> test3 = ConsAtt att3 test2
 
-> test1 = ConsAtt (Attribute 'e' :: Attribute Label1 Char) EmptyAtt
 
 test2 = (Proxy :: Proxy 'True ,True) .*. (Proxy :: Proxy 'False,'r') .*. EmptyR
   :: HRecord '[ '( 'True ,Bool), '( 'False ,Char)]
@@ -106,9 +114,48 @@ test2 = (Proxy :: Proxy 'True ,True) .*. (Proxy :: Proxy 'False,'r') .*. EmptyR
 %endif
 
 
+--- HasField
+
+> data Label l = Label
+
+> class HasField (l::k) (r :: [(k,Type)]) v | l r -> v where
+>    hLookupByLabel:: Label l -> Attribution r -> v
+
+> instance (HEqK l l1 b, HasField' b l ( '(l1,v1) ': r) v)
+>     => HasField l ( '(l1,v1) ': r) v where
+>     hLookupByLabel l (r :: Attribution ( '(l1,v1) ': r)) =
+>          hLookupByLabel' (Proxy::Proxy b) l r
+
+> 
+> class HasField' (b::Bool) (l :: k) (r::[(k,Type)]) v | b l r -> v where
+>     hLookupByLabel':: Proxy b -> Label l -> Attribution r -> v
+
+> instance HasField' True l ( '(l,v) ': r) v where
+>    hLookupByLabel' _ _ (ConsAtt (Attribute v) _) = v
+> instance HasField l r v => HasField' False l ( '(l2,v2) ': r) v where
+>    hLookupByLabel' _ l (ConsAtt _ r) = hLookupByLabel l r
+> 
 
 
+>  {-
+> class HasField (l::k) (r :: [Type]) v | l r -> v where
+>    hLookupByLabel:: Label l -> Record r -> v
 
+
+> instance (HEqK l l1 b, HasField' b l (Tagged l1 v1 ': r) v)
+>     => HasField l (Tagged l1 v1 ': r) v where
+>     hLookupByLabel l (Record r) =
+>              hLookupByLabel' (Proxy::Proxy b) l r
+
+
+> class HasField' (b::Bool) (l :: k) (r::[*]) v | b l r -> v where
+>     hLookupByLabel':: Proxy b -> Label l -> HList r -> v
+
+> instance HasField' True l (Tagged l v ': r) v where
+>    hLookupByLabel' _ _ (HCons (Tagged v) _) = v
+> instance HasField l r v => HasField' False l (fld ': r) v where
+>    hLookupByLabel' _ l (HCons _ r) = hLookupByLabel l (Record r)
+> -}
 
 
 
