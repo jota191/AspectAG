@@ -158,17 +158,25 @@ UpdateAtLabel
 >   updateAtLabel :: Label l -> v -> Attribution r
 >                 -> Attribution (UpdateAtLabelR l v r)
 
-> instance (HEqK l l' True) => UpdateAtLabel l v '[ '(l',v' )] where
->   type UpdateAtLabelR l v '[ '(l',v' )] = '[ '(l,v)]
+> instance UpdateAtLabel l v '[ '(l,v' )] where
+>   type UpdateAtLabelR l v '[ '(l,v' )] = '[ '(l,v)]
 >   updateAtLabel Label v (ConsAtt _ EmptyAtt) = ConsAtt (Attribute v) EmptyAtt
 
-> {-
 
 Since we have to decide 
 
 > class UpdateAtLabel' (b::Bool) (l :: k) (v :: Type) (r :: [(k,Type)]) where
 >   type UpdateAtLabelR' b l v r :: [(k,Type)]
->   updateAtLabel :: Proxy b -> Label l -> v -> Attribution r
->                 -> Attribution (UpdateAtLabelR l v r)
+>   updateAtLabel' :: Proxy b -> Label l -> v -> Attribution r
+>                  -> Attribution (UpdateAtLabelR l v r)
+
+> {-
+
+> instance (HEqK l l' False, UpdateAtLabel l v atts)
+>     => UpdateAtLabel' False l v ( '(l',v') ': atts) where
+>    type UpdateAtLabelR' False l v ( '(l',v') ': atts)
+>                      = '(l',v') ': (UpdateAtLabelR l v atts) 
+>    updateAtLabel' b l v (ConsAtt att atts)
+>       = ConsAtt att ((updateAtLabel l v atts) :: Attribution (UpdateAtLabelR l v atts))
 
 > -}
