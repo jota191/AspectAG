@@ -11,12 +11,16 @@
 %include lhs2TeX.fmt
 %include lhs2TeX.sty
 
+%if style == newcode
+%format | = "''"
+%endif
+
 %format alpha = "\alpha"
 
 \begin{document}
 \maketitle
 
 
-\input{./Attribution.lhs}
+%include ./Attribution.lhs
 
 \end{document}

@@ -23,6 +23,8 @@
 > import Errors
 > import Eq
 > import Attribute
+> import TPrelude
+
 
 %endif
 
@@ -50,34 +52,15 @@ over a promoted list of pairs, where first elements are the labels. {\tt l} is
 an instance of {\tt LabelSet} when no labels are repeated.
 
 
-REFERENCE TO EQ MODUELE
+REFERENCE TO EQ MODULE
 
-%if False
-
-> class LabelSet (l :: [(k,Type)])
-> instance LabelSet '[] -- empty set
-> instance LabelSet '[ '(x,v)] -- singleton set
-
-> instance ( HEqK l1 l2 leq
->          , LabelSet' '(l1,v1) '(l2,v2) leq r)
->         => LabelSet ( '(l1,v1) ': '(l2,v2) ': r)
-
-> class LabelSet' l1v1 l2v2 (leq::Bool) r
-> instance ( LabelSet ( '(l2,v2) ': r)
->          , LabelSet ( '(l1,v1) ': r)
->          ) => LabelSet' '(l1,v1) '(l2,v2) False r
-
-> instance ( Fail (DuplicatedLabel l1) ) => LabelSet' l1 l2 True r
-
-%endif
-
-TODO: explain how the selection of the instance is done
+LABELSET MOVED TO TPRELUDE
 
 We are ready to define Attributions.
 
 > data Attribution :: forall k . [(k,Type)] -> Type where
 >   EmptyAtt :: Attribution '[]
->   ConsAtt  :: -- LabelSet ( '(att, val) ': atts) =>
+>   ConsAtt  :: LabelSet ( '(att, val) ': atts) =>
 >    Attribute att val -> Attribution atts -> Attribution ( '(att,val) ': atts)
                                                   
 
@@ -229,13 +212,13 @@ on the head of r or not
 >   updateAtLabel = updateAtLabel' (Proxy :: Proxy b)
 
 
-> instance --(LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r)) =>
+> instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r) ) =>
 >          UpdateAtLabel' 'True l v ( '(l,v') ': r) ( '(l,v) ': r) where
 >   updateAtLabel' _ (l :: Label l) v (att `ConsAtt` atts)
 >     = (Attribute v :: Attribute l v) `ConsAtt` atts
 
 > 
-> instance ( UpdateAtLabel l v r r') =>
+> instance ( UpdateAtLabel l v r r', LabelSet  ( a ': r' ) ) =>
 >          UpdateAtLabel' False l v ( a ': r) ( a ': r') where
 >   updateAtLabel' (b :: Proxy False) (l :: Label l) (v :: v)
 >     (ConsAtt att xs :: Attribution ( a ': r))
@@ -252,10 +235,10 @@ on the head of r or not
 Some tests
 
 > --test_update_1 = updateAtLabel label4 False attrib3 --should fail
-> test_update_2 = updateAtLabel label2 False attrib3 --should fail
-> test_update_3 = updateAtLabel label2 "hola" attrib3 --should fail
-> test_update_4 = updateAtLabel label2 '9' attrib3 --should fail
-> test_update_5 = updateAtLabel label3 "hola" attrib3 --should fail
-> test_update_6 = updateAtLabel label3 '9' attrib3 --should fail
+> test_update_2 = updateAtLabel label2 False attrib3 
+> test_update_3 = updateAtLabel label2 "hola" attrib3
+> test_update_4 = updateAtLabel label2 '9' attrib3 
+> test_update_5 = updateAtLabel label3 "hola" attrib3 
+> test_update_6 = updateAtLabel label3 '9' attrib3 
 
 %endif
