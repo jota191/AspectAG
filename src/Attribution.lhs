@@ -108,22 +108,22 @@ test2 = (Proxy :: Proxy 'True ,True) .*. (Proxy :: Proxy 'False,'r') .*. EmptyR
 
 --- HasField
 
-> class HasField (l::k) (r :: [(k,Type)]) v | l r -> v where
->    hLookupByLabel:: Label l -> Attribution r -> v
+> class HasFieldAtt (l::k) (r :: [(k,Type)]) v | l r -> v where
+>    lookupByLabelAtt:: Label l -> Attribution r -> v
 
-> instance (HEqK l l1 b, HasField' b l ( '(l1,v1) ': r) v)
->     => HasField l ( '(l1,v1) ': r) v where
->     hLookupByLabel l (r :: Attribution ( '(l1,v1) ': r)) =
->          hLookupByLabel' (Proxy::Proxy b) l r
+> instance (HEqK l l1 b, HasFieldAtt' b l ( '(l1,v1) ': r) v)
+>     => HasFieldAtt l ( '(l1,v1) ': r) v where
+>     lookupByLabelAtt l (r :: Attribution ( '(l1,v1) ': r)) =
+>          lookupByLabelAtt' (Proxy::Proxy b) l r
 
 > 
-> class HasField' (b::Bool) (l :: k) (r::[(k,Type)]) v | b l r -> v where
->     hLookupByLabel':: Proxy b -> Label l -> Attribution r -> v
+> class HasFieldAtt' (b::Bool) (l :: k) (r::[(k,Type)]) v | b l r -> v where
+>     lookupByLabelAtt':: Proxy b -> Label l -> Attribution r -> v
 
-> instance HasField' True l ( '(l,v) ': r) v where
->    hLookupByLabel' _ _ (ConsAtt (Attribute v) _) = v
-> instance HasField l r v => HasField' False l ( '(l2,v2) ': r) v where
->    hLookupByLabel' _ l (ConsAtt _ r) = hLookupByLabel l r
+> instance HasFieldAtt' True l ( '(l,v) ': r) v where
+>    lookupByLabelAtt' _ _ (ConsAtt (Attribute v) _) = v
+> instance HasFieldAtt l r v => HasFieldAtt' False l ( '(l2,v2) ': r) v where
+>    lookupByLabelAtt' _ l (ConsAtt _ r) = lookupByLabelAtt l r
  
 
 UpdateAtLabel
@@ -186,47 +186,47 @@ I keep the code here, after the long comment the actual implementation starts
 >     => UpdateAtLabel' False l v ( '(l',v') ': atts) where
 >    type UpdateAtLabelR' False l v ( '(l',v') ': atts)
 >                      = '(l',v') ': (UpdateAtLabelR l v atts) 
->    updateAtLabel' b l v (ConsAtt att atts)
->       = ConsAtt att ((updateAtLabel l v atts))
+>    updateAtLabelAtt' b l v (ConsAtt att atts)
+>       = ConsAtt att ((updateAtLabelAtt l v atts))
 > -}
 
 
 The fundep implementation is needed..
 
-> class UpdateAtLabel (l :: k)(v :: Type)(r :: [(k,Type)])(r' :: [(k,Type)])
+> class UpdateAtLabelAtt (l :: k)(v :: Type)(r :: [(k,Type)])(r' :: [(k,Type)])
 >    | l v r -> r' where
->   updateAtLabel :: Label l -> v -> Attribution r -> Attribution r'
+>   updateAtLabelAtt :: Label l -> v -> Attribution r -> Attribution r'
 
 So we need an auxiliary class with an extra parameter to decide if we update
 on the head of r or not
 
-> class UpdateAtLabel' (b::Bool)(l::k)(v::Type)(r::[(k,Type)])(r'::[(k,Type)])
+> class UpdateAtLabelAtt' (b::Bool)(l::k)(v::Type)(r::[(k,Type)])(r'::[(k,Type)])
 >     | b l v r -> r'  where
->   updateAtLabel' :: Proxy b -> Label l -> v -> Attribution r -> Attribution r'
+>   updateAtLabelAtt' :: Proxy b -> Label l -> v -> Attribution r -> Attribution r'
 
 
 
-> instance (HEqK l l' b, UpdateAtLabel' b l v ( '(l',v')': r) r')
+> instance (HEqK l l' b, UpdateAtLabelAtt' b l v ( '(l',v')': r) r')
 >  -- note that if pattern over r is not written this does not compile
->        => UpdateAtLabel l v ( '(l',v') ': r) r' where
->   updateAtLabel = updateAtLabel' (Proxy :: Proxy b)
+>        => UpdateAtLabelAtt l v ( '(l',v') ': r) r' where
+>   updateAtLabelAtt = updateAtLabelAtt' (Proxy :: Proxy b)
 
 
 > instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r) ) =>
->          UpdateAtLabel' 'True l v ( '(l,v') ': r) ( '(l,v) ': r) where
->   updateAtLabel' _ (l :: Label l) v (att `ConsAtt` atts)
+>          UpdateAtLabelAtt' 'True l v ( '(l,v') ': r) ( '(l,v) ': r) where
+>   updateAtLabelAtt' _ (l :: Label l) v (att `ConsAtt` atts)
 >     = (Attribute v :: Attribute l v) `ConsAtt` atts
 
 > 
-> instance ( UpdateAtLabel l v r r', LabelSet  ( a ': r' ) ) =>
->          UpdateAtLabel' False l v ( a ': r) ( a ': r') where
->   updateAtLabel' (b :: Proxy False) (l :: Label l) (v :: v)
+> instance ( UpdateAtLabelAtt l v r r', LabelSet  ( a ': r' ) ) =>
+>          UpdateAtLabelAtt' False l v ( a ': r) ( a ': r') where
+>   updateAtLabelAtt' (b :: Proxy False) (l :: Label l) (v :: v)
 >     (ConsAtt att xs :: Attribution ( a ': r))
->     = case (updateAtLabel l v xs) of
+>     = case (updateAtLabelAtt l v xs) of
 >         xs' -> ConsAtt att xs' :: Attribution( a ': r')
 
-> instance Fail (FieldNotFound l) => UpdateAtLabel l v '[] '[] where
->     updateAtLabel _ _ r = r
+> instance Fail (FieldNotFound l) => UpdateAtLabelAtt l v '[] '[] where
+>     updateAtLabelAtt _ _ r = r
 
 
 
@@ -234,11 +234,11 @@ on the head of r or not
 
 Some tests
 
-> --test_update_1 = updateAtLabel label4 False attrib3 --should fail
-> test_update_2 = updateAtLabel label2 False attrib3 
-> test_update_3 = updateAtLabel label2 "hola" attrib3
-> test_update_4 = updateAtLabel label2 '9' attrib3 
-> test_update_5 = updateAtLabel label3 "hola" attrib3 
-> test_update_6 = updateAtLabel label3 '9' attrib3 
+> --test_update_1 = updateAtLabelAtt label4 False attrib3 --should fail
+> test_update_2 = updateAtLabelAtt label2 False attrib3 
+> test_update_3 = updateAtLabelAtt label2 "hola" attrib3
+> test_update_4 = updateAtLabelAtt label2 '9' attrib3 
+> test_update_5 = updateAtLabelAtt label3 "hola" attrib3 
+> test_update_6 = updateAtLabelAtt label3 '9' attrib3 
 
 %endif
