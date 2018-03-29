@@ -18,8 +18,11 @@
 > #-}
 
 > import Data.Kind 
-> import Data.Type.Equality (type (==))
+> import Data.Type.Equality
 > import Data.Proxy
+> import Errors
+> import Eq
+> import Attribute
 
 %endif
 
@@ -46,15 +49,8 @@ LabelSet is a monoparameter typeclass, working as a predicate
 over a promoted list of pairs, where first elements are the labels. {\tt l} is
 an instance of {\tt LabelSet} when no labels are repeated.
 
-First we define equality on types:
 
-
-
-> class HEq (x :: k) (y :: k) (b :: Bool) | x y -> b
-> type HEqK (x :: k1) (y :: k2) (b :: Bool) = HEq (Proxy x) (Proxy y) b
-> instance ((Proxy x == Proxy y) ~ b) => HEq x y b
-
-TODO: explain better this
+REFERENCE TO EQ MODUELE
 
 %if False
 
@@ -73,9 +69,6 @@ TODO: explain better this
 
 > instance ( Fail (DuplicatedLabel l1) ) => LabelSet' l1 l2 True r
 
-> class Fail l
-> class DuplicatedLabel l
-
 %endif
 
 TODO: explain how the selection of the instance is done
@@ -84,11 +77,9 @@ We are ready to define Attributions.
 
 > data Attribution :: forall k . [(k,Type)] -> Type where
 >   EmptyAtt :: Attribution '[]
->   ConsAtt  :: LabelSet ( '(att, val) ': atts) =>
+>   ConsAtt  :: -- LabelSet ( '(att, val) ': atts) =>
 >    Attribute att val -> Attribution atts -> Attribution ( '(att,val) ': atts)
                                                   
-> newtype Attribute label value = Attribute { getVal :: value }
->                               deriving (Eq, Ord,Show)
 
 
 %if False
@@ -110,15 +101,19 @@ Some boilerplate to show Attributes and Attributions
 Some tests:
 TODO: move this..
 
-> data Label1; data Label2; data Label3
+> data Label1; data Label2; data Label3;data Label4
+> label1 = Label :: Label Label1
+> label2 = Label :: Label Label2
+> label3 = Label :: Label Label3
+> label4 = Label :: Label Label4
 > att1 = Attribute 3   :: Attribute Label1 Int 
 > att2 = Attribute '4' :: Attribute Label2 Char
 > att3 = Attribute '4' :: Attribute Label3 Char
 
-> test1 = ConsAtt att2 EmptyAtt
+> attrib1 = ConsAtt att2 EmptyAtt
 > -- test2 = ConsAtt att2 test1 does not compile because of label duplication
-> test2 = ConsAtt att1 test1
-> test3 = ConsAtt att3 test2
+> attrib2 = ConsAtt att1 attrib1
+> attrib3 = ConsAtt att3 attrib2
 
 
 test2 = (Proxy :: Proxy 'True ,True) .*. (Proxy :: Proxy 'False,'r') .*. EmptyR
@@ -129,8 +124,6 @@ test2 = (Proxy :: Proxy 'True ,True) .*. (Proxy :: Proxy 'False,'r') .*. EmptyR
 
 
 --- HasField
-
-> data Label l = Label
 
 > class HasField (l::k) (r :: [(k,Type)]) v | l r -> v where
 >    hLookupByLabel:: Label l -> Attribution r -> v
@@ -152,31 +145,117 @@ test2 = (Proxy :: Proxy 'True ,True) .*. (Proxy :: Proxy 'False,'r') .*. EmptyR
 
 UpdateAtLabel
 
+I attempt to code an indexed type implementation, where the resulting Type
+function of the parameters.
+I could code the type function over the type level,
+the problem is when I do this on a type class to code ter level computations.
+Since we decide from the context (HEqK ) the returned boolean must be a
+parameter of UpdateAtLabelR, but since it's purely on the context,
+it is free on the RHS...
+I keep the code here, after the long comment the actual implementation starts
 
+> {-
 > class UpdateAtLabel (l :: k) (v :: Type) (r :: [(k,Type)]) where
 >   type UpdateAtLabelR l v r :: [(k,Type)]
 >   updateAtLabel :: Label l -> v -> Attribution r
 >                 -> Attribution (UpdateAtLabelR l v r)
 
-> instance UpdateAtLabel l v '[ '(l,v' )] where
->   type UpdateAtLabelR l v '[ '(l,v' )] = '[ '(l,v)]
->   updateAtLabel Label v (ConsAtt _ EmptyAtt) = ConsAtt (Attribute v) EmptyAtt
+> instance (HEqK b l l', UpdateAtLabel' b l v r) => UpdateAtLabel l v r where
+>   type UpdateAtLabelR l v r = UpdateAtLabelR' b l v r
+>   updateAtLabel = undefined
 
-
-Since we have to decide 
 
 > class UpdateAtLabel' (b::Bool) (l :: k) (v :: Type) (r :: [(k,Type)]) where
 >   type UpdateAtLabelR' b l v r :: [(k,Type)]
 >   updateAtLabel' :: Proxy b -> Label l -> v -> Attribution r
 >                  -> Attribution (UpdateAtLabelR l v r)
 
-> {-
+> instance UpdateAtLabel l v '[ '(l',v' )] where
+>   type UpdateAtLabelR l v '[ '(l,v' )] = '[ '(l,v)]
+>   updateAtLabel Label v (ConsAtt _ EmptyAtt) = ConsAtt (Attribute v) EmptyAtt
+
+> type family If (cond:: Bool) (thn :: k) (els :: k) :: k where
+>   If 'True  thn els = thn
+>   If 'False thn els = els
+> 
+> type family Update (l :: k)(v :: Type)(r :: [(k,Type)]) :: [(k,Type)] where
+>   Update l v ( '(l',v') ': xs ) = If (l == l') ( '(l, v) ': xs)
+>                                                ( '(l',v') ': Update l v xs)
+
+> class Up (b::Bool)(l :: k) (v :: Type) (r :: [(k,Type)]) where
+>   up :: Proxy b -> Label l -> v -> Attribution r
+>      -> Attribution (Update l v r)
+
+> instance ((l == l') ~ 'True,
+>          LabelSet ( '(l, v) ': xs))
+>   => Up 'True l v ( '(l',v') ': xs) where
+>               up _ l v (ConsAtt _ xs) = ConsAtt (Attribute v) xs
+
+> instance ((l == l') ~ 'False,
+>          LabelSet ( '(l, v) ': xs),
+>          Up b l v xs)
+>   => Up 'False l v ( '(l',v') ': xs) where
+>               up _ l v (ConsAtt att xs)
+>                 = ConsAtt att (up (Proxy::Proxy b) l v xs)
+>
 
 > instance (HEqK l l' False, UpdateAtLabel l v atts)
 >     => UpdateAtLabel' False l v ( '(l',v') ': atts) where
 >    type UpdateAtLabelR' False l v ( '(l',v') ': atts)
 >                      = '(l',v') ': (UpdateAtLabelR l v atts) 
 >    updateAtLabel' b l v (ConsAtt att atts)
->       = ConsAtt att ((updateAtLabel l v atts) :: Attribution (UpdateAtLabelR l v atts))
-
+>       = ConsAtt att ((updateAtLabel l v atts))
 > -}
+
+
+The fundep implementation is needed..
+
+> class UpdateAtLabel (l :: k)(v :: Type)(r :: [(k,Type)])(r' :: [(k,Type)])
+>    | l v r -> r' where
+>   updateAtLabel :: Label l -> v -> Attribution r -> Attribution r'
+
+So we need an auxiliary class with an extra parameter to decide if we update
+on the head of r or not
+
+> class UpdateAtLabel' (b::Bool)(l::k)(v::Type)(r::[(k,Type)])(r'::[(k,Type)])
+>     | b l v r -> r'  where
+>   updateAtLabel' :: Proxy b -> Label l -> v -> Attribution r -> Attribution r'
+
+
+
+> instance (HEqK l l' b, UpdateAtLabel' b l v ( '(l',v')': r) r')
+>  -- note that if pattern over r is not written this does not compile
+>        => UpdateAtLabel l v ( '(l',v') ': r) r' where
+>   updateAtLabel = updateAtLabel' (Proxy :: Proxy b)
+
+
+> instance --(LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r)) =>
+>          UpdateAtLabel' 'True l v ( '(l,v') ': r) ( '(l,v) ': r) where
+>   updateAtLabel' _ (l :: Label l) v (att `ConsAtt` atts)
+>     = (Attribute v :: Attribute l v) `ConsAtt` atts
+
+> 
+> instance ( UpdateAtLabel l v r r') =>
+>          UpdateAtLabel' False l v ( a ': r) ( a ': r') where
+>   updateAtLabel' (b :: Proxy False) (l :: Label l) (v :: v)
+>     (ConsAtt att xs :: Attribution ( a ': r))
+>     = case (updateAtLabel l v xs) of
+>         xs' -> ConsAtt att xs' :: Attribution( a ': r')
+
+> instance Fail (FieldNotFound l) => UpdateAtLabel l v '[] '[] where
+>     updateAtLabel _ _ r = r
+
+
+
+%if True
+
+Some tests
+
+> --test_update_1 = updateAtLabel label4 False attrib3 --should fail
+> test_update_2 = updateAtLabel label2 False attrib3 --should fail
+> test_update_3 = updateAtLabel label2 "hola" attrib3 --should fail
+> test_update_4 = updateAtLabel label2 '9' attrib3 --should fail
+> test_update_5 = updateAtLabel label3 "hola" attrib3 --should fail
+> test_update_6 = updateAtLabel label3 '9' attrib3 --should fail
+
+%endif
