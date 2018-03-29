@@ -1,3 +1,6 @@
+*ptb
+*.t
+./src/HList/*
 *tex
 *log
 *pdf
