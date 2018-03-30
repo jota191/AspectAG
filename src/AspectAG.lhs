@@ -24,6 +24,7 @@
 > import Data.Kind
 > import Data.Tagged
 > import TPrelude
+> import Data.Proxy
 
 In each node of the grammar, the \emph{Fam} contains a single attribution
 fot the parent, and a collection (Record) of attributions for the children:
@@ -71,3 +72,16 @@ updates the output constructed thus far.
 >        =>  Label att -> val -> Fam ic sp -> Fam ic sp'
 > synmod att v (Fam ic sp) = Fam ic (updateAtLabelAtt att v sp)
 
+
+mch --> memnership of chld
+mnts--> membership of nonterminals
+
+> {-
+> class SingleDef (mch::Bool)(mnts::Bool) att (pv :: (k,Type)) (ic ::[(k,Type)]) where
+>   type SingleDefR mch mnts att pv ic :: [(k,Type)]
+>   singleDef :: Proxy mch -> Proxy mnts -> att -> pv -> Record ic
+>      -> Record (SingleDefR mch mnts att pv ic)
+
+> instance SingleDef True True att '(lch,vch) ic where
+>   
+> -}
