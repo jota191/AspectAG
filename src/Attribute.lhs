@@ -30,3 +30,8 @@
 
 
 > data Label l = Label
+
+> infixr 4 .=.
+
+> (.=.) :: Label l -> v -> Attribute l v
+> Label .=. v = Attribute v

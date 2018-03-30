@@ -17,6 +17,8 @@
 >              TypeFamilies
 > #-}
 
+> module Attribution where
+
 > import Data.Kind 
 > import Data.Type.Equality
 > import Data.Proxy
@@ -242,3 +244,12 @@ Some tests
 > test_update_6 = updateAtLabelAtt label3 '9' attrib3 
 
 %endif
+
+
+
+Sugar:
+
+> infixr 2 .*.
+> (.*.) :: LabelSet ('(att, val) : atts) =>
+>     Attribute att val -> Attribution atts -> Attribution ('(att, val) : atts)
+> (.*.) = ConsAtt

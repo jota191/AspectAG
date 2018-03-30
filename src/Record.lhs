@@ -17,6 +17,8 @@
 >              TypeFamilies
 > #-}
 
+> module Record where
+
 > import Data.Kind 
 > import Data.Type.Equality
 > import Data.Proxy
@@ -143,3 +145,14 @@ Some tests
 > test_update_6 = updateAtLabelRec label3 '9' record3 
 
 %endif
+
+> infixr 2 *.
+> (*.) :: LabelSet ('(att, val) : atts) =>
+>     Tagged att val -> Record atts -> Record ('(att, val) : atts)
+> (*.) = ConsR
+
+TODO: cambiar nombre de params aca
+
+> infixr 4 =.
+> (=.) :: Label l -> v -> Tagged l v
+> (Label :: Label l) =. (v::v) = Tagged v :: Tagged l v
