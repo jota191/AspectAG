@@ -1,5 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances,
-  UndecidableInstances, FlexibleContexts #-}
+  UndecidableInstances, FlexibleContexts, AllowAmbiguousTypes #-}
 
 {-
    The HList library
@@ -221,7 +221,7 @@ True
 -- A heterogeneous apply operator
 
 
-
+-- TODO restore fundep
 class Apply f a r | f a -> r where
   apply :: f -> a -> r
   apply = undefined                     -- In case we use Apply for
@@ -251,7 +251,7 @@ instance Apply Id x x where
 
 -- A heterogeneous fold for all types
 
-class HList l => HFoldr f v l r | f v l -> r
+class HList l => HFoldr f v l r -- | f v l -> r
  where
   hFoldr :: f -> v -> l -> r
 
@@ -259,16 +259,16 @@ instance HFoldr f v HNil v
  where
   hFoldr _ v _ = v
 
-instance ( HFoldr f v l r
-         , Apply f (e,r) r'
-         )
-      => HFoldr f v (HCons e l) r'
- where
-  hFoldr f v (HCons e l) = apply f (e,hFoldr f v l)
+--instance ( HFoldr f v l r
+--         , Apply f (e,r) r'
+--         )
+--      => HFoldr f v (HCons e l) r'
+-- where
+--  hFoldr f v (HCons e l) = apply f (e,hFoldr f v l)
 
 {-----------------------------------------------------------------------------}
 
-class HMap f l l' | f l -> l'
+class HMap f l l' -- | f l -> l'
  where
   hMap :: f -> l -> l'
 
@@ -372,12 +372,12 @@ instance Show x => Apply HShow x (IO ())
  where
   apply _ x = do putStrLn $ show x
 
-instance ( Monad m
-         , Apply f x (m ())
-         )
-      => Apply (HSeq f) (x,m ()) (m ())
- where
-  apply (HSeq f) (x,c) = do apply f x; c
+--instance ( Monad m
+ --        , Apply f x (m ())
+--         )
+--      => Apply (HSeq f) (x,m ()) (m ())
+-- where
+--  apply (HSeq f) (x,c) = do apply f x; c
 
 
 {-----------------------------------------------------------------------------}
@@ -402,7 +402,7 @@ instance HStagedEq HNil HNil
 instance HStagedEq HNil (HCons e l)
  where
   hStagedEq _ _ = False
-
+{-
 instance HStagedEq (HCons e l) HNil
  where
   hStagedEq _ _ = False
@@ -429,7 +429,7 @@ instance HStagedEq' HFalse e e'
 instance Eq e => HStagedEq' HTrue e e
  where
   hStagedEq' _ = (==)
-
+-}
 
 {-----------------------------------------------------------------------------}
 
@@ -675,3 +675,18 @@ ERROR - Unresolved overloading
 
 {-----------------------------------------------------------------------------}
 
+
+instance TypeEq x y b => HEq (Proxy x) (Proxy y) b
+
+instance TypeEq x x HTrue
+instance (HBool b, TypeCast HFalse b) => TypeEq x y b
+-- instance TypeEq x y HFalse -- would violate functional dependency
+
+
+class HBool b => TupleType t b | t -> b
+instance TupleType () HTrue
+instance TupleType (x,y) HTrue
+instance TupleType (x,y,z) HTrue
+-- Continue for a while
+instance (HBool b, TypeCast HFalse b) => TupleType x b
+-- instance TupleType x HFalse -- would violate functional dependency

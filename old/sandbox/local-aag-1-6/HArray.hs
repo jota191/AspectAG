@@ -76,7 +76,7 @@ instance (HUpdateAtHNat n e' l l', HNat n)
 -- Signature is inferred:
 -- hSplitByHNats :: (HSplitByHNats' ns l' l'1 l'', HMap (HAddTag HTrue) l l') =>
 --                ns -> l -> (l'1, l'')
-hSplitByHNats ns l = hSplitByHNats' ns (hFlag l)
+--hSplitByHNats ns l = hSplitByHNats' ns (hFlag l)
 
 class HNats ns => HSplitByHNats' ns l l' l'' | ns l -> l' l''
  where

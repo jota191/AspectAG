@@ -8,9 +8,7 @@
 {-| 
     Library for First-Class Attribute Grammars.
 
-    The library is documented in the paper:
-/Attribute Grammars Fly First-Class.
-How to do aspect oriented programming in Haskell/
+    The library is documented in the paper: /Attribute Grammars Fly First-Class. How to do aspect oriented programming in Haskell/
 
 
     For more documentation see the AspectAG webpage: 
@@ -29,8 +27,6 @@ import Record hiding (hUpdateAtLabel)
 import GhcSyntax
 
 
-import Control.Monad.Reader
-
 -- | Field of an attribution.
 type Att att val = LVPair att val
 
@@ -46,7 +42,6 @@ type Chi ch atts = LVPair ch atts
 --   a function from the output constructed thus far (inherited attributes of the children 
 --   |ic| and synthesized attributes of the parent 'sp') to the extended output.
 type Rule sc ip ic sp ic' sp' = Fam sc ip -> Fam ic sp -> Fam ic' sp'
-
 
 -- | The function 'syndef' adds the definition of a synthesized attribute.
 --   It takes a label 'att' representing the name of the new attribute, 
@@ -220,12 +215,12 @@ ext f g input = f input . g input
 
 
 -- Monadic Interface 
-
+{-
 data Lhs
 lhs :: Proxy Lhs
 lhs = proxy 
 
-class At l m v | l m -> v where
+class At l m v | l -> v where
   at :: l -> m v
 
 instance (HasField (Proxy (lch,nt)) chi v, MonadReader (Fam chi par) m) 
@@ -260,7 +255,7 @@ synmodM  :: (HUpdateAtHNat n (Att att a) sp sp',HFind att ls n,RecordLabels sp l
          => att-> Reader (Fam sc ip) a -> Rule sc ip ic (Record sp) ic (Record sp') 
 synmodM att v f      = synmod att (def v f)
 
-
+-}
 
 -- | Field of an aspect. It associates a production 'prd' with a rule 'rule'.
 type Prd prd rule = LVPair prd rule
@@ -403,7 +398,7 @@ instance  ( Copy att nts vp (Record ics) ics'
                   mnts  = hMember lch nts
                   mvch  = hasLabel att vch
 
-class Copy' mnts mvch att vp pch pch' | mnts mvch att vp pch -> pch' 
+class Copy' mnts mvch att vp pch pch'  | mnts mvch att vp pch -> pch' 
   where
    cpychi'  ::  mnts -> mvch -> att -> vp -> pch -> pch'
 
@@ -458,13 +453,12 @@ instance ( HMember (Proxy t) nts mnts
 class Use' mnts att nts a sc where
  usechi' :: mnts -> att -> nts -> (a -> a -> a) -> sc -> Maybe a
 
-instance (HasField att (Record vch) a, Use att nts a scr,
-         (HasField att vch a))  => 
+instance (HasField att (Record vch) a, Use att nts a scr)  => 
          Use' HTrue att nts a (HCons (LVPair lch (Record vch)) scr) where
  usechi' _ att nts oper ~(HCons fa scr) = Just $ case usechi att nts oper scr of
                                                    Just r  -> oper a r
                                                    Nothing -> a 
-                            where a = valueLVPair fa # att
+                            where a = undefined -- EDIT valueLVPair fa # att
 
 instance (Use att nts a scr)  => 
          Use' HFalse att nts a (HCons (LVPair lch b) scr) where
@@ -497,7 +491,8 @@ instance  (  Chain' msp att nts val sc ic sp ic' sp'
                
 
 
-class Chain' msp att nts val sc ic sp ic' sp' | msp att nts val sc ic sp -> ic' sp' where
+class Chain' msp att nts val sc ic sp ic' sp'
+  | msp att nts val sc ic sp -> ic' sp' where
   defchn' :: msp -> att -> nts -> val -> sc -> Fam ic sp -> Fam ic' sp'
 
 
@@ -657,36 +652,28 @@ instance  (  AttAspect rdef (Record defs) rules
 instance AttAspect rdef (Record HNil) (Record HNil) 
   where attAspect _ _ = emptyRecord
 
-{-
+
 data FnSyn att = FnSyn att
-
-instance  (HExtend (LVPair att val) sp sp', TypeCast (Rule sc ip ic sp ic sp') r)
-         => Apply  (FnSyn att) (Fam sc ip -> val) r
-                    where 
-  apply (FnSyn att) f =  typeCast $ syndef att . f 
-
 data FnInh att nt = FnInh att nt
 
-instance  (Defs att nts vals ic ic', TypeCast (Rule sc ip ic sp ic' sp) r)
-         => Apply  (FnInh att nts) (Fam sc ip -> vals) r
-                    where 
-  apply (FnInh att nts) f = typeCast $ inhdef att nts . f 
--}
 
-data FnSyn att = FnSyn att
+
+
+-- TODO LIBERAL COVERAGE COND
+{-
 
 instance  HExtend (LVPair att val) sp sp'
-         => Apply2 (FnSyn att) (Fam sc ip -> val) 
+         => Apply  (FnSyn att) (Fam sc ip -> val) 
                    (Rule sc ip ic sp ic sp') where 
-  apply2 (FnSyn att) f =  syndef att . f
-
-data FnInh att nt = FnInh att nt
+  apply (FnSyn att) f =  syndef att . f 
 
 instance  Defs att nts vals ic ic'
-         => Apply2  (FnInh att nts) (Fam sc ip -> vals) 
-                    (Rule sc ip ic sp ic' sp) where 
-  apply2 (FnInh att nts) f = inhdef att nts . f 
+         => Apply  (FnInh att nts) (Fam sc ip -> vals) 
+                   (Rule sc ip ic sp ic' sp) where 
+  apply (FnInh att nts) f = inhdef att nts . f 
 
+
+-}
 
 
 class DefAspect deff prds rules | deff prds -> rules 
@@ -695,15 +682,14 @@ class DefAspect deff prds rules | deff prds -> rules
 instance DefAspect deff HNil (Record HNil) where
   defAspect _ _ = emptyRecord
 
-
-{- aca falla la LCC-}
-instance  (  Poly deff deff,
-               DefAspect deff prds rules
-          ,  HExtend (Prd prd deff {- ' -}) rules rules')  
+{-
+instance  (  Poly deff deff'
+          ,  DefAspect deff prds rules
+          ,  HExtend (Prd prd deff') rules rules' )  
          => DefAspect deff (HCons prd prds) rules' where
   defAspect deff (HCons prd prds)  =
-              prd .=. poly deff  .*.  defAspect deff prds
-
+              prd .=. poly deff  .*.  defAspect deff prds   
+-}
 
 class Poly a b where
   poly :: a -> b
@@ -722,7 +708,7 @@ data FnUse att nt op unit = FnUse att nt op unit
 instance  (  Use att nts a sc
           ,  HExtend (LVPair att a) sp sp'
           ,  TypeCast (Rule sc ip ic sp ic sp') r) 
-         => Poly (FnUse att nts (a -> a -> a) a) r where 
+         => Poly  (FnUse att nts (a -> a -> a) a) r where 
   poly (FnUse att nts op unit)  = typeCast $ use att nts op unit 
 
 
