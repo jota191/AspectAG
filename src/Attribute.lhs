@@ -25,9 +25,9 @@
 > import Eq
 
 
-> newtype Attribute label value = Attribute { getVal :: value }
->                               deriving (Eq, Ord,Show)
-
+> newtype Attribute l value = Attribute { getVal :: value }
+>                           deriving (Eq, Ord,Show)
+>
 
 > data Label l = Label
 

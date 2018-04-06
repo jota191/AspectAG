@@ -12,7 +12,8 @@
 >              ConstraintKinds,
 >              ScopedTypeVariables,
 >              AllowAmbiguousTypes,
->              UnicodeSyntax#-}
+>              UnicodeSyntax
+> #-}
 
 
 > module AspectAG where
@@ -76,12 +77,14 @@ updates the output constructed thus far.
 mch --> memnership of chld
 mnts--> membership of nonterminals
 
-> {-
-> class SingleDef (mch::Bool)(mnts::Bool) att (pv :: (k,Type)) (ic ::[(k,Type)]) where
->   type SingleDefR mch mnts att pv ic :: [(k,Type)]
->   singleDef :: Proxy mch -> Proxy mnts -> att -> pv -> Record ic
->      -> Record (SingleDefR mch mnts att pv ic)
+> -- TODO this pv is a pair label-value, I should improve the typing
+> --at type level, Attribute, Tagged and that kind of stuff can be improved
+> class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[(k,Type)])
+>                  (ic' ::[(k,Type)]) | mch mnts att pv ic -> ic' where
+>   singleDef :: Proxy mch -> Proxy mnts -> att -> pv -> Record ic ->Record ic'
 
-> instance SingleDef True True att '(lch,vch) ic where
->   
-> -}
+
+ instance SingleDef True True att (Tagged lch vch) ic where
+   type
+
+
