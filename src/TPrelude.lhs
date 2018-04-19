@@ -25,7 +25,7 @@
 >   If 'False thn els = els
 
 
-> class LabelSet (l :: [(k,Type)])
+> class LabelSet (l :: [(k,k2)])
 > instance LabelSet '[] -- empty set
 > instance LabelSet '[ '(x,v)] -- singleton set
 
