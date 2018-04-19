@@ -80,34 +80,6 @@ Some boilerplate to show Attributes and Attributions
 
 %endif
 
-
-%if False
-
-Some tests:
-TODO: move this..
-
-> data Label1; data Label2; data Label3;data Label4
-> label1 = Label :: Label Label1
-> label2 = Label :: Label Label2
-> label3 = Label :: Label Label3
-> label4 = Label :: Label Label4
-> att1 = Attribute 3   :: Attribute Label1 Int 
-> att2 = Attribute '4' :: Attribute Label2 Char
-> att3 = Attribute '4' :: Attribute Label3 Char
-
-> attrib1 = ConsAtt att2 EmptyAtt
-> -- test2 = ConsAtt att2 test1 does not compile because of label duplication
-> attrib2 = ConsAtt att1 attrib1
-> attrib3 = ConsAtt att3 attrib2
-
-
-test2 = (Proxy :: Proxy 'True ,True) .*. (Proxy :: Proxy 'False,'r') .*. EmptyR
-  :: HRecord '[ '( 'True ,Bool), '( 'False ,Char)]
-
-
-%endif
-
-
 --- HasField
 
 > class HasFieldAtt (l::k) (r :: [(k,Type)]) v | l r -> v where
@@ -137,61 +109,6 @@ the problem is when I do this on a type class to code ter level computations.
 Since we decide from the context (HEqK ) the returned boolean must be a
 parameter of UpdateAtLabelR, but since it's purely on the context,
 it is free on the RHS...
-I keep the code here, after the long comment the actual implementation starts
-
-> {-
-> class UpdateAtLabel (l :: k) (v :: Type) (r :: [(k,Type)]) where
->   type UpdateAtLabelR l v r :: [(k,Type)]
->   updateAtLabel :: Label l -> v -> Attribution r
->                 -> Attribution (UpdateAtLabelR l v r)
-
-> instance (HEqK b l l', UpdateAtLabel' b l v r) => UpdateAtLabel l v r where
->   type UpdateAtLabelR l v r = UpdateAtLabelR' b l v r
->   updateAtLabel = undefined
-
-
-> class UpdateAtLabel' (b::Bool) (l :: k) (v :: Type) (r :: [(k,Type)]) where
->   type UpdateAtLabelR' b l v r :: [(k,Type)]
->   updateAtLabel' :: Proxy b -> Label l -> v -> Attribution r
->                  -> Attribution (UpdateAtLabelR l v r)
-
-> instance UpdateAtLabel l v '[ '(l',v' )] where
->   type UpdateAtLabelR l v '[ '(l,v' )] = '[ '(l,v)]
->   updateAtLabel Label v (ConsAtt _ EmptyAtt) = ConsAtt (Attribute v) EmptyAtt
-
-> type family If (cond:: Bool) (thn :: k) (els :: k) :: k where
->   If 'True  thn els = thn
->   If 'False thn els = els
-> 
-> type family Update (l :: k)(v :: Type)(r :: [(k,Type)]) :: [(k,Type)] where
->   Update l v ( '(l',v') ': xs ) = If (l == l') ( '(l, v) ': xs)
->                                                ( '(l',v') ': Update l v xs)
-
-> class Up (b::Bool)(l :: k) (v :: Type) (r :: [(k,Type)]) where
->   up :: Proxy b -> Label l -> v -> Attribution r
->      -> Attribution (Update l v r)
-
-> instance ((l == l') ~ 'True,
->          LabelSet ( '(l, v) ': xs))
->   => Up 'True l v ( '(l',v') ': xs) where
->               up _ l v (ConsAtt _ xs) = ConsAtt (Attribute v) xs
-
-> instance ((l == l') ~ 'False,
->          LabelSet ( '(l, v) ': xs),
->          Up b l v xs)
->   => Up 'False l v ( '(l',v') ': xs) where
->               up _ l v (ConsAtt att xs)
->                 = ConsAtt att (up (Proxy::Proxy b) l v xs)
->
-
-> instance (HEqK l l' False, UpdateAtLabel l v atts)
->     => UpdateAtLabel' False l v ( '(l',v') ': atts) where
->    type UpdateAtLabelR' False l v ( '(l',v') ': atts)
->                      = '(l',v') ': (UpdateAtLabelR l v atts) 
->    updateAtLabelAtt' b l v (ConsAtt att atts)
->       = ConsAtt att ((updateAtLabelAtt l v atts))
-> -}
-
 
 The fundep implementation is needed..
 

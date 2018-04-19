@@ -49,12 +49,6 @@ Some boilerplate to show Attributes and Attributions
 %endif
 
 
-%if False
-
-Some tests:
-TODO: move this..
-
-
 --- HasField
 
 > class HasFieldRec (l::k) (r :: [(k,Type)]) v | l r -> v where
