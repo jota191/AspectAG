@@ -90,6 +90,15 @@ Some tests:
 > childAttLR = ConsCh (TaggedChAttr labelL attrib1)$
 >              ConsCh (TaggedChAttr labelR attrib2) EmptyCh
 
+> -- duplicatedLabel
+> -- childAttRRFail = ConsCh (TaggedChAttr labelR attrib1)$
+> --              ConsCh (TaggedChAttr labelR attrib2) EmptyCh
+
+> attrib1g = hLookupByChild labelL childAttLR
+> attrib2g = hLookupByChild labelR childAttLR
+>  -- no instance
+>  -- attrib2g = hLookupByChild label3 childAttLR
+
 
 -- test2 = (Proxy :: Proxy 'True ,True) .*. (Proxy :: Proxy 'False,'r') .*. EmptyR
 --   :: HRecord '[ '( 'True ,Bool), '( 'False ,Char)]

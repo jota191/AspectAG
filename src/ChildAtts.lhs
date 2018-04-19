@@ -58,33 +58,26 @@ Some boilerplate to show Attributes and Attributions
 
 %endif
 
-> {-
-
-%if False
-
-Some tests:
-TODO: move this..
-
-
 --- HasField
 
-> class HasFieldRec (l::k) (r :: [(k,Type)]) v | l r -> v where
->    hLookupByLabelRec:: Label l -> Record r -> v
+> class HasChild (l::k) (r :: [(k ,[(k,Type)])]) v | l r -> v where
+>    hLookupByChild:: Label l -> ChAttsRec r -> Attribution v
 
-> instance (HEqK l l1 b, HasFieldRec' b l ( '(l1,v1) ': r) v)
->     => HasFieldRec l ( '(l1,v1) ': r) v where
->     hLookupByLabelRec l (r :: Record ( '(l1,v1) ': r)) =
->          hLookupByLabelRec' (Proxy::Proxy b) l r
+> instance (HEqK l l1 b, HasChild' b l ( '(l1,v1) ': r) v)
+>     => HasChild l ( '(l1,v1) ': r) v where
+>     hLookupByChild l (r :: ChAttsRec ( '(l1,v1) ': r)) =
+>          hLookupByChild' (Proxy::Proxy b) l r
 
 > 
-> class HasFieldRec' (b::Bool) (l :: k) (r::[(k,Type)]) v | b l r -> v where
->     hLookupByLabelRec':: Proxy b -> Label l -> Record r -> v
+> class HasChild' (b::Bool) (l :: k) (r::[(k,[(k,Type)])]) v | b l r -> v where
+>     hLookupByChild':: Proxy b -> Label l -> ChAttsRec r -> Attribution v
 
-> instance HasFieldRec' True l ( '(l,v) ': r) v where
->    hLookupByLabelRec' _ _ (ConsR (Tagged v) _) = v
-> instance HasFieldRec l r v => HasFieldRec' False l ( '(l2,v2) ': r) v where
->    hLookupByLabelRec' _ l (ConsR _ r) = hLookupByLabelRec l r
+> instance HasChild' True l ( '(l,v) ': r) v where
+>    hLookupByChild' _ _ (ConsCh lv _) = unTaggedChAttr lv
+> instance HasChild l r v => HasChild' False l ( '(l2,v2) ': r) v where
+>    hLookupByChild' _ l (ConsCh _ r) = hLookupByChild l r
  
+> {-
 
 
 
@@ -130,31 +123,6 @@ on the head of r or not
 %if True
 
 Some tests
-
-> 
-> data Label1; data Label2; data Label3;data Label4
-> label1 = Label :: Label Label1
-> label2 = Label :: Label Label2
-> label3 = Label :: Label Label3
-> label4 = Label :: Label Label4
-> tagged1 = Tagged 3   :: Tagged Label1 Int 
-> tagged2 = Tagged '4' :: Tagged Label2 Char
-> tagged3 = Tagged '4' :: Tagged Label3 Char
-
-> record1 = ConsR tagged2 EmptyR
-> -- test2 = ConsR att2 test1 does not compile because of label duplication
-> record2 = ConsR tagged1 record1
-> record3 = ConsR tagged3 record2
-> 
-
-
-> --test_update_1 = updateAtLabelRec label4 False record3 --should fail
-> test_update_2 = updateAtLabelRec label2 False record3 
-> test_update_3 = updateAtLabelRec label2 "hola" record3
-> test_update_4 = updateAtLabelRec label2 '9' record3 
-> test_update_5 = updateAtLabelRec label3 "hola" record3 
-> test_update_6 = updateAtLabelRec label3 '9' record3 
-
 %endif
 
 > infixr 2 *.
