@@ -110,35 +110,6 @@ on the head of r or not
 
 
 
-%if True
-
-Some tests
-
-> 
-> data Label1; data Label2; data Label3;data Label4
-> label1 = Label :: Label Label1
-> label2 = Label :: Label Label2
-> label3 = Label :: Label Label3
-> label4 = Label :: Label Label4
-> tagged1 = Tagged 3   :: Tagged Label1 Int 
-> tagged2 = Tagged '4' :: Tagged Label2 Char
-> tagged3 = Tagged '4' :: Tagged Label3 Char
-
-> record1 = ConsR tagged2 EmptyR
-> -- test2 = ConsR att2 test1 does not compile because of label duplication
-> record2 = ConsR tagged1 record1
-> record3 = ConsR tagged3 record2
-> 
-
-
-> --test_update_1 = updateAtLabelRec label4 False record3 --should fail
-> test_update_2 = updateAtLabelRec label2 False record3 
-> test_update_3 = updateAtLabelRec label2 "hola" record3
-> test_update_4 = updateAtLabelRec label2 '9' record3 
-> test_update_5 = updateAtLabelRec label3 "hola" record3 
-> test_update_6 = updateAtLabelRec label3 '9' record3 
-
-%endif
 
 > infixr 2 *.
 > (*.) :: LabelSet ('(att, val) : atts) =>

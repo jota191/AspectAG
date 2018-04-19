@@ -147,23 +147,6 @@ on the head of r or not
 > instance Fail (FieldNotFound l) => UpdateAtLabelAtt l v '[] '[] where
 >     updateAtLabelAtt _ _ r = r
 
-
-
-%if True
-
-Some tests
-
-> --test_update_1 = updateAtLabelAtt label4 False attrib3 --should fail
-> test_update_2 = updateAtLabelAtt label2 False attrib3 
-> test_update_3 = updateAtLabelAtt label2 "hola" attrib3
-> test_update_4 = updateAtLabelAtt label2 '9' attrib3 
-> test_update_5 = updateAtLabelAtt label3 "hola" attrib3 
-> test_update_6 = updateAtLabelAtt label3 '9' attrib3 
-
-%endif
-
-
-
 Sugar:
 
 > infixr 2 .*.

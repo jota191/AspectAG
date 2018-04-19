@@ -17,8 +17,7 @@
 >              TypeFamilies
 > #-}
 
-> module ChildAtts where
-
+> module InternalTest where
 > import Data.Kind 
 > import Data.Type.Equality
 > import Data.Proxy
@@ -28,11 +27,13 @@
 > import TPrelude
 > import Data.Tagged
 > import Attribution
-
+> import Record
+> import ChildAtts
 
 
 Some tests:
-TODO: move this..
+
+-- Attribution
 
 > data Label1; data Label2; data Label3;data Label4
 > label1 = Label :: Label Label1
@@ -47,6 +48,47 @@ TODO: move this..
 > -- test2 = ConsAtt att2 test1 does not compile because of label duplication
 > attrib2 = ConsAtt att1 attrib1
 > attrib3 = ConsAtt att3 attrib2
+
+> --test_update_1 = updateAtLabelAtt label4 False attrib3 --should fail
+> test_update_2 = updateAtLabelAtt label2 False attrib3 
+> test_update_3 = updateAtLabelAtt label2 "hola" attrib3
+> test_update_4 = updateAtLabelAtt label2 '9' attrib3 
+> test_update_5 = updateAtLabelAtt label3 "hola" attrib3 
+> test_update_6 = updateAtLabelAtt label3 '9' attrib3 
+
+
+--Record
+
+> tagged1 = Tagged 3   :: Tagged Label1 Int 
+> tagged2 = Tagged '4' :: Tagged Label2 Char
+> tagged3 = Tagged '4' :: Tagged Label3 Char
+
+> record1 = ConsR tagged2 EmptyR
+> -- test2 = ConsR att2 test1 does not compile because of label duplication
+> record2 = ConsR tagged1 record1
+> record3 = ConsR tagged3 record2
+> 
+
+
+> --test_update_1 = updateAtLabelRec label4 False record3 --should fail
+> test_update_R_2 = updateAtLabelRec label2 False record3 
+> test_update_R_3 = updateAtLabelRec label2 "hola" record3
+> test_update_R_4 = updateAtLabelRec label2 '9' record3 
+> test_update_R_5 = updateAtLabelRec label3 "hola" record3 
+> test_update_R_6 = updateAtLabelRec label3 '9' record3 
+
+
+
+
+--ChildAtts
+
+> data LabelL; data LabelR
+> labelL = Label :: Label LabelL
+> labelR = Label :: Label LabelR
+
+
+> childAttLR = ConsCh (TaggedChAttr labelL attrib1)$
+>              ConsCh (TaggedChAttr labelR attrib2) EmptyCh
 
 
 -- test2 = (Proxy :: Proxy 'True ,True) .*. (Proxy :: Proxy 'False,'r') .*. EmptyR
