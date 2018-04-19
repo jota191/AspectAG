@@ -1,4 +1,4 @@
-%if False
+% if False
 
 > {-# LANGUAGE DataKinds,
 >              TypeOperators,
@@ -77,46 +77,48 @@ Some boilerplate to show Attributes and Attributions
 > instance HasChild l r v => HasChild' False l ( '(l2,v2) ': r) v where
 >    hLookupByChild' _ l (ConsCh _ r) = hLookupByChild l r
  
-> {-
-
 
 
 UPDATEATLABEL
 
-> class UpdateAtLabelRec (l :: k)(v :: Type)(r :: [(k,Type)])(r' :: [(k,Type)])
+> class UpdateAtChild (l :: k)(v :: [(k,Type)])
+>       (r :: [(k,[(k,Type)])])(r' :: [(k,[(k,Type)])])
 >    | l v r -> r' where
->   updateAtLabelRec :: Label l -> v -> Record r -> Record r'
+>   updateAtChild :: Label l -> Attribution v -> ChAttsRec r -> ChAttsRec r'
 
 So we need an auxiliary class with an extra parameter to decide if we update
 on the head of r or not
 
-> class UpdateAtLabelRec' (b::Bool)(l::k)(v::Type)(r::[(k,Type)])(r'::[(k,Type)])
+> class UpdateAtChild' (b::Bool)(l::k)(v::[(k,Type)])
+>       (r::[(k,[(k,Type)])])(r'::[(k,[(k,Type)])])
 >     | b l v r -> r'  where
->   updateAtLabelRec' :: Proxy b -> Label l -> v -> Record r -> Record r'
+>   updateAtChild' :: Proxy b -> Label l -> Attribution v -> ChAttsRec r -> ChAttsRec r'
 
 
 
-> instance (HEqK l l' b, UpdateAtLabelRec' b l v ( '(l',v')': r) r')
+> instance (HEqK l l' b, UpdateAtChild' b l v ( '(l',v')': r) r')
 >  -- note that if pattern over r is not written this does not compile
->        => UpdateAtLabelRec l v ( '(l',v') ': r) r' where
->   updateAtLabelRec = updateAtLabelRec' (Proxy :: Proxy b)
+>        => UpdateAtChild l v ( '(l',v') ': r) r' where
+>   updateAtChild = updateAtChild' (Proxy :: Proxy b)
 
 
 > instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r) ) =>
->          UpdateAtLabelRec' 'True l v ( '(l,v') ': r) ( '(l,v) ': r) where
->   updateAtLabelRec' _ (l :: Label l) v (att `ConsR` atts)
->     = (Tagged v :: Tagged l v) `ConsR` atts
+>          UpdateAtChild' 'True l v ( '(l,v') ': r) ( '(l,v) ': r) where
+>   updateAtChild' _ (l :: Label l) newattrib (attrib `ConsCh` attribs)
+>     = (TaggedChAttr l newattrib) `ConsCh` attribs
 
-> 
-> instance ( UpdateAtLabelRec l v r r', LabelSet  ( a ': r' ) ) =>
->          UpdateAtLabelRec' False l v ( a ': r) ( a ': r') where
->   updateAtLabelRec' (b :: Proxy False) (l :: Label l) (v :: v)
->     (ConsR att xs :: Record ( a ': r))
->     = case (updateAtLabelRec l v xs) of
->         xs' -> ConsR att xs' :: Record( a ': r')
+>
+> instance ( UpdateAtChild l v r r', LabelSet  ( a ': r' ) ) =>
+>          UpdateAtChild' False l v (a ': r) (a ': r') where
+>   updateAtChild' (b :: Proxy False) (l :: Label l) v
+>     (ConsCh attrib xs :: ChAttsRec ( a ': r))
+>     = case (updateAtChild l v xs) of
+>         xs' -> ConsCh attrib xs' :: ChAttsRec (a ': r')
 
-> instance Fail (FieldNotFound l) => UpdateAtLabelRec l v '[] '[] where
->     updateAtLabelRec _ _ r = r
+> instance Fail (FieldNotFound l) => UpdateAtChild l v '[] '[] where
+>     updateAtChild _ _ r = r
+
+> {-
 
 
 

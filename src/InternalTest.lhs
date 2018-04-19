@@ -99,6 +99,9 @@ Some tests:
 >  -- no instance
 >  -- attrib2g = hLookupByChild label3 childAttLR
 
+> test_update_ChAtts_1 = updateAtChild labelL attrib3 childAttLR
+> test_update_ChAtts_2 = updateAtChild labelR attrib3 childAttLR
+
 
 -- test2 = (Proxy :: Proxy 'True ,True) .*. (Proxy :: Proxy 'False,'r') .*. EmptyR
 --   :: HRecord '[ '( 'True ,Bool), '( 'False ,Char)]
