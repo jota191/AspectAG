@@ -30,8 +30,8 @@
 In each node of the grammar, the \emph{Fam} contains a single attribution
 fot the parent, and a collection (Record) of attributions for the children:
 
-> data Fam (c::[(k,Type)])(p :: [(k,Type)]) :: Type where
->   Fam :: Record c -> Attribution p -> Fam c p
+> data Fam (c::[(k,[(k,Type)])]) (p :: [(k,Type)]) :: Type where
+>   Fam :: Proxy c  -> Attribution p -> Fam c p
 
 Note that we could actually improve the kinding here, It is not clear if
 we'll have benefits of type safety and it is certainly non-straightforward
