@@ -118,25 +118,23 @@ on the head of r or not
 > instance Fail (FieldNotFound l) => UpdateAtChild l v '[] '[] where
 >     updateAtChild _ _ r = r
 
-> {-
-
-
+>
 
 %if True
 
 Some tests
 %endif
 
-> infixr 2 *.
-> (*.) :: LabelSet ('(att, val) : atts) =>
->     Tagged att val -> Record atts -> Record ('(att, val) : atts)
-> (*.) = ConsR
+> infixr 2 .*
+> (.*) :: LabelSet ('(ch, attrib) : attribs) =>
+>   TaggedChAttr ch attrib -> ChAttsRec attribs -> ChAttsRec ('(ch, attrib) : attribs)
+> (.*) = ConsCh
 
 TODO: cambiar nombre de params aca
 
+> {-
 > infixr 4 =.
-> (=.) :: Label l -> v -> Tagged l v
+> (.=) :: Label l -> v -> Tagged l v
 > (Label :: Label l) =. (v::v) = Tagged v :: Tagged l v
-
-
 > -}
+

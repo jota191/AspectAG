@@ -26,21 +26,17 @@
 > import Data.Tagged
 > import TPrelude
 > import Data.Proxy
+> import ChildAtts
 
 In each node of the grammar, the \emph{Fam} contains a single attribution
 fot the parent, and a collection (Record) of attributions for the children:
 
 > data Fam (c::[(k,[(k,Type)])]) (p :: [(k,Type)]) :: Type where
->   Fam :: Proxy c  -> Attribution p -> Fam c p
+>   Fam :: ChAttsRec c  -> Attribution p -> Fam c p
 
 Note that we could actually improve the kinding here, It is not clear if
 we'll have benefits of type safety and it is certainly non-straightforward
 to do it, so for now this will be the implementation.
-
-
-> type Chi ch atts = Tagged ch atts
-
--- TODO ? : I could use Chi in records instead of this..
 
 Rules, aka definition of attribution computations
 Rules are defined as a mapping from an input family to an output family,
