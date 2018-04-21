@@ -75,12 +75,18 @@ mnts--> membership of nonterminals
 
 > -- TODO this pv is a pair label-value, I should improve the typing
 > --at type level, Attribute, Tagged and that kind of stuff can be improved
-> class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[(k,Type)])
->                  (ic' ::[(k,Type)]) | mch mnts att pv ic -> ic' where
->   singleDef :: Proxy mch -> Proxy mnts -> att -> pv -> Record ic ->Record ic'
+> class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[(k,[(k,Type)])])
+>                  (ic' ::[(k,[(k,Type)])]) | mch mnts att pv ic -> ic' where
+>   singledef :: Proxy mch -> Proxy mnts -> Label att -> pv -> ChAttsRec ic
+>                -> ChAttsRec ic'
 
 
- instance SingleDef True True att (Tagged lch vch) ic where
-   type
-
-
+> instance ( HasChild lch ic och
+>          , UpdateAtChild lch ( '(att,vch) ': och) ic ic'
+>          , LabelSet ( '(att, vch) ': och))
+>   => SingleDef True True att (TaggedChAtt lch vch) ic ic' where
+>   singledef _ _ att pch ic =
+>     updateAtChild (Label :: Label lch) ( att .=. vch .*. och) ic
+>     where lch = labelTChAtt pch
+>           vch = unTaggedChAtt pch
+>           och = hLookupByChild lch ic
