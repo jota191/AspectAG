@@ -29,7 +29,7 @@
 > import Attribution
 > import Record
 > import ChildAtts
-
+> import AspectAG
 
 Some tests:
 
@@ -94,8 +94,8 @@ Some tests:
 > -- childAttRRFail = ConsCh (TaggedChAttr labelR attrib1)$
 > --              ConsCh (TaggedChAttr labelR attrib2) EmptyCh
 
-> attrib1g = hLookupByChild labelL childAttLR
-> attrib2g = hLookupByChild labelR childAttLR
+> attrib1get = hLookupByChild labelL childAttLR
+> attrib2get = hLookupByChild labelR childAttLR
 >  -- no instance
 >  -- attrib2g = hLookupByChild label3 childAttLR
 
@@ -103,5 +103,23 @@ Some tests:
 > test_update_ChAtts_2 = updateAtChild labelR attrib3 childAttLR
 
 
--- test2 = (Proxy :: Proxy 'True ,True) .*. (Proxy :: Proxy 'False,'r') .*. EmptyR
---   :: HRecord '[ '( 'True ,Bool), '( 'False ,Char)]
+> pch = TaggedChAtt (Label :: Label LabelR) True 
+> testsd = singledef (undefined :: Proxy 'True )( undefined:: Proxy 'True) (Label :: Label Label3)
+>                   pch childAttLR  
+
+
+> deriving instance (Show (Label l), Show v) =>  Show (TaggedChAtt l v)
+> deriving instance  (Show (Label l), Show (Attribution a))
+>   => Show (TaggedChAttr l a)
+> instance Show (Label Label1) where
+>   show _ = "label11"
+> instance Show (Label Label2) where
+>   show _ = "label12"
+> instance Show (Label Label3) where
+>   show _ = "label13"
+> instance Show (Label Label4) where
+>   show _ = "label14"
+> instance Show (Label LabelR) where
+>   show _ = "label1R"
+> instance Show (Label LabelL) where
+>   show _ = "label1L"
