@@ -3,9 +3,11 @@
             -XUndecidableInstances 
             -XExistentialQuantification 
             -XEmptyDataDecls -XRank2Types
-            -XTypeSynonymInstances -XTypeOperators #-}
+            -XTypeSynonymInstances -XTypeOperators -XDataKinds -XTypeFamilies
+            -XScopedTypeVariables #-}
 
 
+import Data.Type.Equality
 import AspectAG
 import HList
 import FakePrelude
@@ -70,18 +72,21 @@ attrib4  = att4 .*. emptyRecord
 tagChi :: Label l -> attrib -> Chi l attrib
 tagChi l a = LVPair a
 
-childAttLR = (tagChi (Label:: Label LabelL ) attrib1) .*.
-             (tagChi (Label:: Label LabelR ) attrib2) .*. emptyRecord
+childAttLR = (tagChi (Label:: Label (LabelL,Char) ) attrib1) .*.
+             (tagChi (Label:: Label (LabelR,Char) ) attrib2) .*. emptyRecord
 
 
-pch = tagChi (Label :: Label LabelR) True
+pch = tagChi (Label :: Label (LabelR,Char)) True
 
 t = undefined :: HTrue
 
 testsd = singledef t t (undefined::Label3) pch childAttLR
 
 
-testdefs = defs '4' 
+
+nts = HCons (undefined :: Char) HNil
+
+--testdefs = defs '4' nts 
 
 
 
@@ -108,43 +113,13 @@ instance ShowLabel LabelL where
 instance ShowLabel LabelR where
   showLabel _ = "label1R"
 
+instance (ShowLabel l) => ShowLabel (l,t) where
+  showLabel (l :: (l,t)) = (showLabel ::(l -> String)) undefined
+
+instance (HEq' b l m hb, ((l==m) ~ b), HBool hb) => HEq l m hb
 
 
-instance HEq Label1 Label2 HFalse
-instance HEq Label1 Label3 HFalse
-instance HEq Label1 Label4 HFalse
-instance HEq Label1 LabelL HFalse
-instance HEq Label1 LabelR HFalse
+class HEq' (d::Bool) l m b | d l m -> b
+instance ((l == m) ~ True) => HEq' True l m HTrue
+instance ((l == m) ~ False) => HEq' False l m HFalse
 
-instance HEq Label2 Label1 HFalse
-instance HEq Label2 Label3 HFalse
-instance HEq Label2 Label4 HFalse
-instance HEq Label2 LabelL HFalse
-instance HEq Label2 LabelR HFalse
-
-instance HEq Label3 Label2 HFalse
-instance HEq Label3 Label1 HFalse
-instance HEq Label3 Label4 HFalse
-instance HEq Label3 LabelL HFalse
-instance HEq Label3 LabelR HFalse
-
-instance HEq Label4 Label2 HFalse
-instance HEq Label4 Label3 HFalse
-instance HEq Label4 Label1 HFalse
-instance HEq Label4 LabelL HFalse
-instance HEq Label4 LabelR HFalse
-
-instance HEq LabelL Label2 HFalse
-instance HEq LabelL Label3 HFalse
-instance HEq LabelL Label4 HFalse
-instance HEq LabelL Label1 HFalse
-instance HEq LabelL LabelR HFalse
-
-instance HEq LabelR Label2 HFalse
-instance HEq LabelR Label3 HFalse
-instance HEq LabelR Label4 HFalse
-instance HEq LabelR LabelL HFalse
-instance HEq LabelR Label1 HFalse
-
-
-instance HEq l l HTrue

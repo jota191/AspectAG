@@ -3,7 +3,7 @@
             -XUndecidableInstances 
             -XExistentialQuantification 
             -XEmptyDataDecls -XRank2Types
-            -XTypeSynonymInstances#-}
+            -XTypeSynonymInstances #-}
 
 {-| 
     Library for First-Class Attribute Grammars.
