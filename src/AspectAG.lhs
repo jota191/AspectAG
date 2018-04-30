@@ -31,7 +31,7 @@
 In each node of the grammar, the \emph{Fam} contains a single attribution
 fot the parent, and a collection (Record) of attributions for the children:
 
-> data Fam (c::[(k,[(k,Type)])]) (p :: [(k,Type)]) :: Type where
+> data Fam (c::[((k,Type),[(k,Type)])]) (p :: [(k,Type)]) :: Type where
 >   Fam :: ChAttsRec c  -> Attribution p -> Fam c p
 
 Note that we could actually improve the kinding here, It is not clear if
@@ -75,19 +75,20 @@ mnts--> membership of nonterminals
 
 > -- TODO this pv is a pair label-value, I should improve the typing
 > --at type level, Attribute, Tagged and that kind of stuff can be improved
-> class SingleDef (mch::Bool)(mnts::Bool) att (pv::(k,Type)) (ic ::[(k,[(k,Type)])])
->                  (ic' ::[(k,[(k,Type)])]) | mch mnts att pv ic -> ic' where
->   singledef :: Proxy mch -> Proxy mnts -> Label att -> TaggedChAtt pv -> ChAttsRec ic
->                -> ChAttsRec ic'
+> class SingleDef (mch::Bool)(mnts::Bool) att (pv::((k,Type),Type))
+>                  (ic  :: [((k,Type),[(k,Type)])])
+>                  (ic' :: [((k,Type),[(k,Type)])]) | mch mnts att pv ic -> ic' where
+>   singledef :: Proxy mch -> Proxy mnts -> Label att -> TaggedChAtt pv
+>                -> ChAttsRec ic -> ChAttsRec ic'
 
 
-> instance ( HasChild lch ic och
->          , UpdateAtChild lch ( '(att,vch) ': och) ic ic'
+> instance ( HasChild '(lch,*) ic och
+>          , UpdateAtChild '(lch,*) ( '(att,vch) ': och) ic ic'
 >          , LabelSet ( '(att, vch) ': och))
->   => SingleDef True True att '(lch, vch) ic ic' where
+>   => SingleDef True True att '( '(lch, *), vch) ic ic' where
 >   singledef _ _ att pch ic =
->     updateAtChild (Label :: Label lch) ( att .=. vch .*. och) ic
+>     updateAtChild lch ( att .=. vch .*. och) ic
 >     where lch = labelTChAtt pch
->           vch = unTaggedChAtt pch
->           och = hLookupByChild lch ic
+>           vch  = unTaggedChAtt pch
+>           och  = hLookupByChild lch ic
 

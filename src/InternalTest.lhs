@@ -83,8 +83,8 @@ Some tests:
 --ChildAtts
 
 > data LabelL; data LabelR
-> labelL = Label :: Label LabelL
-> labelR = Label :: Label LabelR
+> labelL = LabelCh :: LabelCh '(LabelL, Type)
+> labelR = LabelCh :: LabelCh '(LabelR, Type)
 
 
 > childAttLR = ConsCh (TaggedChAttr labelL attrib1)$

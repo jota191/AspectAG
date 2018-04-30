@@ -29,26 +29,43 @@
 > --import Data.Tagged
 > import Attribution
 
+
+
+
+
+
+
+
 > --TODO: move this
 > -- Tags a Label to an attribution, used for children
-> data TaggedChAttr (l::k) (v :: [(k,Type)]) :: Type where
->   TaggedChAttr :: Label l -> Attribution v -> TaggedChAttr l v
+
+> data LabelCh :: (k,Type) -> Type where
+>   LabelCh :: LabelCh '(k,Type)
+
+> nameChi :: LabelCh '(k,t) -> Label k
+> nameChi _ = Label
+
+> type family TypeChi l where
+>   TypeChi (LabelCh '(k,t)) = t
+
+> data TaggedChAttr (l::(k,Type)) (v :: [(k,Type)]) :: Type where
+>   TaggedChAttr :: LabelCh l -> Attribution v -> TaggedChAttr l v
 > unTaggedChAttr :: TaggedChAttr l v -> Attribution v
 > unTaggedChAttr (TaggedChAttr _ v) = v
 
-> data TaggedChAtt :: (k,Type) -> Type where
->   TaggedChAtt :: Label l -> v -> TaggedChAtt '(l,v)
-> unTaggedChAtt :: TaggedChAtt '(l, v) -> v
+> data TaggedChAtt :: ((k,Type),Type) -> Type where
+>   TaggedChAtt :: LabelCh '(l,t) -> v -> TaggedChAtt '( '(l,t) ,v)
+> unTaggedChAtt :: TaggedChAtt '( '(l,t), v) -> v
 > unTaggedChAtt (TaggedChAtt _ v) = v
-> labelTChAtt :: TaggedChAtt '(l,v) -> Label l
-> labelTChAtt _ = Label
+> labelTChAtt :: TaggedChAtt '( '(k,Type),v) -> LabelCh '(k,Type)
+> labelTChAtt _ = LabelCh
 
 
 > -- the record of attribution fot the children
-> data ChAttsRec :: forall k . [(k , [(k,Type)])] -> Type where
+> data ChAttsRec :: [((k,Type) , [(k,Type)])] -> Type where
 >   EmptyCh :: ChAttsRec '[]
->   ConsCh  :: LabelSet ( '(l, v) ': xs) =>
->    TaggedChAttr l v -> ChAttsRec xs -> ChAttsRec ( '(l,v) ': xs)
+>   ConsCh  :: LabelSet ( '( '(l,t), v) ': xs) =>
+>    TaggedChAttr '(l,t) v -> ChAttsRec xs -> ChAttsRec ( '( '(l,t),v) ': xs)
 
 
 %if False
@@ -67,17 +84,19 @@ Some boilerplate to show Attributes and Attributions
 
 --- HasField
 
-> class HasChild (l::k) (r :: [(k ,[(k,Type)])]) v | l r -> v where
->    hLookupByChild:: Label l -> ChAttsRec r -> Attribution v
+> class HasChild (l:: (k,Type))
+>    (r :: [((k,Type) ,[(k,Type)])]) v | l r -> v where
+>    hLookupByChild:: LabelCh l -> ChAttsRec r -> Attribution v
 
 > instance (HEqK l l1 b, HasChild' b l ( '(l1,v1) ': r) v)
 >     => HasChild l ( '(l1,v1) ': r) v where
 >     hLookupByChild l (r :: ChAttsRec ( '(l1,v1) ': r)) =
 >          hLookupByChild' (Proxy::Proxy b) l r
 
-> 
-> class HasChild' (b::Bool) (l :: k) (r::[(k,[(k,Type)])]) v | b l r -> v where
->     hLookupByChild':: Proxy b -> Label l -> ChAttsRec r -> Attribution v
+
+> class HasChild' (b::Bool) (l :: (k,Type)) (r::[((k,Type),[(k,Type)])]) v
+>   | b l r -> v where
+>     hLookupByChild':: Proxy b -> LabelCh l -> ChAttsRec r -> Attribution v
 
 > instance HasChild' True l ( '(l,v) ': r) v where
 >    hLookupByChild' _ _ (ConsCh lv _) = unTaggedChAttr lv
@@ -88,18 +107,19 @@ Some boilerplate to show Attributes and Attributions
 
 UPDATEATLABEL
 
-> class UpdateAtChild (l :: k)(v :: [(k,Type)])
->       (r :: [(k,[(k,Type)])])(r' :: [(k,[(k,Type)])])
+> class UpdateAtChild (l :: (k,Type)) (v :: [(k,Type)])
+>       (r :: [((k,Type),[(k,Type)])])(r' :: [((k,Type),[(k,Type)])])
 >    | l v r -> r' where
->   updateAtChild :: Label l -> Attribution v -> ChAttsRec r -> ChAttsRec r'
+>   updateAtChild :: LabelCh l -> Attribution v -> ChAttsRec r -> ChAttsRec r'
 
 So we need an auxiliary class with an extra parameter to decide if we update
 on the head of r or not
 
-> class UpdateAtChild' (b::Bool)(l::k)(v::[(k,Type)])
->       (r::[(k,[(k,Type)])])(r'::[(k,[(k,Type)])])
+> class UpdateAtChild' (b::Bool)(l::(k,Type))(v::[(k,Type)])
+>       (r::[((k,Type),[(k,Type)])])(r'::[((k,Type),[(k,Type)])])
 >     | b l v r -> r'  where
->   updateAtChild' :: Proxy b -> Label l -> Attribution v -> ChAttsRec r -> ChAttsRec r'
+>   updateAtChild' ::
+>    Proxy b -> LabelCh l -> Attribution v -> ChAttsRec r -> ChAttsRec r'
 
 
 
@@ -111,13 +131,13 @@ on the head of r or not
 
 > instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r) ) =>
 >          UpdateAtChild' 'True l v ( '(l,v') ': r) ( '(l,v) ': r) where
->   updateAtChild' _ (l :: Label l) newattrib (attrib `ConsCh` attribs)
+>   updateAtChild' _ (l :: LabelCh l) newattrib (attrib `ConsCh` attribs)
 >     = (TaggedChAttr l newattrib) `ConsCh` attribs
 
 >
 > instance ( UpdateAtChild l v r r', LabelSet  ( a ': r' ) ) =>
 >          UpdateAtChild' False l v (a ': r) (a ': r') where
->   updateAtChild' (b :: Proxy False) (l :: Label l) v
+>   updateAtChild' (b :: Proxy False) (l :: LabelCh l) v
 >     (ConsCh attrib xs :: ChAttsRec ( a ': r))
 >     = case (updateAtChild l v xs) of
 >         xs' -> ConsCh attrib xs' :: ChAttsRec (a ': r')
@@ -133,8 +153,9 @@ Some tests
 %endif
 
 > infixr 2 .*
-> (.*) :: LabelSet ('(ch, attrib) : attribs) =>
->   TaggedChAttr ch attrib -> ChAttsRec attribs -> ChAttsRec ('(ch, attrib) : attribs)
+> (.*) :: LabelSet ('( '(ch,t), attrib) : attribs) =>
+>   TaggedChAttr '(ch,t) attrib -> ChAttsRec attribs
+>   -> ChAttsRec ('( '(ch,t), attrib) : attribs)
 > (.*) = ConsCh
 
 TODO: cambiar nombre de params aca
