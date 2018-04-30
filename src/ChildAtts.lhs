@@ -36,11 +36,11 @@
 > unTaggedChAttr :: TaggedChAttr l v -> Attribution v
 > unTaggedChAttr (TaggedChAttr _ v) = v
 
-> data TaggedChAtt (l::k) (v :: Type) :: Type where
->   TaggedChAtt :: Label l -> v -> TaggedChAtt l v
-> unTaggedChAtt :: TaggedChAtt l v -> v
+> data TaggedChAtt :: (k,Type) -> Type where
+>   TaggedChAtt :: Label l -> v -> TaggedChAtt '(l,v)
+> unTaggedChAtt :: TaggedChAtt '(l, v) -> v
 > unTaggedChAtt (TaggedChAtt _ v) = v
-> labelTChAtt :: TaggedChAtt l v -> Label l
+> labelTChAtt :: TaggedChAtt '(l,v) -> Label l
 > labelTChAtt _ = Label
 
 

@@ -125,7 +125,7 @@ ChAttsRec
 
 
 
-> deriving instance (Show (Label l), Show v) =>  Show (TaggedChAtt l v)
+> deriving instance (Show (Label l), Show v) =>  Show (TaggedChAtt '(l,v))
 > deriving instance  (Show (Label l), Show (Attribution a))
 >   => Show (TaggedChAttr l a)
 > instance Show (Label Label1) where
