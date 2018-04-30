@@ -3,7 +3,7 @@
             -XUndecidableInstances 
             -XExistentialQuantification 
             -XEmptyDataDecls -XRank2Types
-            -XTypeSynonymInstances #-}
+            -XTypeSynonymInstances#-}
 
 {-| 
     Library for First-Class Attribute Grammars.
@@ -22,7 +22,7 @@ module AspectAG where
 import HList
 import FakePrelude
 import HArray
-import HListPrelude
+import HListPrelude hiding (Apply)
 import Record hiding (hUpdateAtLabel)
 import GhcSyntax
 
@@ -590,28 +590,30 @@ instance  (  HasField att sch val
              where  lch = labelLVPair psch
                     sch = valueLVPair psch
                     ich = valueLVPair pich 
+{-
 
 -- | The function 'inhAspect' defines an inherited attribute aspect.
 --   It takes as arguments: the name of the attribute 'att', 
 --   the list 'nts' of non-terminals where the attribute is defined,
 --   the list 'cpys' of productions where the copy rule has to be applied, 
 --   and a record 'defs' containing the explicit definitions for some productions.
-inhAspect ::  (  AttAspect (FnInh att nts) defs defasp
-              ,  DefAspect (FnCpy att nts) cpys cpyasp
+---------------------------------------------------------------------------------------
+inhAspect ::  ( AttAspect (FnInh att nts) defs defasp,
+                DefAspect (FnCpy att nts) cpys cpyasp
               ,  Com cpyasp defasp inhasp)
          => att -> nts -> cpys -> defs -> inhasp
 inhAspect att nts cpys defs 
-   =     (defAspect  (FnCpy att nts)  cpys)
-   .+.   (attAspect  (FnInh att nts)  defs) 
+   =     (((defAspect  (FnCpy att nts) cpys) :: cpyasp)
+   .+.   ((attAspect  (FnInh att nts)  defs) :: defasp)) ::inhasp
 
 
 -- | The function 'synAspect' defines a synthesized attribute aspect. 
 ---  The rule applied is the use rule, 
 --   which takes 'op' as the monoidal operator and 'unit' as the unit value. 
-synAspect ::  (  AttAspect (FnSyn att) defs defasp
-              ,  DefAspect (FnUse att nts op unit) uses useasp
-              ,  Com useasp defasp synasp) 
-         => att -> nts -> op -> unit -> uses -> defs -> synasp
+--synAspect ::  (  AttAspect (FnSyn att) defs defasp
+--              ,  DefAspect (FnUse att nts op unit) uses useasp
+--              ,  Com useasp defasp synasp) 
+--         => att -> nts -> op -> unit -> uses -> defs -> synasp
 synAspect att nts op unit uses defs 
    =     (defAspect  (FnUse att nts op unit)    uses)
    .+.   (attAspect  (FnSyn att)                defs)
@@ -619,22 +621,36 @@ synAspect att nts op unit uses defs
 
 -- | A chained attribute definition introduces both an inherited 
 --   and a synthesized attribute. In this case the pattern to be applied is the chain rule. 
-chnAspect ::  (  DefAspect (FnChn att nts) chns chnasp
-              ,  AttAspect (FnInh att nts) inhdefs inhasp
-              ,  Com chnasp inhasp asp
-              ,  AttAspect (FnSyn att) syndefs synasp
-              ,  Com asp synasp  asp') 
-         => att -> nts -> chns -> inhdefs -> syndefs -> asp'
-chnAspect att nts chns inhdefs syndefs 
-   =     (defAspect  (FnChn att nts)   chns)
-   .+.   (attAspect  (FnInh att nts)   inhdefs)
-   .+.   (attAspect  (FnSyn att)       syndefs)
+--chnAspect ::  (  DefAspect (FnChn att nts) chns chnasp
+--              ,  AttAspect (FnInh att nts) inhdefs inhasp
+--              ,  Com chnasp inhasp asp
+--              ,  AttAspect (FnSyn att) syndefs synasp
+--              ,  Com asp synasp  asp') 
+--         => att -> nts -> chns -> inhdefs -> syndefs -> asp'
+--chnAspect att nts chns inhdefs syndefs -
+--   =     (defAspect  (FnChn att nts)   chns)
+--   .+.   (attAspect  (FnInh att nts)   inhdefs)
+--   .+.   (attAspect  (FnSyn att)       syndefs)
 
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+class AttAspect rdef defs rules sc ip ic sp ic' sp' | rdef defs -> rules 
+   where attAspect :: --Proxy sc -> Proxy ip -> Proxy ic
+                  -- -> Proxy sp -> Proxy ic' -> Proxy sp' ->
+                   rdef -> defs -> rules
 
-
-class AttAspect rdef defs rules | rdef defs -> rules 
-   where attAspect :: rdef -> defs -> rules
-
+instance  (  AttAspect rdef (Record defs) rules sc ip ic sp ic sp'
+          ,  Apply' rdef def sc ip ic sp ic sp'
+          ,  HExtend (Prd lprd (Rule sc ip ic sp ic sp')) rules rules' )  
+         => AttAspect  rdef 
+                       (Record (HCons  (Prd lprd def) 
+                                       defs)) 
+                       rules' sc ip ic sp ic sp'
+  where
+   attAspect rdef (Record (HCons def defs)) = 
+         let  lprd = (labelLVPair def)
+         in   lprd .=. apply' rdef (valueLVPair def) 
+              .*.  attAspect rdef (Record defs)   
+{-
 instance  (  AttAspect rdef (Record defs) rules
           ,  Apply rdef def rule  
           ,  HExtend (Prd lprd rule) rules rules' )  
@@ -647,9 +663,10 @@ instance  (  AttAspect rdef (Record defs) rules
          let  lprd = (labelLVPair def)
          in   lprd .=. apply rdef (valueLVPair def) 
               .*.  attAspect rdef (Record defs)   
+-}
 
 
-instance AttAspect rdef (Record HNil) (Record HNil) 
+instance AttAspect rdef (Record HNil) (Record HNil) sc ip ic sp ic' sp' 
   where attAspect _ _ = emptyRecord
 
 
@@ -657,16 +674,33 @@ data FnSyn att = FnSyn att
 data FnInh att nt = FnInh att nt
 
 
-
-
 -- TODO LIBERAL COVERAGE COND
-{-
+
+class Apply' rdef def sc ip ic sp ic' sp' | rdef def -> sc ip,
+                                            rdef ic -> ic',
+                                            rdef def sp -> sp'
+                                          where
+  apply' :: rdef -> def -> Rule sc ip ic sp ic' sp'
 
 instance  HExtend (LVPair att val) sp sp'
+         => Apply'  (FnSyn att) (Fam sc ip -> val) sc ip ic sp ic sp'
+         {-(Rule sc ip ic sp ic sp')-} where 
+  apply' (FnSyn att) f =  syndef att . f 
+
+{-
+instance  Defs att nts vals ic ic'
+         => Apply' (FnInh att nts) (Fam sc ip -> vals) sc ip ic sp ic' sp
+                   {-(Rule sc ip ic sp ic' sp)-} where 
+  apply' (FnInh att nts) f = inhdef att nts . f 
+-}
+
+{-instance  HExtend (LVPair att val) sp sp'
          => Apply  (FnSyn att) (Fam sc ip -> val) 
                    (Rule sc ip ic sp ic sp') where 
-  apply (FnSyn att) f =  syndef att . f 
-
+  apply (FnSyn att) f =  syndef att . f
+-}
+------------------- Un-determined variables: sp, sp', ic
+{-
 instance  Defs att nts vals ic ic'
          => Apply  (FnInh att nts) (Fam sc ip -> vals) 
                    (Rule sc ip ic sp ic' sp) where 
@@ -720,7 +754,7 @@ instance  (  Chain att nts val sc ic sp ic' sp'
       => Poly   (FnChn att nts) r where 
   poly (FnChn att nts) = typeCast $ chain att nts
 
-
+-}
 ------ HList
 
 class HBool b => HasLabel l r b | l r -> b

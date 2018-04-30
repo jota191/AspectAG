@@ -383,13 +383,13 @@ instance Show x => Apply HShow x (IO ())
 {-----------------------------------------------------------------------------}
 
 -- Type-level equality for lists
-
+{-
 instance HEq HNil HNil HTrue
 instance HList l => HEq HNil (HCons e l) HFalse
 instance HList l => HEq (HCons e l) HNil HFalse
 instance (HList l, HList l', HEq e e' b, HEq l l' b', HAnd b b' b'')
       => HEq (HCons e l) (HCons e' l') b''
-
+-}
 
 {-----------------------------------------------------------------------------}
 
@@ -690,3 +690,5 @@ instance TupleType (x,y,z) HTrue
 -- Continue for a while
 instance (HBool b, TypeCast HFalse b) => TupleType x b
 -- instance TupleType x HFalse -- would violate functional dependency
+
+

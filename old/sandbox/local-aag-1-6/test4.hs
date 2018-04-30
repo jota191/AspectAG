@@ -1,14 +1,14 @@
-{-# OPTIONS -XEmptyDataDecls -XFlexibleContexts #-}
+{-# OPTIONS -XEmptyDataDecls #-}
 
 module Test where
 
-import AspectAG
-import HList
-import FakePrelude
-import HArray
-import HListPrelude
-import Record hiding (hUpdateAtLabel)
-import GhcSyntax
+import Data.AspectAG
+
+import Data.HList.Label4
+import Data.HList.TypeEqGeneric1
+import Data.HList.TypeCastGeneric1
+
+
 
 --data types-------------------------------------------------------------------
 data Root = Root Tree
@@ -60,6 +60,8 @@ asp_smin () = synAspect smin ( nt_Tree .*. hNil ) (min::Int->Int->Int)  (0::Int)
 asp_ival f  = inhAspect ival ( nt_Tree .*. hNil ) ( p_Node .*. hNil )
                         (   p_Root .=. (\(Fam chi _) -> (   ch_tree .=. f (chi # ch_tree) 
                                                         .*. emptyRecord ) )
+                        .*. p_Node .=. (\(Fam _ par) -> (   ch_l .=. (par # ival) + 1    -- difference with repmin (doesn't apply copy rule for ch_l)
+                                                        .*. emptyRecord ) )
                         .*. emptyRecord )
 
 asp_sres () = synAspect sres ( nt_Root .*. nt_Tree .*. hNil ) Node (Leaf 0) ( p_Node .*. hNil )
@@ -73,20 +75,6 @@ asp_repmin () =  asp_smin () .+. asp_sres () .+. asp_ival (\c -> c # smin)
 repmin tree = sem_Root (asp_repmin ()) (Root tree) () # sres
 
 
---average----------------------------------------------------------------------
-
-data Att_ssum;   ssum    = proxy::Proxy Att_ssum
-data Att_scnt;   scnt    = proxy::Proxy Att_scnt
-
-asp_ssum att f  = 
-              synAspect att ( nt_Tree .*. hNil ) ((+)::Int->Int->Int)  (0::Int) ( p_Node .*. hNil )
-                        (   p_Leaf .=. (\(Fam chi _) -> f chi )
-                        .*. emptyRecord )
-
-asp_avg () = asp_ssum scnt (const 1) .+. asp_ssum ssum (\c -> c # ch_i) .+. asp_sres () .+. asp_ival (\c -> div (c # ssum) (c # scnt))
-
---avg tree  = sem_Root (asp_avg ()) (Root tree) () # sres
-
 
 ----example--------------------------------------------------------------------
 
@@ -99,9 +87,7 @@ examplet =    (Node (Node (Node (Leaf 1) (Leaf 4))
                           (Leaf 6)
                     )
               )
-{-
+
 res_repmin = repmin examplet
 
-res_avg = avg examplet
 
--}

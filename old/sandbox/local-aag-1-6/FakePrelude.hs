@@ -137,16 +137,16 @@ class HBool b => HEq x y b | x y -> b
 
 
 -- Equality instances for naturals
-
+{-
 instance HEq HZero HZero HTrue
 instance HNat n => HEq HZero (HSucc n) HFalse
 instance HNat n => HEq (HSucc n) HZero HFalse
 instance (HNat n, HNat n', HEq  n n' b )
       =>  HEq (HSucc n) (HSucc n') b
+-}
 
 hEq :: HEq x y b => x -> y -> b
 hEq =  undefined
-
 
 {-----------------------------------------------------------------------------}
 

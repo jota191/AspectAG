@@ -1,57 +1,34 @@
-{-# OPTIONS -XEmptyDataDecls -XFlexibleContexts #-}
+{-# OPTIONS -XEmptyDataDecls #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Test where
 
-import AspectAG
-import HList
-import FakePrelude
-import HArray
-import HListPrelude
-import Record hiding (hUpdateAtLabel)
-import GhcSyntax
+import Data.AspectAG
+import Data.AspectAG.Derive
+
+import Data.HList.Label4
+import Data.HList.TypeEqGeneric1
+import Data.HList.TypeCastGeneric1
+
+
 
 --data types-------------------------------------------------------------------
-data Root = Root Tree
+
+data Root = Root { tree :: Tree}
           deriving Show
 
-data Tree = Node Tree Tree
-          | Leaf Int
+data Tree = Node {l::Tree, r::Tree}
+          | Leaf {i::Int}
           deriving Show
 
 
---data types' dependent definitions
+$(deriveAG ''Root)
 
-----non terminals
-nt_Root = proxy::Proxy Root
-nt_Tree = proxy::Proxy Tree
-
-----productions
-data P_Root;   p_Root    = proxy::Proxy P_Root
-data P_Node;   p_Node    = proxy::Proxy P_Node
-data P_Leaf;   p_Leaf    = proxy::Proxy P_Leaf
-
-----children labels
-data Ch_tree;   ch_tree  = proxy::Proxy (Ch_tree, Tree)
-data Ch_l;      ch_l     = proxy::Proxy (Ch_l,    Tree)
-data Ch_r;      ch_r     = proxy::Proxy (Ch_r,    Tree)
-data Ch_i;      ch_i     = proxy::Proxy (Ch_i,    Int)
-
-----catamorphism
-sem_Tree  asp (Node left right) = knit (asp # p_Node) (   ch_l .=. sem_Tree asp left 
-                                                      .*. ch_r .=. sem_Tree asp right 
-                                                      .*. emptyRecord )
-sem_Tree  asp (Leaf i         ) = knit (asp # p_Leaf) (   ch_i .=. sem_Lit i 
-                                                      .*. emptyRecord )
-sem_Root  asp (Root t         ) = knit (asp # p_Root) (   ch_tree .=. sem_Tree asp t 
-                                                      .*. emptyRecord )
-
-
+ 
 --repmin-----------------------------------------------------------------------
 
-data Att_smin;   smin    = proxy::Proxy Att_smin
-data Att_ival;   ival    = proxy::Proxy Att_ival
-data Att_sres;   sres    = proxy::Proxy Att_sres
 
+$(attLabels ["smin","ival","sres"])
 
 asp_smin () = synAspect smin ( nt_Tree .*. hNil ) (min::Int->Int->Int)  (0::Int) ( p_Node .*. hNil )
                         (   p_Leaf .=. (\(Fam chi _) -> chi # ch_i)
@@ -73,10 +50,12 @@ asp_repmin () =  asp_smin () .+. asp_sres () .+. asp_ival (\c -> c # smin)
 repmin tree = sem_Root (asp_repmin ()) (Root tree) () # sres
 
 
+
+
 --average----------------------------------------------------------------------
 
-data Att_ssum;   ssum    = proxy::Proxy Att_ssum
-data Att_scnt;   scnt    = proxy::Proxy Att_scnt
+$(attLabels ["ssum","scnt"])
+
 
 asp_ssum att f  = 
               synAspect att ( nt_Tree .*. hNil ) ((+)::Int->Int->Int)  (0::Int) ( p_Node .*. hNil )
@@ -85,7 +64,8 @@ asp_ssum att f  =
 
 asp_avg () = asp_ssum scnt (const 1) .+. asp_ssum ssum (\c -> c # ch_i) .+. asp_sres () .+. asp_ival (\c -> div (c # ssum) (c # scnt))
 
---avg tree  = sem_Root (asp_avg ()) (Root tree) () # sres
+avg tree  = sem_Root (asp_avg ()) (Root tree) () # sres
+
 
 
 ----example--------------------------------------------------------------------
@@ -99,9 +79,8 @@ examplet =    (Node (Node (Node (Leaf 1) (Leaf 4))
                           (Leaf 6)
                     )
               )
-{-
+
 res_repmin = repmin examplet
 
 res_avg = avg examplet
 
--}

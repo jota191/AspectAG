@@ -81,8 +81,6 @@ t = undefined :: HTrue
 testsd = singledef t t (undefined::Label3) pch childAttLR
 
 
-testdefs = defs '4' 
-
 
 
 instance ShowLabel Label1 where
