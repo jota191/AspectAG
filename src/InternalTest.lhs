@@ -104,8 +104,25 @@ Some tests:
 
 
 > pch = TaggedChAtt (Label :: Label LabelR) True 
-> testsd = singledef (undefined :: Proxy 'True )( undefined:: Proxy 'True) (Label :: Label Label3)
->                   pch childAttLR  
+> testsd = singledef (undefined :: Proxy 'True )
+>                    ( undefined:: Proxy 'True)
+>                    (Label :: Label Label3)
+>                    pch childAttLR  
+
+example explained:
+ChAttsRec
+ '['(LabelL, '['(Label2, Char)]),
+   '(LabelR, '['(Label1, Int), '(Label2, Char)])]
+then add on child LabelR an attibute called Label3 with type Bool : 
+
+ChAttsRec
+  '['(LabelL, '['(Label2, Char)]),
+    '(LabelR, '['(Label3, Bool), '(Label1, Int), '(Label2, Char)])]
+
+
+
+
+
 
 
 > deriving instance (Show (Label l), Show v) =>  Show (TaggedChAtt l v)
