@@ -83,8 +83,8 @@ Some tests:
 --ChildAtts
 
 > data LabelL; data LabelR
-> labelL = Label :: Label LabelL
-> labelR = Label :: Label LabelR
+> labelL = Label :: Label (LabelL,Char)
+> labelR = Label :: Label (LabelR,Int)
 
 
 > childAttLR = ConsCh (TaggedChAttr labelL attrib1)$
@@ -103,7 +103,7 @@ Some tests:
 > test_update_ChAtts_2 = updateAtChild labelR attrib3 childAttLR
 
 
-> pch = TaggedChAtt (Label :: Label LabelR) True 
+> pch = TaggedChAtt (Label :: Label (LabelR,Int)) True 
 > testsd = singledef (undefined :: Proxy 'True )
 >                    (undefined:: Proxy 'True)
 >                    (Label :: Label Label3)
@@ -143,5 +143,5 @@ ChAttsRec
 RECORD
 
 > testrec = tagged1 *. tagged3 *. EmptyR
-> testMemberRec1  = undefined 
-> t1 = memberRec label1 testrec
+> t1 = hasLabelRec label2 testrec :: Proxy 'False
+> t2 = hasLabelRec label3 testrec :: Proxy 'True

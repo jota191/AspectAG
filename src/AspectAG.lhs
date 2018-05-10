@@ -10,9 +10,7 @@
 >              UndecidableInstances,
 >              FunctionalDependencies,
 >              ConstraintKinds,
->              ScopedTypeVariables,
->              AllowAmbiguousTypes,
->              UnicodeSyntax
+>              ScopedTypeVariables
 > #-}
 
 
@@ -92,10 +90,30 @@ mnts--> membership of nonterminals
 >           och = hLookupByChild lch ic
 
 
-> class Defs att (nts :: [(k,Type)]) (vals :: [(k,Type)])
+> class Defs att (nts :: [Type]) (vals :: [(k,Type)])
 >            (ic :: [(k,[(k,Type)])]) (ic' :: [(k,[(k,Type)])]) where
->   defs :: Label att -> Record nts -> Record vals -> ChAttsRec ic
+>   defs :: Label att -> HList nts -> Record vals -> ChAttsRec ic
 >        -> ChAttsRec ic'
 
 > instance Defs att nts '[] ic ic where
 >   defs _ _ _ ic = ic
+
+> 
+> instance
+>   ( Defs att nts vs ic ic'
+>   , HasLabelChildAttsRes (lch,t) ic' ~ mch
+>   , HMemberRes t nts ~ mnts
+>   , SingleDef mch mnts att (Tagged (lch,t) vch) ic ic') =>
+>   Defs att nts ( '((lch,t), vch) ': vs) ic ic' where
+>   defs att nts (ConsR pch vs) ic =
+>     singledef mch mnts att pch ic'
+>     where ic'  = defs att nts vs ic
+>           lch  = labelLVPair pch :: Label (lch,t)
+>           mch  = hasLabelChildAtts lch ic'
+>           mnts = hMember (sndLabel lch) nts
+
+> labelLVPair :: Tagged (k1,k2) v -> Label (k1,k2)
+> labelLVPair _ = Label
+
+> sndLabel :: Label (a,b) -> Label b
+> sndLabel _ = undefined

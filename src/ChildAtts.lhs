@@ -145,3 +145,16 @@ TODO: cambiar nombre de params aca
 > (Label :: Label l) =. (v::v) = Tagged v :: Tagged l v
 > -}
 
+> class HasLabelChildAtts (e :: k)(r :: [(k,[(k,Type)])]) where
+>   type HasLabelChildAttsRes (e::k)(r :: [(k,[(k,Type)])]) :: Bool
+>   hasLabelChildAtts
+>    :: Label e -> ChAttsRec r -> Proxy (HasLabelChildAttsRes e r)
+
+> instance HasLabelChildAtts e '[] where
+>   type HasLabelChildAttsRes e '[] = 'False
+>   hasLabelChildAtts _ _ = Proxy
+
+> instance HasLabelChildAtts k ( '(k' ,v) ': ls) where
+>   type HasLabelChildAttsRes k ( '(k' ,v) ': ls)
+>       = Or (k == k') (HasLabelChildAttsRes k ls)
+>   hasLabelChildAtts _ _ = Proxy
