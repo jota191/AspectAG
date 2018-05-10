@@ -24,6 +24,9 @@
 >   If 'True  thn els = thn
 >   If 'False thn els = els
 
+> type family Or (l :: Bool)(r :: Bool) :: Bool where
+>   Or False b = b
+>   Or True b  = 'True
 
 > class LabelSet (l :: [(k,k2)])
 > instance LabelSet '[] -- empty set
@@ -42,14 +45,15 @@
 
 
 TODO: explain how the selection of the instance is done
+TODO: 
 
 
+> type family HMemberT (e::k)(l ::[k]) :: Bool where
+>   HMemberT k '[] = 'False
+>   HMemberT k ( k' ': l) = If (k==k') 'True (HMemberT k l)
 
-> type family HMember (e::k)(l ::[k]) :: Bool where
->   HMember k '[] = 'False
->   HMember k ( k' ': l) = If (k==k') 'True (HMember k l)
-
-> type family HasLabel (l::k) (lst :: [(k,Type)]) :: Bool where
->   HasLabel l '[] = 'False
->   HasLabel l ( '(k,v) ': tail) = If (l == k) 'True (HasLabel l tail)
+> type family HasLabelT (l::k) (lst :: [(k,Type)]) :: Bool where
+>   HasLabelT l '[] = 'False
+>   HasLabelT l ( '(k,v) ': tail) = If (l == k) 'True (HasLabelT l tail)
+> 
 

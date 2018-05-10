@@ -121,3 +121,17 @@ TODO: cambiar nombre de params aca
 > infixr 4 =.
 > (=.) :: Label l -> v -> Tagged l v
 > (Label :: Label l) =. (v::v) = Tagged v :: Tagged l v
+
+
+> class MemberRec (e :: k)(r ::[(k,Type)]) where
+>   type MemberRecRes (e::k)(r ::[(k,Type)]) :: Bool
+>   memberRec :: Proxy e -> Record r -> Proxy (MemberRecRes e r)
+
+> instance MemberRec e '[] where
+>   type MemberRecRes e '[] = 'False
+>   memberRec _ _ = Proxy
+
+> instance MemberRec  k ( '(k' ,v) ': ls) where
+>   type MemberRecRes k ( '(k' ,v) ': ls)
+>       = Or (k == k') (MemberRecRes k ls)
+>   memberRec _ _ = Proxy

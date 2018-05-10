@@ -105,7 +105,7 @@ Some tests:
 
 > pch = TaggedChAtt (Label :: Label LabelR) True 
 > testsd = singledef (undefined :: Proxy 'True )
->                    ( undefined:: Proxy 'True)
+>                    (undefined:: Proxy 'True)
 >                    (Label :: Label Label3)
 >                    pch childAttLR  
 
@@ -118,10 +118,6 @@ then add on child LabelR an attibute called Label3 with type Bool :
 ChAttsRec
   '['(LabelL, '['(Label2, Char)]),
     '(LabelR, '['(Label3, Bool), '(Label1, Int), '(Label2, Char)])]
-
-
-
-
 
 
 
@@ -140,3 +136,12 @@ ChAttsRec
 >   show _ = "label1R"
 > instance Show (Label LabelL) where
 >   show _ = "label1L"
+
+
+
+
+RECORD
+
+> testrec = tagged1 *. tagged3 *. EmptyR
+> testMemberRec1  = undefined 
+> t1 = memberRec label1 testrec

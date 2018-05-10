@@ -91,3 +91,11 @@ mnts--> membership of nonterminals
 >           vch = unTaggedChAtt pch
 >           och = hLookupByChild lch ic
 
+
+> class Defs att (nts :: [(k,Type)]) (vals :: [(k,Type)])
+>            (ic :: [(k,[(k,Type)])]) (ic' :: [(k,[(k,Type)])]) where
+>   defs :: Label att -> Record nts -> Record vals -> ChAttsRec ic
+>        -> ChAttsRec ic'
+
+> instance Defs att nts '[] ic ic where
+>   defs _ _ _ ic = ic
