@@ -91,7 +91,8 @@ mnts--> membership of nonterminals
 
 
 > class Defs att (nts :: [Type]) (vals :: [(k,Type)])
->            (ic :: [(k,[(k,Type)])]) (ic' :: [(k,[(k,Type)])]) where
+>            (ic :: [(k,[(k,Type)])]) (ic' :: [(k,[(k,Type)])])
+>           | att nts vals ic -> ic' where
 >   defs :: Label att -> HList nts -> Record vals -> ChAttsRec ic
 >        -> ChAttsRec ic'
 
@@ -102,15 +103,17 @@ mnts--> membership of nonterminals
 > instance
 >   ( Defs att nts vs ic ic'
 >   , HasLabelChildAttsRes (lch,t) ic' ~ mch
+>   , HasLabelChildAtts (lch,t) ic'
 >   , HMemberRes t nts ~ mnts
->   , SingleDef mch mnts att (Tagged (lch,t) vch) ic ic') =>
->   Defs att nts ( '((lch,t), vch) ': vs) ic ic' where
+>   , HMember t nts
+>   , SingleDef mch mnts att (Tagged (lch,t) vch) ic' ic'') =>
+>   Defs att nts ( '((lch,t), vch) ': vs) ic ic'' where
 >   defs att nts (ConsR pch vs) ic =
->     singledef mch mnts att pch ic'
->     where ic'  = defs att nts vs ic
->           lch  = labelLVPair pch :: Label (lch,t)
->           mch  = hasLabelChildAtts lch ic'
->           mnts = hMember (sndLabel lch) nts
+>     singledef mch mnts att pch ic'          -- :: ChAttsRec ic'' 
+>     where ic'  = defs att nts vs ic         -- :: ChAttsRec ic'
+>           lch  = labelLVPair pch            -- :: Label (lch,t)
+>           mch  = hasLabelChildAtts lch ic'  -- :: Proxy mch
+>           mnts = hMember (sndLabel lch) nts -- :: Proxy mnts
 
 > labelLVPair :: Tagged (k1,k2) v -> Label (k1,k2)
 > labelLVPair _ = Label
