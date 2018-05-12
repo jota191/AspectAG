@@ -62,18 +62,18 @@ type SP = '[ '(Att_smin,Int), '(Att_sres, Tree)]
 type IL = '[ '(Att_ival, Int)]
 type IR = '[ '(Att_ival, Int)]
 
-type IC = '[ '((Ch_l,Tree),Attribution IL), '((Ch_r, Tree),Attribution IR)]
+type IC = '[ '((Ch_l,Tree),IL), '((Ch_r, Tree),IR)]
 
 type Output_Node_Fam = Fam IC SP
 
-testFam = Fam record attributionP -- :: Output_Node_Fam
+--testFam = Fam record attributionP -- :: Output_Node_Fam
 
-attributionP = (smin .=. 3) .*. (sres .=. Leaf 4) .*. EmptyAtt
-attributionL = (ival .=. 2) .*. EmptyAtt
-attributionR = (ival .=. 6) .*. EmptyAtt
-record = (ch_l =. attributionL ) *. (ch_r =. attributionR) *. EmptyR
+--attributionP = (smin .=. 3) .*. (sres .=. Leaf 4) .*. EmptyAtt
+--attributionL = (ival .=. 2) .*. EmptyAtt
+--attributionR = (ival .=. 6) .*. EmptyAtt
+--record = (ch_l =. attributionL ) *. (ch_r =. attributionR) *. EmptyR
 
 
-test_syndef_1 = syndef ival "string" testFam
+--test_syndef_1 = syndef ival "string" testFam
 
-test_synmod_1 = synmod smin "er" testFam
+--test_synmod_1 = synmod smin "er" testFam

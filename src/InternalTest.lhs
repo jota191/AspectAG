@@ -30,6 +30,7 @@
 > import Record
 > import ChildAtts
 > import AspectAG
+> import HList
 
 Some tests:
 
@@ -102,8 +103,7 @@ Some tests:
 > test_update_ChAtts_1 = updateAtChild labelL attrib3 childAttLR
 > test_update_ChAtts_2 = updateAtChild labelR attrib3 childAttLR
 
-
-> pch = TaggedChAtt (Label :: Label (LabelR,Int)) True 
+> -- pch = Tagged True ::  Tagged  (LabelR,Int) Bool 
 > testsd = singledef (undefined :: Proxy 'True )
 >                    (undefined:: Proxy 'True)
 >                    (Label :: Label Label3)
@@ -119,9 +119,30 @@ ChAttsRec
   '['(LabelL, '['(Label2, Char)]),
     '(LabelR, '['(Label3, Bool), '(Label1, Int), '(Label2, Char)])]
 
+> 
+> nts :: HList [Bool, Int,Char]
+> nts = undefined
+
+> testdefs1 = defs (Label :: Label Label3)
+>                   nts
+>                  (EmptyR)
+>                   childAttLR
+> 
 
 
-> deriving instance (Show (Label l), Show v) =>  Show (TaggedChAtt l v)
+> pch = Tagged True ::  Tagged  (LabelL,Char) Bool 
+> pch2 = Tagged '2' :: Tagged (LabelR,Int) Char
+
+> 
+> testdefs2 -- = undefined
+>   = defs (Label :: Label Label3)
+>     nts
+>     (ConsR pch (ConsR pch2 EmptyR))
+>     childAttLR
+> 
+> 
+
+> --deriving instance (Show (Label l), Show v) =>  Show (TaggedChAtt l v)
 > deriving instance  (Show (Label l), Show (Attribution a))
 >   => Show (TaggedChAttr l a)
 > instance Show (Label Label1) where

@@ -32,10 +32,6 @@ fot the parent, and a collection (Record) of attributions for the children:
 > data Fam (c::[(k,[(k,Type)])]) (p :: [(k,Type)]) :: Type where
 >   Fam :: ChAttsRec c  -> Attribution p -> Fam c p
 
-Note that we could actually improve the kinding here, It is not clear if
-we'll have benefits of type safety and it is certainly non-straightforward
-to do it, so for now this will be the implementation.
-
 Rules, aka definition of attribution computations
 Rules are defined as a mapping from an input family to an output family,
 the added arity is for make them composable
@@ -46,8 +42,8 @@ the added arity is for make them composable
 
 
 > ext :: Rule sc ip ic' sp' ic'' sp''
->     -> Rule sc ip ic sp ic' sp'
->     -> Rule sc ip ic sp ic'' sp''
+>     -> Rule sc ip ic  sp  ic'  sp'
+>     -> Rule sc ip ic  sp  ic'' sp''
 
 > (f `ext` g) input = f input . g input
 
@@ -82,12 +78,19 @@ mnts--> membership of nonterminals
 > instance ( HasChild lch ic och
 >          , UpdateAtChild lch ( '(att,vch) ': och) ic ic'
 >          , LabelSet ( '(att, vch) ': och))
->   => SingleDef True True att (TaggedChAtt lch vch) ic ic' where
+>   => SingleDef True True att (Tagged lch vch) ic ic' where
 >   singledef _ _ att pch ic =
 >     updateAtChild (Label :: Label lch) ( att .=. vch .*. och) ic
 >     where lch = labelTChAtt pch
 >           vch = unTaggedChAtt pch
 >           och = hLookupByChild lch ic
+
+where
+
+> unTaggedChAtt :: Tagged l v -> v
+> unTaggedChAtt (Tagged v) = v
+> labelTChAtt :: Tagged l v -> Label l
+> labelTChAtt _ = Label
 
 
 > class Defs att (nts :: [Type]) (vals :: [(k,Type)])
@@ -99,7 +102,7 @@ mnts--> membership of nonterminals
 > instance Defs att nts '[] ic ic where
 >   defs _ _ _ ic = ic
 
-> 
+> -- TODO: duplicated context
 > instance
 >   ( Defs att nts vs ic ic'
 >   , HasLabelChildAttsRes (lch,t) ic' ~ mch

@@ -36,13 +36,15 @@
 > unTaggedChAttr :: TaggedChAttr l v -> Attribution v
 > unTaggedChAttr (TaggedChAttr _ v) = v
 
+> {- TODO: erase this
 > data TaggedChAtt (l::k) (v :: Type) :: Type where
 >   TaggedChAtt :: Label l -> v -> TaggedChAtt l v
 > unTaggedChAtt :: TaggedChAtt l v -> v
 > unTaggedChAtt (TaggedChAtt _ v) = v
 > labelTChAtt :: TaggedChAtt l v -> Label l
 > labelTChAtt _ = Label
-
+> -} -- this exists if we want to specialize records of definitions on
+>    --  AspectAG.Defs,
 
 > -- the record of attribution fot the children
 > data ChAttsRec :: forall k . [(k , [(k,Type)])] -> Type where
