@@ -23,13 +23,11 @@
 > import Data.Proxy
 > import Errors
 > import Eq
-
+> import TagUtils
 
 > newtype Attribute l value = Attribute { getVal :: value }
 >                           deriving (Eq, Ord,Show)
 >
-
-> data Label l = Label
 
 > infixr 4 .=.
 

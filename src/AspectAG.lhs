@@ -25,6 +25,7 @@
 > import TPrelude
 > import Data.Proxy
 > import ChildAtts
+> import TagUtils
 
 In each node of the grammar, the \emph{Fam} contains a single attribution
 fot the parent, and a collection (Record) of attributions for the children:
@@ -54,6 +55,8 @@ a value 'val' to be assigned to this attribute, and it builds a function which
 updates the output constructed thus far.
 
 
+----------------------------------------------------------------------------
+
 > syndef  :: LabelSet ( '(att,val) ': sp) =>
 >     Label att -> val -> (Fam ic sp -> Fam ic ( '(att,val) ': sp))
 > syndef latt val (Fam ic sp) = Fam ic (latt .=. val .*. sp)
@@ -62,6 +65,8 @@ updates the output constructed thus far.
 > synmod  ::  UpdateAtLabelAtt att val sp sp'
 >        =>  Label att -> val -> Fam ic sp -> Fam ic sp'
 > synmod att v (Fam ic sp) = Fam ic (updateAtLabelAtt att v sp)
+
+----------------------------------------------------------------------------
 
 
 mch --> memnership of chld
@@ -85,13 +90,6 @@ mnts--> membership of nonterminals
 >           vch = unTaggedChAtt pch
 >           och = hLookupByChild lch ic
 
-where
-
-> unTaggedChAtt :: Tagged l v -> v
-> unTaggedChAtt (Tagged v) = v
-> labelTChAtt :: Tagged l v -> Label l
-> labelTChAtt _ = Label
-
 
 > class Defs att (nts :: [Type]) (vals :: [(k,Type)])
 >            (ic :: [(k,[(k,Type)])]) (ic' :: [(k,[(k,Type)])])
@@ -103,23 +101,24 @@ where
 >   defs _ _ _ ic = ic
 
 > -- TODO: duplicated context
-> instance
->   ( Defs att nts vs ic ic'
->   , HasLabelChildAttsRes (lch,t) ic' ~ mch
->   , HasLabelChildAtts (lch,t) ic'
->   , HMemberRes t nts ~ mnts
->   , HMember t nts
->   , SingleDef mch mnts att (Tagged (lch,t) vch) ic' ic'') =>
->   Defs att nts ( '((lch,t), vch) ': vs) ic ic'' where
->   defs att nts (ConsR pch vs) ic =
->     singledef mch mnts att pch ic'          -- :: ChAttsRec ic'' 
->     where ic'  = defs att nts vs ic         -- :: ChAttsRec ic'
->           lch  = labelLVPair pch            -- :: Label (lch,t)
->           mch  = hasLabelChildAtts lch ic'  -- :: Proxy mch
->           mnts = hMember (sndLabel lch) nts -- :: Proxy mnts
+> instance ( Defs att nts vs ic ic'
+>          , HasLabelChildAttsRes (lch,t) ic' ~ mch
+>          , HasLabelChildAtts (lch,t) ic'
+>          , HMemberRes t nts ~ mnts
+>          , HMember t nts
+>          , SingleDef mch mnts att (Tagged (lch,t) vch) ic' ic'')
+>     => Defs att nts ( '((lch,t), vch) ': vs) ic ic'' where
+>   defs att nts (ConsR pch vs) ic = singledef mch mnts att pch ic' 
+>       where ic'  = defs att nts vs ic         -- :: ChAttsRec ic'
+>             lch  = labelLVPair pch            -- :: Label (lch,t)
+>             mch  = hasLabelChildAtts lch ic'  -- :: Proxy mch
+>             mnts = hMember (sndLabel lch) nts -- :: Proxy mnts
 
-> labelLVPair :: Tagged (k1,k2) v -> Label (k1,k2)
-> labelLVPair _ = Label
 
-> sndLabel :: Label (a,b) -> Label b
-> sndLabel _ = undefined
+----------------------------------------------------------------------------
+
+> inhdef :: Defs att nts vals ic ic'
+>   => Label att -> HList nts -> Record vals -> (Fam ic sp -> Fam ic' sp)
+> inhdef att nts vals (Fam ic sp) = Fam (defs att nts vals ic) sp
+
+----------------------------------------------------------------------------

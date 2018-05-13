@@ -22,6 +22,7 @@
 
 > import Data.Proxy
 > import Attribute
+> import TagUtils
 
 > data HList (l :: [Type]) :: Type  where
 >   HNil :: HList '[]

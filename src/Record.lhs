@@ -27,6 +27,7 @@
 > import Attribute
 > import TPrelude
 > import Data.Tagged
+> import TagUtils
 
 > data Record :: forall k . [(k,Type)] -> Type where
 >   EmptyR :: Record '[]

@@ -26,7 +26,7 @@
 > import Eq
 > import Attribute
 > import TPrelude
-> --import Data.Tagged
+> import TagUtils
 > import Attribution
 
 > --TODO: move this

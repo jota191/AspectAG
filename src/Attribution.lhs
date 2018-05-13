@@ -26,7 +26,7 @@
 > import Eq
 > import Attribute
 > import TPrelude
-
+> import TagUtils
 
 %endif
 
