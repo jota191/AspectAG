@@ -117,11 +117,6 @@ on the head of r or not
 >     Tagged att val -> Record atts -> Record ('(att, val) : atts)
 > (*.) = ConsR
 
-TODO: cambiar nombre de params aca
-
-> infixr 4 =.
-> (=.) :: Label l -> v -> Tagged l v
-> (Label :: Label l) =. (v::v) = Tagged v :: Tagged l v
 
 
 > class HasLabelRec (e :: k)(r ::[(k,Type)]) where

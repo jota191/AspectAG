@@ -70,7 +70,7 @@ Some boilerplate to show Attributes and Attributions
 --- HasField
 
 > class HasChild (l::k) (r :: [(k ,[(k,Type)])]) v | l r -> v where
->    hLookupByChild:: Label l -> ChAttsRec r -> Attribution v
+>    hLookupByChild :: Label l -> ChAttsRec r -> Attribution v
 
 > instance (HEqK l l1 b, HasChild' b l ( '(l1,v1) ': r) v)
 >     => HasChild l ( '(l1,v1) ': r) v where

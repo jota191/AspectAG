@@ -30,3 +30,9 @@ unTaggedChAtt :: Tagged l v -> v
 unTaggedChAtt (Tagged v) = v
 labelTChAtt :: Tagged l v -> Label l
 labelTChAtt _ = Label
+
+infixr 4 =.
+(=.) :: Label l -> v -> Tagged l v
+l =. v = Tagged v
+
+
