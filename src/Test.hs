@@ -69,6 +69,8 @@ type IC = '[ '((Ch_l,Tree),IL), '((Ch_r, Tree),IR)]
 
 type Output_Node_Fam = Fam IC SP
 
+fam = undefined :: Fam IC '[]
+
 leaf_smin
   :: (LabelSet ('(Att_smin, Attribution v) : sp),
       HasChild (Ch_i, Int) r v) =>
@@ -105,7 +107,21 @@ leaf_sres (Fam chi par)
 node_sres (Fam chi par)
   = syndef sres (Node (lookupByLabelAtt sres (hLookupByChild ch_l chi))
                       (lookupByLabelAtt sres (hLookupByChild ch_r chi)))
+{-
+asp_smin :: (HasChild (Ch_r, Tree) r3 r2, HasChild (Ch_l, Tree) r3 r1,
+      HasFieldAtt Att_smin r2 val, HasFieldAtt Att_smin r1 val, Ord val,
+      LabelSet ('(Att_smin, val) : sp)) =>
+     Record
+       '[ '(P_Node,
+           Fam r3 p -> Fam ic sp -> Fam ic ('(Att_smin, val) : sp))]
+-}
 
+asp_smin :: (HasChild (Ch_r, Tree) r3 r2, HasChild (Ch_l, Tree) r3 r1,
+      HasChild (Ch_i, Int) r v, HasFieldAtt Att_smin r2 val,
+      HasFieldAtt Att_smin r1 val, Ord val,
+      LabelSet ('(Att_smin, Attribution v) : sp2),
+      LabelSet ('(Att_smin, val) : sp1)) =>
+ Record '[ '(P_Leaf, Rule r  p1 ic1 sp2 ic1('(Att_smin, Attribution v) : sp2)),
+           '(P_Node, Rule r3 p2 ic2 sp1 ic2('(Att_smin, val) : sp1))]
+asp_smin = (p_Leaf =. leaf_smin) `ConsR` ((p_Node =. node_smin) `ConsR` EmptyR)
 
---asp_smin = (p_Leaf =. leaf_smin) `ConsR` 
---           ((p_Node =. node_smin) `ConsR` EmptyR)

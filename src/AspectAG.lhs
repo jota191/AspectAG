@@ -122,3 +122,53 @@ mnts--> membership of nonterminals
 > inhdef att nts vals (Fam ic sp) = Fam (defs att nts vals ic) sp
 
 ----------------------------------------------------------------------------
+
+
+Aspects: Aspects are record that have a rule for each production:
+-- TODO: use specialized datatypes?
+
+> type Aspect = Record
+
+
+Let a Type for the fields:
+
+> type Prd prd rule = Tagged prd rule
+
+> labelPrd (Tagged v :: Tagged l v)= Label :: Label l 
+> rulePrd (Tagged v)= v
+
+
+Lets define the combination of aspects. When labels are only present once,
+the new aspect has a copy of the field. In the other hand, when a lebel is
+repeated, rules are combined with the function ext.
+
+> -- here we are using a less kinded types than before
+> class Com (r₁ :: [(k,Type)]) (r₂ :: [(k, Type)]) (r₃ :: [(k,Type)])
+>   | r₁ r₂ -> r₃ where
+>   (.+.) :: Aspect r₁ ->  Aspect r₂ ->  Aspect r₃
+
+Since we'll need to decide what to do depending on context, we use the
+usual technique:
+
+
+> class ComSingle (b::Bool) (prd :: k) (rule :: Type) (r₁ :: [(k,Type)])
+>                   {- → -}                           (r₂ :: [(k,Type)]) where
+>   comSingle :: Proxy b -> Prd prd rule -> Aspect r₁ -> Aspect r₂
+
+The boolean parameter is the indicator of prd being a label in the record.
+
+> instance (LabelSet ('(prd, rule) : r₁))
+>    => ComSingle 'False prd rule r₁ ( '(prd,rule) ': r₁) where
+>   comSingle _ prd asp = prd `ConsR` asp
+
+> 
+> instance (UpdateAtLabelRec prd (Rule sc ip ic' sp' ic'' sp'') r₁ r₂
+>          , HasFieldRec prd r₁ (Rule sc ip ic'' sp'' ic'' sp''))
+>   => ComSingle 'True prd (Rule sc ip ic' sp' ic'' sp'') r₁ r₂ where
+>   comSingle _ f r = updateAtLabelRec l (oldR `ext` newR) r
+>     where l    = labelPrd f
+>           oldR = hLookupByLabelRec l r
+>           newR = rulePrd f
+> 
+
+
