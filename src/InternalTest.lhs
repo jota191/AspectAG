@@ -31,6 +31,7 @@
 > import ChildAtts
 > import AspectAG
 > import HList
+> import TagUtils
 
 Some tests:
 
@@ -163,6 +164,26 @@ ChAttsRec
 
 RECORD
 
+
+recall:
+tagged1 = Tagged 3   :: Tagged Label1 Int 
+tagged2 = Tagged '4' :: Tagged Label2 Char
+tagged3 = Tagged '4' :: Tagged Label3 Char
+
 > testrec = tagged1 *. tagged3 *. EmptyR
 > t1 = hasLabelRec label2 testrec :: Proxy 'False
 > t2 = hasLabelRec label3 testrec :: Proxy 'True
+
+
+COM
+
+> type ERule = Rule '[] '[] '[] '[] '[] '[]
+> emptyRule = undefined :: Rule '[] '[] '[] '[] '[] '[]
+
+> r1 :: Record [ '( Label1, ERule), '(Label2 ,ERule)]
+> r1 = (Tagged emptyRule) `ConsR` ((Tagged emptyRule) `ConsR` EmptyR)
+
+> r2 :: Record [ '( Label1, ERule), '(Label3 ,ERule)]
+> r2 = (Tagged emptyRule) `ConsR` ((Tagged emptyRule) `ConsR` EmptyR)
+
+> r3 = r1 .+. r2

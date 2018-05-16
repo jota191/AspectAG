@@ -152,7 +152,7 @@ usual technique:
 
 
 > class ComSingle (b::Bool) (prd :: k) (rule :: Type) (r₁ :: [(k,Type)])
->                   {- → -}                           (r₂ :: [(k,Type)]) where
+>                 (r₂ :: [(k,Type)]) | b prd rule r₁ -> r₂ where
 >   comSingle :: Proxy b -> Prd prd rule -> Aspect r₁ -> Aspect r₂
 
 The boolean parameter is the indicator of prd being a label in the record.
@@ -171,4 +171,19 @@ The boolean parameter is the indicator of prd being a label in the record.
 >           newR = rulePrd f
 > 
 
+
+Now we implement Com, by induction over the first Aspect.
+
+> instance Com '[] r₂ r₂ where
+>   _ .+. r = r
+
+> instance ( Com r₁ r₂ r'
+>          , HasLabelRecRes prd r₂ ~ b
+>          , HasLabelRec prd r₂
+>          , ComSingle b prd rule r' r₃)
+>   => Com ( '(prd, rule) ': r₁) r₂ r₃ where
+>      (pr `ConsR` r₁) .+. r₂ = let r'  = r₁ .+. r₂
+>                                   b   = hasLabelRec (labelPrd pr) r₂ :: Proxy b
+>                                   r₃   = comSingle b pr r'
+>                               in  r₃
 
