@@ -35,6 +35,9 @@
 >   TaggedChAttr :: Label l -> Attribution v -> TaggedChAttr l v
 > unTaggedChAttr :: TaggedChAttr l v -> Attribution v
 > unTaggedChAttr (TaggedChAttr _ v) = v
+> labelChAttr :: TaggedChAttr l v -> Label l
+> labelChAttr _ = Label
+
 
 > {- TODO: erase this
 > data TaggedChAtt (l::k) (v :: Type) :: Type where
@@ -63,7 +66,8 @@ Some boilerplate to show Attributes and Attributions
 > instance (Show (Attribution v), Show (ChAttsRec xs)) =>
 >          Show (ChAttsRec ( '(l,v) ': xs ) ) where
 >   show (ConsCh lv xs) = let tail = show xs
->                             in "{" ++ show (unTaggedChAttr lv) ++ "," ++ drop 1 tail 
+>                             in "{" ++ show (unTaggedChAttr lv) ++
+>                                "," ++ drop 1 tail 
 
 %endif
 

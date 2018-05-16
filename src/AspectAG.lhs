@@ -188,3 +188,37 @@ Now we implement Com, by induction over the first Aspect.
 >                               in  r₃
 
 ----------------------------------------------------------------------------
+
+[(k1, [(k1, *)])] -> [(k2, [(k2, *)])]
+
+> class Empties (fc :: [(k, [(k, Type)])])
+>               (ec :: [(k, [(k, Type)])]) | fc -> ec where
+>   empties :: ChAttsRec fc -> ChAttsRec ec
+
+> instance Empties '[] '[] where
+>   empties (EmptyCh) = EmptyCh
+
+> instance ( Empties fcr ecr
+>          , LabelSet ( '(lch, '[]) ': ecr)) --TODO ver como remover esto
+>   => Empties ( '(lch,fch)': fcr ) ( '(lch, '[])': ecr) where
+>   empties (ConsCh pch fcr)
+>     = let lch = labelChAttr pch
+>       in  ConsCh (TaggedChAttr lch EmptyAtt) (empties fcr)
+
+----------------------------------------------------------------------------
+
+> class Kn (fc :: [(k, Type)])
+>          (ic :: [(k, [(k, Type)])])
+>          (sc :: [(k, [(k, Type)])]) | fc -> ic sc where
+>   kn :: Record fc -> ChAttsRec ic -> ChAttsRec sc
+
+> instance Kn '[] '[] '[] where
+>   kn _ _ = EmptyCh
+
+> 
+> instance (Kn fn ic sc)
+>   =>  Kn ( '(lch , ich -> sch) ': fc)
+>          ( '(lch , ich)        ': ic)
+>          ( '(lch , sch)        ': sc) where
+>  kn = undefined
+> 
