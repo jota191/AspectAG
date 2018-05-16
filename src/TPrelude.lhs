@@ -19,6 +19,7 @@
 > import Data.Kind
 > import Eq
 > import Data.Type.Equality
+> import GHC.TypeLits
 
 > type family If (cond:: Bool) (thn :: k) (els :: k) :: k where
 >   If 'True  thn els = thn
@@ -41,8 +42,14 @@
 >          , LabelSet ( '(l1,v1) ': r)
 >          ) => LabelSet' '(l1,v1) '(l2,v2) False r
 
-> instance ( Fail (DuplicatedLabel l1) ) => LabelSet' l1 l2 True r
+> instance TypeError (Text "LabelSet Error:" :$$:
+>                     Text "Duplicated Label on Record" :$$:
+>                    Text "On fields:" :$$: ShowType l1 :$$:
+>                    Text " and " :$$: ShowType l1 )
+>           => LabelSet' l1 l2 True r
 
+Reference:
+https://hackage.haskell.org/package/base-4.11.1.0/docs/GHC-TypeLits.html
 
 TODO: explain how the selection of the instance is done
 TODO: 

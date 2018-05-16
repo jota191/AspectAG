@@ -180,10 +180,10 @@ COM
 > type ERule = Rule '[] '[] '[] '[] '[] '[]
 > emptyRule = undefined :: Rule '[] '[] '[] '[] '[] '[]
 
-> r1 :: Record [ '( Label1, ERule), '(Label2 ,ERule)]
+> r1 :: Aspect [ '( Label2, ERule), '(Label1 ,ERule)]
 > r1 = (Tagged emptyRule) `ConsR` ((Tagged emptyRule) `ConsR` EmptyR)
 
-> r2 :: Record [ '( Label1, ERule), '(Label3 ,ERule)]
+> r2 :: Aspect [ '( Label1, ERule), '(Label2 ,ERule)]
 > r2 = (Tagged emptyRule) `ConsR` ((Tagged emptyRule) `ConsR` EmptyR)
 
 > r3 = r1 .+. r2

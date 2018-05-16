@@ -183,7 +183,8 @@ Now we implement Com, by induction over the first Aspect.
 >          , ComSingle b prd rule r' r₃)
 >   => Com ( '(prd, rule) ': r₁) r₂ r₃ where
 >      (pr `ConsR` r₁) .+. r₂ = let r'  = r₁ .+. r₂
->                                   b   = hasLabelRec (labelPrd pr) r₂ :: Proxy b
+>                                   b   = hasLabelRec (labelPrd pr) r₂
 >                                   r₃   = comSingle b pr r'
 >                               in  r₃
 
+----------------------------------------------------------------------------

@@ -111,7 +111,6 @@ on the head of r or not
 
 
 
-
 > infixr 2 *.
 > (*.) :: LabelSet ('(att, val) : atts) =>
 >     Tagged att val -> Record atts -> Record ('(att, val) : atts)
