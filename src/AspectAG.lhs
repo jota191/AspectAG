@@ -191,22 +191,23 @@ Now we implement Com, by induction over the first Aspect.
 
 [(k1, [(k1, *)])] -> [(k2, [(k2, *)])]
 
-> class Empties (fc :: [(k, [(k, Type)])])
+> class Empties (fc :: [(k,Type)])
 >               (ec :: [(k, [(k, Type)])]) | fc -> ec where
->   empties :: ChAttsRec fc -> ChAttsRec ec
+>   empties :: Record fc -> ChAttsRec ec
 
 > instance Empties '[] '[] where
->   empties (EmptyCh) = EmptyCh
+>   empties (EmptyR) = EmptyCh
 
 > instance ( Empties fcr ecr
 >          , LabelSet ( '(lch, '[]) ': ecr)) --TODO ver como remover esto
 >   => Empties ( '(lch,fch)': fcr ) ( '(lch, '[])': ecr) where
->   empties (ConsCh pch fcr)
->     = let lch = labelChAttr pch
+>   empties (ConsR pch fcr)
+>     = let lch = labelTChAtt pch -- TODO: name
 >       in  ConsCh (TaggedChAttr lch EmptyAtt) (empties fcr)
 
 ----------------------------------------------------------------------------
 
+> 
 > class Kn (fc :: [(k, Type)])
 >          (ic :: [(k, [(k, Type)])])
 >          (sc :: [(k, [(k, Type)])]) | fc -> ic sc where
@@ -216,9 +217,15 @@ Now we implement Com, by induction over the first Aspect.
 >   kn _ _ = EmptyCh
 
 > 
-> instance (Kn fn ic sc)
->   =>  Kn ( '(lch , ich -> sch) ': fc)
->          ( '(lch , ich)        ': ic)
->          ( '(lch , sch)        ': sc) where
->  kn = undefined
-> 
+> instance ( Kn fc ic sc
+>          , LabelSet ('(lch, sch) ': sc))
+>   =>  Kn ( '(lch , Attribution ich -> Attribution sch) ': fc)
+>          ( '(lch , ich) ': ic)
+>          ( '(lch , sch) ': sc) where
+>  kn (ConsR pfch fcr) (ConsCh pich icr)
+>    = let scr = kn fcr icr
+>          lch = labelTChAtt pfch -- TODO: name
+>          fch = unTagged pfch
+>          ich = unTaggedChAttr pich
+>      in ConsCh (TaggedChAttr lch (fch ich)) scr
+
