@@ -229,3 +229,17 @@ Now we implement Com, by induction over the first Aspect.
 >          ich = unTaggedChAttr pich
 >      in ConsCh (TaggedChAttr lch (fch ich)) scr
 
+----------------------------------------------------------------------------
+
+Now we code the actual knit function:
+
+> knit :: ( Empties fc ec
+>         , Kn fc ic sc )
+>   => Rule sc ip ec '[] ic sp
+>      -> Record fc -> Attribution ip -> Attribution sp
+> knit rule fc ip
+>   = let ec          = empties fc
+>         (Fam ic sp) = rule (Fam sc ip) (Fam ec EmptyAtt)
+>         sc          = kn fc ic
+>     in  sp
+
