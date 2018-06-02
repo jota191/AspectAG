@@ -207,27 +207,56 @@ Now we implement Com, by induction over the first Aspect.
 
 ----------------------------------------------------------------------------
 
-> 
+
+> data Val
+
 > class Kn (fc :: [(k, Type)])
 >          (ic :: [(k, [(k, Type)])])
->          (sc :: [(k, [(k, Type)])]) | fc -> ic sc where
+>          (sc :: [(k, [(k, Type)])]) | fc -> sc ic where
 >   kn :: Record fc -> ChAttsRec ic -> ChAttsRec sc
 
 > instance Kn '[] '[] '[] where
 >   kn _ _ = EmptyCh
 
-> 
+ 
 > instance ( Kn fc ic sc
->          , LabelSet ('(lch, sch) ': sc))
->   =>  Kn ( '(lch , Attribution ich -> Attribution sch) ': fc)
->          ( '(lch , ich) ': ic)
->          ( '(lch , sch) ': sc) where
->  kn (ConsR pfch fcr) (ConsCh pich icr)
+>          , LabelSet ('(lch, fc2scl) ': sc)
+>          , fc2icl ~ Fc2ic l
+>          , fc2scl ~ Fc2sc l
+>          , l ~ (Attribution fc2icl -> Attribution fc2scl))
+>   =>  Kn ( '(lch , l {-Attribution ich -> Attribution sch)-}) ': fc)
+>          ( '(lch , fc2icl) ': ic)
+>          ( '(lch , fc2scl) ': sc) where
+>   kn (ConsR pfch fcr) (ConsCh pich icr)
 >    = let scr = kn fcr icr
->          lch = labelTChAtt pfch -- TODO: name
->          fch = unTagged pfch
->          ich = unTaggedChAttr pich
+>          lch = labelTChAtt pfch    :: Label lch-- TODO: name
+>          fch = unTagged pfch       :: l
+>          ich = unTaggedChAttr pich -- :: Attribution ich
 >      in ConsCh (TaggedChAttr lch (fch ich)) scr
+
+
+> type family Fc2ic a ::  [(k,Type)]
+> type instance Fc2ic (Attribution '[] -> Attribution '[ '(v, Int)]) = '[]
+> type instance Fc2ic (Attribution ich -> Attribution sch) = ich
+
+> type family Fc2sc a ::  [(k,Type)]
+> type instance Fc2sc (Attribution '[] -> Attribution '[ '(v, Int)])
+>   = '[ '(v,Int)]
+> type instance Fc2sc (Attribution ich -> Attribution sch) = sch
+
+
+-- > instance ( Kn fc ic sc
+-- >          , LabelSet ('(lch, sch) ': sc))
+-- >   =>  Kn ( '(lch , Attribution '[] -> Attribution '[ '(Val, a)]) ': fc)
+-- >          ( '(lch , '[ '(Val, a)] ) ': ic)
+-- >          ( '(lch , '[] ) ': sc) where
+-- >   kn (ConsR pfch fcr) (ConsCh pich icr)
+-- >    = undefined
+-- > --     let scr = kn fcr icr
+-- > --         lch = labelTChAtt pfch -- TODO: name
+-- > --         fch = unTagged pfch
+-- > --         ich = unTaggedChAttr pich
+-- > --     in ConsCh (TaggedChAttr lch (fch ich)) scr
 
 ----------------------------------------------------------------------------
 

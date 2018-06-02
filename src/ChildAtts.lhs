@@ -33,9 +33,9 @@
 > -- Tags a Label to an attribution, used for children
 > data TaggedChAttr (l::k) (v :: [(k,Type)]) :: Type where
 >   TaggedChAttr :: Label l -> Attribution v -> TaggedChAttr l v
-> unTaggedChAttr :: TaggedChAttr l v -> Attribution v
-> unTaggedChAttr (TaggedChAttr _ v) = v
-> labelChAttr :: TaggedChAttr l v -> Label l
+> unTaggedChAttr :: TaggedChAttr l a -> Attribution a
+> unTaggedChAttr (TaggedChAttr _ a) = a
+> labelChAttr :: TaggedChAttr l a -> Label l
 > labelChAttr _ = Label
 
 
