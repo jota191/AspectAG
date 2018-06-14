@@ -28,6 +28,8 @@
 > import TPrelude
 > import Data.Tagged
 > import TagUtils
+> import GHC.TypeLits
+
 
 > data Record :: forall k . [(k,Type)] -> Type where
 >   EmptyR :: Record '[]
@@ -52,6 +54,8 @@ Some boilerplate to show Attributes and Attributions
 
 --- HasField
 
+
+> {-
 > class HasFieldRec (l::k) (r :: [(k,Type)]) v | l r -> v where
 >    hLookupByLabelRec:: Label l -> Record r -> v
 
@@ -68,8 +72,18 @@ Some boilerplate to show Attributes and Attributions
 >    hLookupByLabelRec' _ _ (ConsR (Tagged v) _) = v
 > instance HasFieldRec l r v => HasFieldRec' False l ( '(l2,v2) ': r) v where
 >    hLookupByLabelRec' _ l (ConsR _ r) = hLookupByLabelRec l r
- 
+> -} 
 
+> type family LookupByLabel (l::k) (r :: [(k,Type)]) :: Type
+> type instance LookupByLabel l '[] = TypeError (Text "FieldNotFound")
+> type instance LookupByLabel l1 ( '(l2, t) ': xs)
+>   = If (l1 == l2) t (LookupByLabel l1 xs)
+
+> class HasFieldRec (l::k) (r :: [(k,Type)]) where
+>   type LookupByLabelRec l r :: Type
+>   hLookupByLabelRec:: Label l -> Record r -> LookupByLabelRec l r
+
+> lookupByLabelRec :: Label l -> Record r -> LookupByLabelRec l r
 
 
 UPDATEATLABEL

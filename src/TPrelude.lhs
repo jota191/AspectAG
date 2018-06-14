@@ -44,8 +44,8 @@
 
 > instance TypeError (Text "LabelSet Error:" :$$:
 >                     Text "Duplicated Label on Record" :$$:
->                    Text "On fields:" :$$: ShowType l1 :$$:
->                    Text " and " :$$: ShowType l1 )
+>                     Text "On fields:" :$$: ShowType l1 :$$:
+>                     Text " and " :$$: ShowType l1 )
 >           => LabelSet' l1 l2 True r
 
 Reference:
