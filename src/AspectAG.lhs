@@ -1,3 +1,4 @@
+
 > {-# LANGUAGE TypeInType,
 >              GADTs,
 >              KindSignatures,
@@ -162,15 +163,19 @@ The boolean parameter is the indicator of prd being a label in the record.
 >   comSingle _ prd asp = prd `ConsR` asp
 
 > 
-> instance (UpdateAtLabelRec prd (Rule sc ip ic' sp' ic'' sp'') r₁ r₂
->          , HasFieldRec prd r₁ (Rule sc ip ic'' sp'' ic'' sp''))
->   => ComSingle 'True prd (Rule sc ip ic' sp' ic'' sp'') r₁ r₂ where
->   comSingle _ f r = updateAtLabelRec l (oldR `ext` newR) r
->     where l    = labelPrd f
->           oldR = hLookupByLabelRec l r
+> instance ( HasFieldRec prd r₁   (Rule sc ip ic' sp' ic'' sp'')
+>          , UpdateAtLabelRec prd (Rule sc ip ic  sp  ic'' sp'') r₁ r₂
+>          )
+>   => ComSingle 'True prd        (Rule sc ip ic  sp  ic'  sp') r₁ r₂ where
+>   comSingle _ f r = updateAtLabelRec l (oldR `ext` newR) r :: Aspect r₂ 
+>     where l    = labelPrd f                                :: Label prd
+>           oldR = hLookupByLabelRec l r    
 >           newR = rulePrd f
 > 
 
+ext :: Rule sc ip ic' sp' ic'' sp''
+    -> Rule sc ip ic  sp  ic'  sp'
+    -> Rule sc ip ic  sp  ic'' sp''
 
 Now we implement Com, by induction over the first Aspect.
 
@@ -184,7 +189,7 @@ Now we implement Com, by induction over the first Aspect.
 >   => Com ( '(prd, rule) ': r₁) r₂ r₃ where
 >      (pr `ConsR` r₁) .+. r₂ = let r'  = r₁ .+. r₂
 >                                   b   = hasLabelRec (labelPrd pr) r₂
->                                   r₃   = comSingle b pr r'
+>                                   r₃  = comSingle b pr r'
 >                               in  r₃
 
 ----------------------------------------------------------------------------
