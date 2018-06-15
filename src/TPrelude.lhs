@@ -20,6 +20,7 @@
 > import Eq
 > import Data.Type.Equality
 > import GHC.TypeLits
+> import Data.Proxy
 
 > type family If (cond:: Bool) (thn :: k) (els :: k) :: k where
 >   If 'True  thn els = thn
@@ -29,7 +30,34 @@
 >   Or False b = b
 >   Or True b  = 'True
 
+> type family And (l :: Bool)(r :: Bool) :: Bool where
+>   And False b = False
+>   And True b  = b
+
+
+> type family Not (l :: Bool) :: Bool where
+>   Not False = True
+>   Not True  = False
+
+-- > type family IsLabelSet (r :: [(k,k')]) :: Bool
+-- > type instance IsLabelSet '[]             = True
+-- > --type instance IsLabelSet '[ '(l,v)]      = True
+-- > type instance IsLabelSet ( '(l,v) ': r)
+-- >   = And (Not (OccursLabel l r)) (IsLabelSet r)
+
+-- > type family OccursLabel (l :: k) (r :: [(k,k')]) :: Bool
+-- > type instance OccursLabel l '[] = False
+-- > type instance OccursLabel l ( '(l2,v) ': r ) = Or (l == l2)(OccursLabel l r)
+
+
+-- > --FIXME: this is not polykinded
+-- > type family (===) l v :: Bool 
+-- > -- type instance x === y = x == y
+-- > type instance x === y = Proxy x == Proxy y
+
 > class LabelSet (l :: [(k,k2)])
+> --instance (IsLabelSet xs ~ True) => LabelSet xs
+
 > instance LabelSet '[] -- empty set
 > instance LabelSet '[ '(x,v)] -- singleton set
 
@@ -47,6 +75,7 @@
 >                    Text "On fields:" :$$: ShowType l1 :$$:
 >                    Text " and " :$$: ShowType l1 )
 >           => LabelSet' l1 l2 True r
+> 
 
 Reference:
 https://hackage.haskell.org/package/base-4.11.1.0/docs/GHC-TypeLits.html

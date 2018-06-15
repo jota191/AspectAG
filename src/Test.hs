@@ -11,8 +11,7 @@
              FunctionalDependencies,
              ConstraintKinds,
              ScopedTypeVariables,
-             UnicodeSyntax,
-             AllowAmbiguousTypes
+             UnicodeSyntax
 #-}
 
 module Test where
@@ -115,20 +114,20 @@ node_sres (Fam chi par)
 
 
 
-asp_smin = (p_Leaf =. leaf_smin)
-  `ConsR` ((p_Node =. node_smin)
-  `ConsR` ((p_Root =. root_smin)
-  `ConsR` EmptyR))
+-- asp_smin = (p_Leaf =. leaf_smin)
+--   `ConsR` ((p_Node =. node_smin)
+--   `ConsR` ((p_Root =. root_smin)
+--   `ConsR` EmptyR))
 
-asp_ival = (p_Root =. root_ival)
-  `ConsR` ((p_Node =. node_ival)
-  `ConsR` ((p_Leaf =. leaf_ival)
-  `ConsR` EmptyR))
+-- asp_ival = (p_Root =. root_ival)
+--   `ConsR` ((p_Node =. node_ival)
+--   `ConsR` ((p_Leaf =. leaf_ival)
+--   `ConsR` EmptyR))
   
-asp_sres = (p_Root =. root_sres)
-  `ConsR` ((p_Node =. node_sres)
-  `ConsR` ((p_Leaf =. leaf_sres)
-  `ConsR` EmptyR))
+-- asp_sres = (p_Root =. root_sres)
+--   `ConsR` ((p_Node =. node_sres)
+--   `ConsR` ((p_Leaf =. leaf_sres)
+--   `ConsR` EmptyR))
 
 
 
@@ -182,74 +181,74 @@ examplet =    (Node (Node (Node (Leaf (-45)) (Leaf 4))
 --          '(P_Node,
 --            Fam r3 p2 -> Fam ic2 sp2 -> Fam ic2 ('(Att_smin, val2) : sp2))]
 
-asp_ival
-  :: (HasChild (Ch_tree, Tree) r2 r1, HasFieldAtt Att_smin r1 v1,
-      HasFieldAtt Att_ival r4 v2, HasFieldAtt Att_ival r5 v3,
-      SingleDef
-        (HasLabelChildAttsRes (Ch_tree, Tree) ic'4)
-        'True
-        Att_ival
-        (Tagged (Ch_tree, Tree) v1)
-        ic'4
-        ic'5,
-      SingleDef
-        (HasLabelChildAttsRes (Ch_l, Tree) ic'6)
-        'True
-        Att_ival
-        (Tagged (Ch_l, Tree) v2)
-        ic'6
-        ic'3,
-      SingleDef
-        (HasLabelChildAttsRes (Ch_r, Tree) ic'7)
-        'True
-        Att_ival
-        (Tagged (Ch_r, Tree) v2)
-        ic'7
-        ic'6,
-      SingleDef
-        (HasLabelChildAttsRes (Ch_i, Int) ic'8)
-        'False
-        Att_ival
-        (Tagged (Ch_i, Int) v3)
-        ic'8
-        ic'9,
-      HasLabelChildAtts (Ch_tree, Tree) ic'4,
-      HasLabelChildAtts (Ch_l, Tree) ic'6,
-      HasLabelChildAtts (Ch_r, Tree) ic'7,
-      HasLabelChildAtts (Ch_i, Int) ic'8) =>
-     Record
-       '[ '(P_Root, Fam r2 p -> Fam ic'4 sp1 -> Fam ic'5 sp1),
-         '(P_Node, Fam c1 r4 -> Fam ic'7 sp2 -> Fam ic'3 sp2),
-         '(P_Leaf, Fam c2 r5 -> Fam ic'8 sp3 -> Fam ic'9 sp3)]
+-- asp_ival
+--   :: (HasChild (Ch_tree, Tree) r2 r1, HasFieldAtt Att_smin r1 v1,
+--       HasFieldAtt Att_ival r4 v2, HasFieldAtt Att_ival r5 v3,
+--       SingleDef
+--         (HasLabelChildAttsRes (Ch_tree, Tree) ic'4)
+--         'True
+--         Att_ival
+--         (Tagged (Ch_tree, Tree) v1)
+--         ic'4
+--         ic'5,
+--       SingleDef
+--         (HasLabelChildAttsRes (Ch_l, Tree) ic'6)
+--         'True
+--         Att_ival
+--         (Tagged (Ch_l, Tree) v2)
+--         ic'6
+--         ic'3,
+--       SingleDef
+--         (HasLabelChildAttsRes (Ch_r, Tree) ic'7)
+--         'True
+--         Att_ival
+--         (Tagged (Ch_r, Tree) v2)
+--         ic'7
+--         ic'6,
+--       SingleDef
+--         (HasLabelChildAttsRes (Ch_i, Int) ic'8)
+--         'False
+--         Att_ival
+--         (Tagged (Ch_i, Int) v3)
+--         ic'8
+--         ic'9,
+--       HasLabelChildAtts (Ch_tree, Tree) ic'4,
+--       HasLabelChildAtts (Ch_l, Tree) ic'6,
+--       HasLabelChildAtts (Ch_r, Tree) ic'7,
+--       HasLabelChildAtts (Ch_i, Int) ic'8) =>
+--      Record
+--        '[ '(P_Root, Fam r2 p -> Fam ic'4 sp1 -> Fam ic'5 sp1),
+--          '(P_Node, Fam c1 r4 -> Fam ic'7 sp2 -> Fam ic'3 sp2),
+--          '(P_Leaf, Fam c2 r5 -> Fam ic'8 sp3 -> Fam ic'9 sp3)]
 
 
-asp_sres
-  :: (HasChild (Ch_tree, Tree) r4 r5, HasChild (Ch_r, Tree) r3 r6,
-      HasChild (Ch_l, Tree) r3 r7, HasFieldAtt Att_sres r5 val,
-      HasFieldAtt Att_sres r6 Tree, HasFieldAtt Att_sres r7 Tree,
-      HasFieldAtt Att_ival r Int, LabelSet ('(Att_sres, Tree) : sp2),
-      LabelSet ('(Att_sres, Tree) : sp3),
-      LabelSet ('(Att_sres, val) : sp1)) =>
-     Record
-       '[ '(P_Root,
-           Fam r4 p1 -> Fam ic1 sp1 -> Fam ic1 ('(Att_sres, val) : sp1)),
-         '(P_Node,
-           Fam r3 p2 -> Fam ic2 sp2 -> Fam ic2 ('(Att_sres, Tree) : sp2)),
-         '(P_Leaf,
-           Fam c r -> Fam ic3 sp3 -> Fam ic3 ('(Att_sres, Tree) : sp3))]
+-- asp_sres
+--   :: (HasChild (Ch_tree, Tree) r4 r5, HasChild (Ch_r, Tree) r3 r6,
+--       HasChild (Ch_l, Tree) r3 r7, HasFieldAtt Att_sres r5 val,
+--       HasFieldAtt Att_sres r6 Tree, HasFieldAtt Att_sres r7 Tree,
+--       HasFieldAtt Att_ival r Int, LabelSet ('(Att_sres, Tree) : sp2),
+--       LabelSet ('(Att_sres, Tree) : sp3),
+--       LabelSet ('(Att_sres, val) : sp1)) =>
+--      Record
+--        '[ '(P_Root,
+--            Fam r4 p1 -> Fam ic1 sp1 -> Fam ic1 ('(Att_sres, val) : sp1)),
+--          '(P_Node,
+--            Fam r3 p2 -> Fam ic2 sp2 -> Fam ic2 ('(Att_sres, Tree) : sp2)),
+--          '(P_Leaf,
+--            Fam c r -> Fam ic3 sp3 -> Fam ic3 ('(Att_sres, Tree) : sp3))]
 
-asp_smin
-  :: (Ord val1, HasChild (Ch_i, Int) r4 r5,
-      HasChild (Ch_r, Tree) r3 r6, HasChild (Ch_l, Tree) r3 r7,
-      HasChild (Ch_tree, Tree) r8 r9, HasFieldAtt Val r5 val2,
-      HasFieldAtt Att_smin r6 val1, HasFieldAtt Att_smin r7 val1,
-      HasFieldAtt Att_smin r9 val3, LabelSet ('(Att_smin, val2) : sp1),
-      LabelSet ('(Att_smin, val1) : sp2),
-      LabelSet ('(Att_smin, val3) : sp3)) =>
-     Record
-       '[ '(P_Leaf,
-           Fam r4 p1 -> Fam ic1 sp1 -> Fam ic1 ('(Att_smin, val2) : sp1)),
-         '(P_Node,
-           Fam r3 p2 -> Fam ic2 sp2 -> Fam ic2 ('(Att_smin, val1) : sp2)),
-         '(P_Root,
-           Fam r8 p3 -> Fam ic3 sp3 -> Fam ic3 ('(Att_smin, val3) : sp3))]
+-- asp_smin
+--   :: (Ord val1, HasChild (Ch_i, Int) r4 r5,
+--       HasChild (Ch_r, Tree) r3 r6, HasChild (Ch_l, Tree) r3 r7,
+--       HasChild (Ch_tree, Tree) r8 r9, HasFieldAtt Val r5 val2,
+--       HasFieldAtt Att_smin r6 val1, HasFieldAtt Att_smin r7 val1,
+--       HasFieldAtt Att_smin r9 val3, LabelSet ('(Att_smin, val2) : sp1),
+--       LabelSet ('(Att_smin, val1) : sp2),
+--       LabelSet ('(Att_smin, val3) : sp3)) =>
+--      Record
+--        '[ '(P_Leaf,
+--            Fam r4 p1 -> Fam ic1 sp1 -> Fam ic1 ('(Att_smin, val2) : sp1)),
+--          '(P_Node,
+--            Fam r3 p2 -> Fam ic2 sp2 -> Fam ic2 ('(Att_smin, val1) : sp2)),
+--          '(P_Root,
+--            Fam r8 p3 -> Fam ic3 sp3 -> Fam ic3 ('(Att_smin, val3) : sp3))]
