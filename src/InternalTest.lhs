@@ -32,7 +32,6 @@
 > import AspectAG
 > import HList
 > import TagUtils
-> import Test
 
 Some tests:
 
@@ -188,7 +187,3 @@ COM
 > r2 = (Tagged emptyRule) `ConsR` ((Tagged emptyRule) `ConsR` EmptyR)
 
 > r3 = r1 .+. r2
-
-
->-- r4 = (p_Leaf =. leaf_smin) `ConsR` EmptyR
->-- r5 = (p_Root =. root_smin) `ConsR` ( p_Leaf =. root_smin `ConsR` EmptyR)

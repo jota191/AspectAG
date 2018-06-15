@@ -175,10 +175,12 @@ instance  (  HasLabel lprd r b
 class  ComSingle b f r r' | b f r -> r'
   where comsingle :: b -> f -> r -> r'
 
-instance  (  HasField  lprd  r          (Rule sc ip ic' sp' ic'' sp'')
-          ,  HUpdateAtLabel  lprd       (Rule sc ip ic  sp  ic'' sp'') 
+instance  (  HasField  lprd  r (Rule sc ip ic' sp' ic'' sp'')
+          ,  HUpdateAtLabel  lprd (Rule  sc    ip 
+                                         ic    sp 
+                                         ic''  sp'') 
                              r r')
-         => ComSingle   HTrue (Prd lprd (Rule sc ip ic  sp  ic'  sp')) 
+         => ComSingle   HTrue (Prd lprd (Rule sc ip ic sp ic' sp')) 
                         r r'
    where 
     comsingle _ f r  = hUpdateAtLabel n ((r # n) `ext` v) r
