@@ -162,8 +162,9 @@ The boolean parameter is the indicator of prd being a label in the record.
 >    => ComSingle 'False prd rule r₁ ( '(prd,rule) ': r₁) where
 >   comSingle _ prd asp = prd `ConsR` asp
 
-> 
-> instance ( HasFieldRec prd r₁   (Rule sc ip ic' sp' ic'' sp'')
+ 
+> instance ( HasFieldRec prd r₁,
+>            LookupByLabelRec prd r₁ ~ (Rule sc ip ic' sp' ic'' sp'')
 >          , UpdateAtLabelRec prd (Rule sc ip ic  sp  ic'' sp'') r₁ r₂
 >          )
 >   => ComSingle 'True prd        (Rule sc ip ic  sp  ic'  sp') r₁ r₂ where
