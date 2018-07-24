@@ -29,24 +29,40 @@
 >   Or False b = b
 >   Or True b  = 'True
 
-> class LabelSet (l :: [(k,k2)])
-> instance LabelSet '[] -- empty set
-> instance LabelSet '[ '(x,v)] -- singleton set
 
-> instance ( HEqK l1 l2 leq
->          , LabelSet' '(l1,v1) '(l2,v2) leq r)
->         => LabelSet ( '(l1,v1) ': '(l2,v2) ': r)
+-- > class LabelSet (l :: [(k,k2)])
+-- > instance LabelSet '[] -- empty set
+-- > instance LabelSet '[ '(x,v)] -- singleton set
 
-> class LabelSet' l1v1 l2v2 (leq::Bool) r
-> instance ( LabelSet ( '(l2,v2) ': r)
->          , LabelSet ( '(l1,v1) ': r)
->          ) => LabelSet' '(l1,v1) '(l2,v2) False r
+-- > instance ( HEqK l1 l2 leq
+-- >          , LabelSet' '(l1,v1) '(l2,v2) leq r)
+-- >         => LabelSet ( '(l1,v1) ': '(l2,v2) ': r)
 
-> instance TypeError (Text "LabelSet Error:" :$$:
->                     Text "Duplicated Label on Record" :$$:
->                     Text "On fields:" :$$: ShowType l1 :$$:
->                     Text " and " :$$: ShowType l1 )
->           => LabelSet' l1 l2 True r
+-- > class LabelSet' l1v1 l2v2 (leq::Bool) r
+-- > instance ( LabelSet ( '(l2,v2) ': r)
+-- >          , LabelSet ( '(l1,v1) ': r)
+-- >          ) => LabelSet' '(l1,v1) '(l2,v2) False r
+
+
+-- > instance TypeError (Text "LabelSet Error:" :$$:
+-- >                     Text "Duplicated Label on Record" :$$:
+-- >                     Text "On fields:" :$$: ShowType l1 :$$:
+-- >                     Text " and " :$$: ShowType l1 )
+-- >           => LabelSet' l1 l2 True r
+
+
+
+> class LabelSet (r :: [(k,m)])
+> instance LabelSet '[]
+> instance ( LabelSet r
+>          , NotIn l r)
+>   => LabelSet ( '(l,m) ': r)
+
+> class NotIn (l :: k) (t :: [(k,m)])
+> instance NotIn l '[]
+> instance ( HEqK l l' False
+>          , NotIn l r)
+>   => NotIn l ( '(l' ,m) ': r)
 
 Reference:
 https://hackage.haskell.org/package/base-4.11.1.0/docs/GHC-TypeLits.html

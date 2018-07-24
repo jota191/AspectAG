@@ -27,7 +27,7 @@
 > import Eq
 > import Attribute
 > import TPrelude
-> import Data.Tagged
+> import Data.Tagged hiding (unTagged)
 > import TagUtils
 > import GHC.TypeLits
 

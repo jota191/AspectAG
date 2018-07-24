@@ -11,7 +11,8 @@
 >              UndecidableInstances,
 >              FunctionalDependencies,
 >              ConstraintKinds,
->              ScopedTypeVariables
+>              ScopedTypeVariables,
+>              DataKinds, IncoherentInstances
 > #-}
 
 
@@ -22,11 +23,12 @@
 > import Record
 > import Attribute
 > import Data.Kind
-> import Data.Tagged
+> import Data.Tagged hiding (unTagged)
 > import TPrelude
 > import Data.Proxy
 > import ChildAtts
 > import TagUtils
+> import GHC.TypeLits
 
 In each node of the grammar, the \emph{Fam} contains a single attribution
 fot the parent, and a collection (Record) of attributions for the children:
@@ -140,7 +142,7 @@ Let a Type for the fields:
 
 
 Lets define the combination of aspects. When labels are only present once,
-the new aspect has a copy of the field. In the other hand, when a lebel is
+the new aspect has a copy of the field. In the other hand, when a label is
 repeated, rules are combined with the function ext.
 
 > -- here we are using a less kinded types than before
@@ -195,82 +197,85 @@ Now we implement Com, by induction over the first Aspect.
 
 ----------------------------------------------------------------------------
 
-[(k1, [(k1, *)])] -> [(k2, [(k2, *)])]
+> class Empties (fc :: [(k,Type)]) where
+>   type EmptiesR fc :: [(k, [(k, Type)])]
+>   empties :: Record fc -> ChAttsRec (EmptiesR fc)
 
-> class Empties (fc :: [(k,Type)])
->               (ec :: [(k, [(k, Type)])]) | fc -> ec where
->   empties :: Record fc -> ChAttsRec ec
 
-> instance Empties '[] '[] where
->   empties (EmptyR) = EmptyCh
+> instance Empties '[] where
+>   type EmptiesR '[] = '[]
+>   empties EmptyR = EmptyCh
 
-> instance ( Empties fcr ecr
->          , LabelSet ( '(lch, '[]) ': ecr)) --TODO ver como remover esto
->   => Empties ( '(lch,fch)': fcr ) ( '(lch, '[])': ecr) where
+
+> instance (Empties fcr,
+>           LabelSet ( '(lch, '[]) ': EmptiesR fcr)) =>
+>   Empties ( '(lch, fch) ': fcr) where
+>   type EmptiesR ( '(lch, fch) ': fcr) = '(lch, '[]) ': EmptiesR fcr
 >   empties (ConsR pch fcr)
 >     = let lch = labelTChAtt pch -- TODO: name
 >       in  ConsCh (TaggedChAttr lch EmptyAtt) (empties fcr)
 
-----------------------------------------------------------------------------
-
 
 > data Val
 
-> class Kn (fc :: [(k, Type)])
->          (ic :: [(k, [(k, Type)])])
->          (sc :: [(k, [(k, Type)])]) | fc -> sc ic where
->   kn :: Record fc -> ChAttsRec ic -> ChAttsRec sc
+
+The Kn function implementation
+
+> class Kn (fcr :: [(k, Type)])
+>          (icr :: [(k, [(k, Type)])])
+>          (scr :: [(k, [(k, Type)])]) | fcr -> scr icr where
+>   kn :: Record fcr -> ChAttsRec icr -> ChAttsRec scr
 
 > instance Kn '[] '[] '[] where
->   kn _ _ = EmptyCh
+>   kn EmptyR EmptyCh = EmptyCh
 
- 
-> instance ( Kn fc ic sc
->          , LabelSet ('(lch, fc2scl) ': sc)
->          , fc2icl ~ Fc2ic l
->          , fc2scl ~ Fc2sc l
->          , l ~ (Attribution fc2icl -> Attribution fc2scl))
->   =>  Kn ( '(lch , l {-Attribution ich -> Attribution sch)-}) ': fc)
->          ( '(lch , fc2icl) ': ic)
->          ( '(lch , fc2scl) ': sc) where
->   kn (ConsR pfch fcr) (ConsCh pich icr)
->    = let scr = kn fcr icr
->          lch = labelTChAtt pfch    :: Label lch-- TODO: name
->          fch = unTagged pfch       :: l
->          ich = unTaggedChAttr pich -- :: Attribution ich
->      in ConsCh (TaggedChAttr lch (fch ich)) scr
+> instance {-# OVERLAPS  #-} ( Kn fcr icr scr
+>          , (LabelSet ('(lch, '[ '(v, t)] ) : scr)))
+>   => Kn ( '(lch, Attribution '[] -> Attribution '[ '(v, t)] ) ': fcr)
+>         ( '(lch, '[]) ': icr )
+>         ( '(lch, '[ '(v, t)] ) ': scr) where
+>   kn (ConsR (lfc :: Tagged lch (Attribution '[] -> Attribution '[ '(v,t)])) fcr)
+>      (ConsCh lic icr)
+>     = ConsCh (TaggedChAttr lch (fc EmptyAtt)) $ kn fcr icr   
+>       where lch = labelChAttr lic
+>             fc  = unTagged lfc :: Attribution '[] -> Attribution '[ '(v,t)]
+>             ic  = unTaggedChAttr lic
 
 
-> type family Fc2ic a ::  [(k,Type)]
-> type instance Fc2ic (Attribution '[] -> Attribution '[ '(v, Int)]) = '[]
-> type instance Fc2ic (Attribution ich -> Attribution sch) = ich
 
-> type family Fc2sc a ::  [(k,Type)]
-> type instance Fc2sc (Attribution '[] -> Attribution '[ '(v, Int)])
->   = '[ '(v,Int)]
-> type instance Fc2sc (Attribution ich -> Attribution sch) = sch
+> instance {-# OVERLAPPABLE #-} ( Kn fcr icr scr
+>          , (LabelSet ('(lch, sch) : scr)))
+>            -- esto no deberia ser necesario pero hay que tocar LabelSet 
+>   => Kn ( '(lch, Attribution ich -> Attribution sch) ': fcr)
+>         ( '(lch, ich) ': icr )
+>         ( '(lch, sch) ': scr ) where
+>   kn (ConsR lfc fcr) (ConsCh lic icr)
+>     = ConsCh (TaggedChAttr lch (fc ic)) $ kn fcr icr   
+>       where lch = label lfc
+>             fc  = unTagged lfc 
+>             ic  = unTaggedChAttr lic
 
 
--- > instance ( Kn fc ic sc
--- >          , LabelSet ('(lch, sch) ': sc))
--- >   =>  Kn ( '(lch , Attribution '[] -> Attribution '[ '(Val, a)]) ': fc)
--- >          ( '(lch , '[ '(Val, a)] ) ': ic)
--- >          ( '(lch , '[] ) ': sc) where
--- >   kn (ConsR pfch fcr) (ConsCh pich icr)
--- >    = undefined
--- > --     let scr = kn fcr icr
--- > --         lch = labelTChAtt pfch -- TODO: name
--- > --         fch = unTagged pfch
--- > --         ich = unTaggedChAttr pich
--- > --     in ConsCh (TaggedChAttr lch (fch ich)) scr
 
-----------------------------------------------------------------------------
 
-Now we code the actual knit function:
 
-> knit :: ( Empties fc ec
+
+-- > instance Kn ( '((chl, Int), Attribution '[]
+  -> Attribution '[ '(Val, Int)]) ': '[])
+-- >             ( '((chl, Int), '[]) ': '[])
+-- >             ( '((chl, Int), '[ '(Val, Int)]) ': '[] ) where
+-- > 
+-- >   kn (ConsR lfc EmptyR) EmptyAtt
+-- >     = ConsCh (TaggedChAttr lch (fc ic)) EmptyAtt
+-- >       where lch = label lfc
+-- >             fc  = unTagged lfc
+-- >             ic  = unTaggedChAttr lic
+
+Actual knit:
+
+> knit :: ( Empties fc
 >         , Kn fc ic sc )
->   => Rule sc ip ec '[] ic sp
+>   => Rule sc ip (EmptiesR fc) '[] ic sp
 >      -> Record fc -> Attribution ip -> Attribution sp
 > knit rule fc ip
 >   = let ec          = empties fc
