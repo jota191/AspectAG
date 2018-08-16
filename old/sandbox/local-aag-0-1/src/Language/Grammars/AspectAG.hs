@@ -189,9 +189,9 @@ instance ComSingle  HFalse f (Record r) (Record (HCons f r))
    where comsingle _ f (Record r) = Record (HCons f r)
 
 -- | Semantic function of a terminal
-sem_Lit :: a -> Record HNil -> a
-sem_Lit e (Record HNil) = e
-
+--sem_Lit :: a -> Record HNil -> a
+--sem_Lit e (Record HNil) = e
+--movido a test1
 
 -- | The function 'knit' takes the combined rules for a node and the 
 --   semantic functions of the children, and builds a
