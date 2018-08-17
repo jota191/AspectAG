@@ -192,6 +192,18 @@ COM
 > r3 = r1 .+. r2
 
 
->-- r4 = (p_Leaf =. leaf_smin) `ConsR` EmptyR
->-- r5 = (p_Root =. root_smin) `ConsR` ( p_Leaf =. root_smin `ConsR` EmptyR)
-> 
+-- > r4 ::(LabelSet sp, NotIn Att_smin sp, HasFieldAtt Val r1 val,
+-- >       HasChild (Ch_i, Int) r2 r1) =>
+-- >      Record '[ '(P_Leaf,
+-- >            Fam r2 p -> Fam ic sp -> Fam ic ('(Att_smin, val) : sp))]
+-- > r4 = (p_Leaf =. leaf_smin) `ConsR` EmptyR
+-- > r5 = (p_Root =. root_smin) `ConsR` ((p_Leaf =. root_smin) `ConsR` EmptyR)
+-- > r5 :: (LabelSet sp1, LabelSet sp2, NotIn Att_smin sp1,
+-- >      NotIn Att_smin sp2, HasFieldAtt Att_smin r4 val1,
+-- >      HasFieldAtt Att_smin r5 val2, HasChild (Ch_tree, Tree) r6 r4,
+-- >      HasChild (Ch_tree, Tree) r7 r5) =>
+-- >     Record
+-- >       '[ '(P_Root,
+-- >           Fam r6 p1 -> Fam ic1 sp1 -> Fam ic1 ('(Att_smin, val1) : sp1)),
+-- >         '(P_Leaf,
+-- >           Fam r7 p2 -> Fam ic2 sp2 -> Fam ic2 ('(Att_smin, val2) : sp2))]

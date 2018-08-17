@@ -12,7 +12,7 @@
 >              FunctionalDependencies,
 >              ConstraintKinds,
 >              ScopedTypeVariables,
->              DataKinds, IncoherentInstances
+>              DataKinds
 > #-}
 
 
@@ -45,9 +45,6 @@ the added arity is for make them composable
 >   = Fam sc ip -> (Fam ic sp -> Fam ic' sp')
 
 
-> ext :: Rule sc ip ic' sp' ic'' sp''
->     -> Rule sc ip ic  sp  ic'  sp'
->     -> Rule sc ip ic  sp  ic'' sp''
 
 > (f `ext` g) input = f input . g input
 
@@ -182,20 +179,37 @@ ext :: Rule sc ip ic' sp' ic'' sp''
 
 Now we implement Com, by induction over the first Aspect.
 
-> instance Com '[] r₂ r₂ where
->   _ .+. r = r
 
-> instance ( Com r₁ r₂ r'
->          , HasLabelRecRes prd r₂ ~ b
->          , HasLabelRec prd r₂
->          , ComSingle b prd rule r' r₃)
->   => Com ( '(prd, rule) ': r₁) r₂ r₃ where
->      (pr `ConsR` r₁) .+. r₂ = let r'  = r₁ .+. r₂
->                                   b   = hasLabelRec (labelPrd pr) r₂
->                                   r₃  = comSingle b pr r'
->                               in  r₃
+
+-- > instance ( Com r₁ r₂ r'
+-- >          , HasLabelRecRes prd r₂ ~ b
+-- >          , HasLabelRec prd r₂
+-- >          , ComSingle b prd rule r' r₃)
+-- >   => Com ( '(prd, rule) ': r₁) r₂ r₃ where
+-- >      (pr `ConsR` r₁) .+. r₂ = let r'  = r₁ .+. r₂
+-- >                                   b   = hasLabelRec (labelPrd pr) r₂
+-- >                                   r₃  = comSingle b pr r'
+-- >                               in  r₃
+
+
+> instance Com r '[] r where
+>   r .+. _ = r
+
+
+> instance ( Com r''' r' r''
+>          , HasLabelRecRes prd r ~ b
+>          , HasLabelRec prd r
+>          , ComSingle b prd rule r r''')
+>   => Com r ( '(prd, rule) ': r') r'' where
+>      r .+. (pr `ConsR` r') = let 
+>                                  b   = hasLabelRec (labelPrd pr) r
+>                                  r'''= comSingle b pr r
+>                                  r'' = r''' .+. r'
+>                              in  r''
 
 ----------------------------------------------------------------------------
+
+
 
 > class Empties (fc :: [(k,Type)]) where
 >   type EmptiesR fc :: [(k, [(k, Type)])]
@@ -216,10 +230,7 @@ Now we implement Com, by induction over the first Aspect.
 >       in  ConsCh (TaggedChAttr lch EmptyAtt) (empties fcr)
 
 
-> data Val
-
-
-The Kn function implementation
+-- the Kn class
 
 > class Kn (fcr :: [(k, Type)])
 >          (icr :: [(k, [(k, Type)])])
@@ -227,55 +238,43 @@ The Kn function implementation
 >   kn :: Record fcr -> ChAttsRec icr -> ChAttsRec scr
 
 > instance Kn '[] '[] '[] where
->   kn EmptyR EmptyCh = EmptyCh
-
-> instance {-# OVERLAPS  #-} ( Kn fcr icr scr
->          , (LabelSet ('(lch, '[ '(v, t)] ) : scr)))
->   => Kn ( '(lch, Attribution '[] -> Attribution '[ '(v, t)] ) ': fcr)
->         ( '(lch, '[]) ': icr )
->         ( '(lch, '[ '(v, t)] ) ': scr) where
->   kn (ConsR (lfc :: Tagged lch (Attribution '[] -> Attribution '[ '(v,t)])) fcr)
->      (ConsCh lic icr)
->     = ConsCh (TaggedChAttr lch (fc EmptyAtt)) $ kn fcr icr   
->       where lch = labelChAttr lic
->             fc  = unTagged lfc :: Attribution '[] -> Attribution '[ '(v,t)]
->             ic  = unTaggedChAttr lic
+>   kn _ _ = EmptyCh
 
 
-
-> instance {-# OVERLAPPABLE #-} ( Kn fcr icr scr
->          , (LabelSet ('(lch, sch) : scr)))
->            -- esto no deberia ser necesario pero hay que tocar LabelSet 
->   => Kn ( '(lch, Attribution ich -> Attribution sch) ': fcr)
->         ( '(lch, ich) ': icr )
->         ( '(lch, sch) ': scr ) where
->   kn (ConsR lfc fcr) (ConsCh lic icr)
->     = ConsCh (TaggedChAttr lch (fc ic)) $ kn fcr icr   
->       where lch = label lfc
->             fc  = unTagged lfc 
->             ic  = unTaggedChAttr lic
-
-
+> instance ( Kn fc ic sc
+>          , LabelSet ('(lch, sch) : sc)
+>          , LabelSet ('(lch, ich) : ic))
+>   =>  Kn ( '(lch , Attribution ich -> Attribution sch) ': fc)
+>          ( '(lch , ich) ': ic)
+>          ( '(lch , sch) ': sc) where
+>   kn (ConsR pfch fcr) (ConsCh pich icr)
+>    = let scr = kn fcr icr
+>          lch = labelTChAtt pfch    :: Label lch-- TODO: name
+>          fch = unTagged pfch       :: Attribution ich -> Attribution sch
+>          ich = unTaggedChAttr pich :: Attribution ich
+>      in ConsCh (TaggedChAttr lch (fch ich)) scr
 
 
+-- > instance ( Kn fc ic sc
+-- >          , LabelSet ('(lch, sch) ': sc))
+-- >   =>  Kn ( '(lch , Attribution '[] -> Attribution '[ '(Val, a)]) ': fc)
+-- >          ( '(lch , '[ '(Val, a)] ) ': ic)
+-- >          ( '(lch , '[] ) ': sc) where
+-- >   kn (ConsR pfch fcr) (ConsCh pich icr)
+-- >    = undefined
+-- > --     let scr = kn fcr icr
+-- > --         lch = labelTChAtt pfch -- TODO: name
+-- > --         fch = unTagged pfch
+-- > --         ich = unTaggedChAttr pich
+-- > --     in ConsCh (TaggedChAttr lch (fch ich)) scr
 
+----------------------------------------------------------------------------
 
--- > instance Kn ( '((chl, Int), Attribution '[]
-  -> Attribution '[ '(Val, Int)]) ': '[])
--- >             ( '((chl, Int), '[]) ': '[])
--- >             ( '((chl, Int), '[ '(Val, Int)]) ': '[] ) where
--- > 
--- >   kn (ConsR lfc EmptyR) EmptyAtt
--- >     = ConsCh (TaggedChAttr lch (fc ic)) EmptyAtt
--- >       where lch = label lfc
--- >             fc  = unTagged lfc
--- >             ic  = unTaggedChAttr lic
+Now we code the actual knit function:
 
-Actual knit:
-
-> knit :: ( Empties fc
+> knit :: ( Empties fc ,EmptiesR fc ~ ec
 >         , Kn fc ic sc )
->   => Rule sc ip (EmptiesR fc) '[] ic sp
+>   => Rule sc ip ec '[] ic sp
 >      -> Record fc -> Attribution ip -> Attribution sp
 > knit rule fc ip
 >   = let ec          = empties fc
