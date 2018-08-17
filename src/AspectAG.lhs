@@ -10,7 +10,8 @@
 >              UndecidableInstances,
 >              FunctionalDependencies,
 >              ConstraintKinds,
->              ScopedTypeVariables
+>              ScopedTypeVariables,
+>              DataKinds
 > #-}
 
 
@@ -21,11 +22,12 @@
 > import Record
 > import Attribute
 > import Data.Kind
-> import Data.Tagged
+> import Data.Tagged hiding (unTagged)
 > import TPrelude
 > import Data.Proxy
 > import ChildAtts
 > import TagUtils
+> import GHC.TypeLits
 
 In each node of the grammar, the \emph{Fam} contains a single attribution
 fot the parent, and a collection (Record) of attributions for the children:
@@ -42,9 +44,6 @@ the added arity is for make them composable
 >   = Fam sc ip -> (Fam ic sp -> Fam ic' sp')
 
 
-> ext :: Rule sc ip ic' sp' ic'' sp''
->     -> Rule sc ip ic  sp  ic'  sp'
->     -> Rule sc ip ic  sp  ic'' sp''
 
 > (f `ext` g) input = f input . g input
 
@@ -139,7 +138,7 @@ Let a Type for the fields:
 
 
 Lets define the combination of aspects. When labels are only present once,
-the new aspect has a copy of the field. In the other hand, when a lebel is
+the new aspect has a copy of the field. In the other hand, when a label is
 repeated, rules are combined with the function ext.
 
 > -- here we are using a less kinded types than before
@@ -161,88 +160,81 @@ The boolean parameter is the indicator of prd being a label in the record.
 >    => ComSingle 'False prd rule r₁ ( '(prd,rule) ': r₁) where
 >   comSingle _ prd asp = prd `ConsR` asp
 
-> 
-> instance (UpdateAtLabelRec prd (Rule sc ip ic' sp' ic'' sp'') r₁ r₂
->          , HasFieldRec prd r₁ (Rule sc ip ic'' sp'' ic'' sp''))
->   => ComSingle 'True prd (Rule sc ip ic' sp' ic'' sp'') r₁ r₂ where
->   comSingle _ f r = updateAtLabelRec l (oldR `ext` newR) r
->     where l    = labelPrd f
->           oldR = hLookupByLabelRec l r
+ 
+> instance ( HasFieldRec prd r₁,
+>            LookupByLabelRec prd r₁ ~ (Rule sc ip ic' sp' ic'' sp'')
+>          , UpdateAtLabelRec prd (Rule sc ip ic  sp  ic'' sp'') r₁ r₂
+>          )
+>   => ComSingle 'True prd        (Rule sc ip ic  sp  ic'  sp') r₁ r₂ where
+>   comSingle _ f r = updateAtLabelRec l (oldR `ext` newR) r :: Aspect r₂ 
+>     where l    = labelPrd f                                :: Label prd
+>           oldR = hLookupByLabelRec l r    
 >           newR = rulePrd f
-> 
 
 
 Now we implement Com, by induction over the first Aspect.
 
-> instance Com '[] r₂ r₂ where
->   _ .+. r = r
+> instance Com r '[] r where
+>   r .+. _ = r
 
-> instance ( Com r₁ r₂ r'
->          , HasLabelRecRes prd r₂ ~ b
->          , HasLabelRec prd r₂
->          , ComSingle b prd rule r' r₃)
->   => Com ( '(prd, rule) ': r₁) r₂ r₃ where
->      (pr `ConsR` r₁) .+. r₂ = let r'  = r₁ .+. r₂
->                                   b   = hasLabelRec (labelPrd pr) r₂
->                                   r₃   = comSingle b pr r'
->                               in  r₃
+
+> instance ( Com r''' r' r''
+>          , HasLabelRecRes prd r ~ b
+>          , HasLabelRec prd r
+>          , ComSingle b prd rule r r''')
+>   => Com r ( '(prd, rule) ': r') r'' where
+>      r .+. (pr `ConsR` r') = let 
+>                                  b   = hasLabelRec (labelPrd pr) r
+>                                  r'''= comSingle b pr r
+>                                  r'' = r''' .+. r'
+>                              in  r''
 
 ----------------------------------------------------------------------------
 
-[(k1, [(k1, *)])] -> [(k2, [(k2, *)])]
 
-> class Empties (fc :: [(k,Type)])
->               (ec :: [(k, [(k, Type)])]) | fc -> ec where
->   empties :: Record fc -> ChAttsRec ec
 
-> instance Empties '[] '[] where
->   empties (EmptyR) = EmptyCh
+> class Empties (fc :: [(k,Type)]) where
+>   type EmptiesR fc :: [(k, [(k, Type)])]
+>   empties :: Record fc -> ChAttsRec (EmptiesR fc)
 
-> instance ( Empties fcr ecr
->          , LabelSet ( '(lch, '[]) ': ecr)) --TODO ver como remover esto
->   => Empties ( '(lch,fch)': fcr ) ( '(lch, '[])': ecr) where
+
+> instance Empties '[] where
+>   type EmptiesR '[] = '[]
+>   empties EmptyR = EmptyCh
+
+
+> instance (Empties fcr,
+>           LabelSet ( '(lch, '[]) ': EmptiesR fcr)) =>
+>   Empties ( '(lch, fch) ': fcr) where
+>   type EmptiesR ( '(lch, fch) ': fcr) = '(lch, '[]) ': EmptiesR fcr
 >   empties (ConsR pch fcr)
 >     = let lch = labelTChAtt pch -- TODO: name
 >       in  ConsCh (TaggedChAttr lch EmptyAtt) (empties fcr)
 
-----------------------------------------------------------------------------
 
+-- the Kn class
 
-> data Val
-
-> class Kn (fc :: [(k, Type)])
->          (ic :: [(k, [(k, Type)])])
->          (sc :: [(k, [(k, Type)])]) | fc -> sc ic where
->   kn :: Record fc -> ChAttsRec ic -> ChAttsRec sc
+> class Kn (fcr :: [(k, Type)])
+>          (icr :: [(k, [(k, Type)])])
+>          (scr :: [(k, [(k, Type)])]) | fcr -> scr icr where
+>   kn :: Record fcr -> ChAttsRec icr -> ChAttsRec scr
 
 > instance Kn '[] '[] '[] where
 >   kn _ _ = EmptyCh
 
- 
+
 > instance ( Kn fc ic sc
->          , LabelSet ('(lch, fc2scl) ': sc)
->          , fc2icl ~ Fc2ic l
->          , fc2scl ~ Fc2sc l
->          , l ~ (Attribution fc2icl -> Attribution fc2scl))
->   =>  Kn ( '(lch , l {-Attribution ich -> Attribution sch)-}) ': fc)
->          ( '(lch , fc2icl) ': ic)
->          ( '(lch , fc2scl) ': sc) where
+>          , LabelSet ('(lch, sch) : sc)
+>          , LabelSet ('(lch, ich) : ic))
+>   =>  Kn ( '(lch , Attribution ich -> Attribution sch) ': fc)
+>          ( '(lch , ich) ': ic)
+>          ( '(lch , sch) ': sc) where
 >   kn (ConsR pfch fcr) (ConsCh pich icr)
 >    = let scr = kn fcr icr
 >          lch = labelTChAtt pfch    :: Label lch-- TODO: name
->          fch = unTagged pfch       :: l
->          ich = unTaggedChAttr pich -- :: Attribution ich
+>          fch = unTagged pfch       :: Attribution ich -> Attribution sch
+>          ich = unTaggedChAttr pich :: Attribution ich
 >      in ConsCh (TaggedChAttr lch (fch ich)) scr
-
-
-> type family Fc2ic a ::  [(k,Type)]
-> type instance Fc2ic (Attribution '[] -> Attribution '[ '(v, Int)]) = '[]
-> type instance Fc2ic (Attribution ich -> Attribution sch) = ich
-
-> type family Fc2sc a ::  [(k,Type)]
-> type instance Fc2sc (Attribution '[] -> Attribution '[ '(v, Int)])
->   = '[ '(v,Int)]
-> type instance Fc2sc (Attribution ich -> Attribution sch) = sch
 
 
 -- > instance ( Kn fc ic sc
@@ -262,7 +254,7 @@ Now we implement Com, by induction over the first Aspect.
 
 Now we code the actual knit function:
 
-> knit :: ( Empties fc ec
+> knit :: ( Empties fc ,EmptiesR fc ~ ec
 >         , Kn fc ic sc )
 >   => Rule sc ip ec '[] ic sp
 >      -> Record fc -> Attribution ip -> Attribution sp

@@ -39,21 +39,6 @@
 >   Not False = True
 >   Not True  = False
 
--- > type family IsLabelSet (r :: [(k,k')]) :: Bool
--- > type instance IsLabelSet '[]             = True
--- > --type instance IsLabelSet '[ '(l,v)]      = True
--- > type instance IsLabelSet ( '(l,v) ': r)
--- >   = And (Not (OccursLabel l r)) (IsLabelSet r)
-
--- > type family OccursLabel (l :: k) (r :: [(k,k')]) :: Bool
--- > type instance OccursLabel l '[] = False
--- > type instance OccursLabel l ( '(l2,v) ': r ) = Or (l == l2)(OccursLabel l r)
-
-
--- > --FIXME: this is not polykinded
--- > type family (===) l v :: Bool 
--- > -- type instance x === y = x == y
--- > type instance x === y = Proxy x == Proxy y
 
 > class LabelSet (l :: [(k,k2)])
 > --instance (IsLabelSet xs ~ True) => LabelSet xs
@@ -70,12 +55,27 @@
 >          , LabelSet ( '(l1,v1) ': r)
 >          ) => LabelSet' '(l1,v1) '(l2,v2) False r
 
+
 > instance TypeError (Text "LabelSet Error:" :$$:
 >                     Text "Duplicated Label on Record" :$$:
->                    Text "On fields:" :$$: ShowType l1 :$$:
->                    Text " and " :$$: ShowType l1 )
+>                     Text "On fields:" :$$: ShowType l1 :$$:
+>                     Text " and " :$$: ShowType l1 )
 >           => LabelSet' l1 l2 True r
 > 
+
+
+
+-- > class LabelSet (r :: [(k,m)])
+-- > instance LabelSet '[]
+-- > instance ( LabelSet r
+-- >          , NotIn l r)
+-- >   => LabelSet ( '(l,m) ': r)
+
+-- > class NotIn (l :: k) (t :: [(k,m)])
+-- > instance NotIn l '[]
+-- > instance ( HEqK l l' False
+-- >          , NotIn l r)
+-- >   => NotIn l ( '(l' ,m) ': r)
 
 Reference:
 https://hackage.haskell.org/package/base-4.11.1.0/docs/GHC-TypeLits.html

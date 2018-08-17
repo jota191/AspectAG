@@ -14,7 +14,8 @@
 >              FunctionalDependencies,
 >              UndecidableInstances,
 >              ScopedTypeVariables,
->              TypeFamilies
+>              TypeFamilies,
+>              InstanceSigs
 > #-}
 
 > module Record where
@@ -26,8 +27,10 @@
 > import Eq
 > import Attribute
 > import TPrelude
-> import Data.Tagged
+> import Data.Tagged hiding (unTagged)
 > import TagUtils
+> import GHC.TypeLits
+
 
 > data Record :: forall k . [(k,Type)] -> Type where
 >   EmptyR :: Record '[]
@@ -45,13 +48,16 @@ Some boilerplate to show Attributes and Attributions
 > instance (Show v, Show (Record xs)) =>
 >          Show (Record ( '(l,v) ': xs ) ) where
 >   show (ConsR lv xs) = let tail = show xs
->                             in "{" ++ show (unTagged lv) ++ "," ++ drop 1 tail 
+>                        in "{" ++ show (unTagged lv)
+>                           ++ "," ++ drop 1 tail 
 
 %endif
 
 
 --- HasField
 
+
+> {-
 > class HasFieldRec (l::k) (r :: [(k,Type)]) v | l r -> v where
 >    hLookupByLabelRec:: Label l -> Record r -> v
 
@@ -68,8 +74,62 @@ Some boilerplate to show Attributes and Attributions
 >    hLookupByLabelRec' _ _ (ConsR (Tagged v) _) = v
 > instance HasFieldRec l r v => HasFieldRec' False l ( '(l2,v2) ': r) v where
 >    hLookupByLabelRec' _ l (ConsR _ r) = hLookupByLabelRec l r
- 
+> -} 
 
+
+> {-
+>
+> missing proofs 
+
+> type family LookupByLabel (l::k) (r :: [(k,Type)]) :: Type
+> type instance LookupByLabel l '[] = TypeError (Text "FieldNotFound")
+> type instance LookupByLabel l1 ( '(l2, t) ': xs)
+>   = If (l1 == l2) t (LookupByLabel l1 xs)
+
+
+> hLookupByLabel :: Label l -> Record r -> LookupByLabel l r
+> hLookupByLabel (Label :: Label l) (ConsR (lv :: Tagged l v)  r) = v
+
+> -}
+
+
+> class HasFieldRec (l::k) (r :: [(k,Type)]) where
+>   type LookupByLabelRec l r :: Type
+>   hLookupByLabelRec:: Label l -> Record r -> LookupByLabelRec l r
+
+
+> instance (HasFieldRec' (l == l2) l ( '(l2,v) ': r)) =>
+>   HasFieldRec l ( '(l2,v) ': r) where
+>   type LookupByLabelRec l ( '(l2,v) ': r)
+>     = LookupByLabelRec' (l == l2) l ( '(l2,v) ': r)
+>   hLookupByLabelRec :: Label l -> Record ( '(l2,v) ': r)
+>                     -> LookupByLabelRec l ( '(l2,v) ': r)
+>   hLookupByLabelRec l r
+>     = hLookupByLabelRec' (Proxy :: Proxy (l == l2)) l r 
+
+> class HasFieldRec' (b::Bool) (l::k) (r :: [(k,Type)]) where
+>   type LookupByLabelRec' b l r :: Type
+>   hLookupByLabelRec' ::
+>      Proxy b -> Label l -> Record r -> LookupByLabelRec' b l r
+
+> instance HasFieldRec'    'True l ( '(l, v) ': r) where
+>   type LookupByLabelRec' 'True l ( '(l, v) ': r) = v
+>   hLookupByLabelRec' _ _ (ConsR lv _) = unTagged lv
+
+> instance (HasFieldRec l r )=>
+>   HasFieldRec' 'False l ( '(l2, v) ': r) where
+>   type LookupByLabelRec' 'False l ( '(l2, v) ': r) = LookupByLabelRec l r
+>   hLookupByLabelRec' _ l (ConsR _ r) = hLookupByLabelRec l r
+
+Error instance:
+
+> instance TypeError (Text "Type Error ----" :$$:
+>                     Text "From the use of 'HasFieldRec' :" :$$:
+>                     Text "No Field of type " :<>: ShowType l
+>                     :<>: Text " on Record" )
+>   => HasFieldRec l '[] where
+>   type LookupByLabelRec l '[] = TypeError (Text "unreachable")
+>   hLookupByLabelRec = undefined
 
 
 UPDATEATLABEL

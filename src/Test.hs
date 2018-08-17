@@ -1,3 +1,4 @@
+
 {-# LANGUAGE TypeInType,
              GADTs,
              KindSignatures,
@@ -11,7 +12,9 @@
              FunctionalDependencies,
              ConstraintKinds,
              ScopedTypeVariables,
-             UnicodeSyntax#-}
+             UnicodeSyntax,
+             NoMonomorphismRestriction
+#-}
 
 module Test where
 
@@ -72,15 +75,19 @@ fam = undefined :: Fam IC '[]
 testFam = Fam (ConsCh (TaggedChAttr (ch_i) (ConsAtt (smin .=. 3) EmptyAtt))
                EmptyCh)
           (EmptyAtt)
+data Val
 
-     
+
+
 leaf_smin (Fam chi par)
-  = syndef smin (lookupByLabelAtt (Label :: Label Val) (hLookupByChild ch_i chi))
+  = syndef smin (lookupByLabelAtt ch_i (hLookupByChild ch_i chi))
+-- = syndef smin (hLookupByChild ch_i chi)
 
 node_smin (Fam chi par)
   = syndef smin ((lookupByLabelAtt smin (hLookupByChild ch_l chi))
                   `min`
                  (lookupByLabelAtt smin (hLookupByChild ch_r chi)))
+
 
 root_ival (Fam chi par)
   = inhdef ival (HCons nt_Tree HNil)
@@ -114,34 +121,104 @@ asp_ival = (p_Root =. root_ival) `ConsR` ((p_Node =. node_ival) `ConsR` EmptyR)
 asp_sres = (p_Root =. root_sres) `ConsR` ((p_Node =. node_sres)
                                  `ConsR` ((p_Leaf =. leaf_sres)`ConsR` EmptyR))
 
+asp_smin = (p_Leaf =. leaf_smin)
+  `ConsR` ((p_Node =. node_smin)
+  `ConsR` ((p_Root =. root_smin)
+  `ConsR` EmptyR))
+
+
+----catamorphism
+sem_Tree  asp (Node l r) = knit (hLookupByLabelRec p_Node asp )
+                                ((ch_l =. sem_Tree asp l)`ConsR`
+                                ((ch_r =. sem_Tree asp r) `ConsR` EmptyR))
+
+sem_Tree  asp (Leaf i) = knit (hLookupByLabelRec p_Leaf asp)
+                         ((ch_i =. sem_Lit i) `ConsR` EmptyR )
+
+sem_Root  asp (Root t) = knit (hLookupByLabelRec p_Root asp)
+                              ((ch_tree =. sem_Tree asp t) 
+                              `ConsR` EmptyR )
+
+sem_Lit :: Int -> Attribution '[ '((Ch_i, Int), a)] -> Attribution '[ '((Ch_i, Int), Int)]
+sem_Lit i _ = (ch_i .=. i) `ConsAtt` EmptyAtt
 
 
 
-sem_Root asp (Root t)
-  = knit (hLookupByLabelRec p_Root asp) (  ch_tree =. sem_Tree asp t 
-                                        *. EmptyR )
-  
-sem_Tree asp (Node left right)
-  = knit (hLookupByLabelRec p_Node asp) (  ch_l =. sem_Tree asp left 
-                                        *. ch_r =. sem_Tree asp right 
-                                        *. EmptyR )
+--minimo = lookupByLabelAtt smin (sem_Tree (asp_smin) examplet EmptyR)
 
-sem_Tree asp (Leaf i)
-  = knit (hLookupByLabelRec p_Leaf asp) (  ch_i =. (sem_Lit i) 
-                                        *. EmptyR )
+{-
 
+data IntList = Nil
+             | Cons Int IntList
+             deriving Show
+data V a = V a
 
-sem_Lit :: Int -> Attribution '[] -> Attribution ( '(Val, Int) ': '[])
-sem_Lit e EmptyAtt = ((Label) .=. e) `ConsAtt` EmptyAtt 
+-- non terminals
+nt_Cons = Label :: Label IntList
 
-
---repmin tree = lookupByLabelAtt smin $ sem_Root asp_smin (Root tree) EmptyAtt
-
-tree = Leaf 4
+----productions
+data P_Cons;   p_Cons   = Label :: Label P_Cons
+data P_Nil;    p_Nil    = Label :: Label P_Nil
 
 
+--children labels
+data Ch_c;      ch_c     = Label :: Label (Ch_c,IntList)
+data Ch_v;      ch_v     = Label :: Label (Ch_v,Int)
 
-examplet =    (Node (Node (Node (Leaf (-45)) (Leaf 4))
+-- cata
+sem_List asp (Cons v c) = knit (hLookupByLabelRec  p_Cons asp)
+                               ((ch_c =. sem_List asp c) 
+                               `ConsR` ((ch_v =. sem_Lit v)
+                               `ConsR` EmptyR ))
+
+sem_List  asp (Nil) = knit (hLookupByLabelRec p_Nil asp)
+                           ((ch_v  =. sem_Lit (0::Int)) 
+                            `ConsR` EmptyR )
+
+
+--sem_Lit :: Int -> Attribution '[] -> Int --Attribution ( '(Val, Int) ': '[])
+--sem_Lit e EmptyAtt = e -- ((Label) .=. e) `ConsAtt` EmptyAtt 
+sem_Lit :: Int -> Attribution '[] -> Attribution '[ '(Att_ssum, Int)]
+sem_Lit v _ = (ConsAtt (ssum .=. v) EmptyAtt)
+
+data Att_ssum;   ssum = Label :: Label Att_ssum
+
+nil_ssum (Fam chi par)
+  = syndef ssum(lookupByLabelAtt(Label::Label Val) (hLookupByChild ch_v chi))
+
+cons_ssum (Fam chi par)
+  = syndef ssum $ (lookupByLabelAtt ssum (hLookupByChild ch_c chi))
+                   +
+                  (lookupByLabelAtt(Label::Label Val) (hLookupByChild ch_v chi))
+
+
+asp_ssum
+  :: (LabelSet ('(Att_ssum, val1) : sp1),
+      LabelSet ('(Att_ssum, val2) : sp2), Num val2,
+      HasFieldAtt Att_ssum r4 val2, HasFieldAtt Val r5 val1,
+      HasFieldAtt Val r6 val2, HasChild (Ch_c, IntList) r3 r4,
+      HasChild (Ch_v, Int) r7 r5, HasChild (Ch_v, Int) r3 r6) =>
+     Record
+       '[ '(P_Nil,
+           Fam r7 p1 -> Fam ic1 sp1 -> Fam ic1 ('(Att_ssum, val1) : sp1)),
+         '(P_Cons,
+           Fam r3 p2 -> Fam ic2 sp2 -> Fam ic2 ('(Att_ssum, val2) : sp2))]
+
+asp_ssum = (p_Nil  =. nil_ssum) `ConsR` ((p_Cons =. cons_ssum) `ConsR` EmptyR)
+
+--asp_ssum =    (p_Nil  .=. nil_ssum) .*. (p_Cons .=. cons_ssum) .*. emptyRecord
+
+--suma= lookupByLabelAtt ssum (sem_List (asp_ssum) examplel EmptyAtt)
+examplel = (Cons 5 (Cons 4 Nil))
+
+-- sumalista = (sem_List (asp_ssum) examplel emptyRecord) # ssum
+
+-}
+
+
+
+
+examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
                           (Node (Leaf 2) (Leaf 7))
                     )
 
@@ -149,80 +226,3 @@ examplet =    (Node (Node (Node (Leaf (-45)) (Leaf 4))
                           (Leaf 6)
                     )
               )
-
---minimo = sem_Tree (asp_smin) examplet EmptyAtt
-
-
-asp_smin
-  :: (Ord val1, HasChild (Ch_i, Int) r4 r5,
-      HasChild (Ch_r, Tree) r3 r6, HasChild (Ch_l, Tree) r3 r7,
-      HasChild (Ch_tree, Tree) r8 r9, HasFieldAtt Val r5 val2,
-      HasFieldAtt Att_smin r6 val1, HasFieldAtt Att_smin r7 val1,
-      HasFieldAtt Att_smin r9 val3, LabelSet ('(Att_smin, val2) : sp1),
-      LabelSet ('(Att_smin, val1) : sp2),
-      LabelSet ('(Att_smin, val3) : sp3)) =>
-     Record
-       '[ '(P_Leaf,
-           Fam r4 p1 -> Fam ic1 sp1 -> Fam ic1 ('(Att_smin, val2) : sp1)),
-         '(P_Node,
-           Fam r3 p2 -> Fam ic2 sp2 -> Fam ic2 ('(Att_smin, val1) : sp2)),
-         '(P_Root,
-           Fam r8 p3 -> Fam ic3 sp3 -> Fam ic3 ('(Att_smin, val3) : sp3))]
-
-
--- asp_smin
---   :: (HasChild (Ch_i, Int) r4 r5, HasChild (Ch_r, Tree) r3 r6,
---       HasChild (Ch_l, Tree) r3 r7, HasFieldAtt Val r5 val1,
---       HasFieldAtt Att_smin r6 val2, HasFieldAtt Att_smin r7 val2,
---       Ord val2, LabelSet ('(Att_smin, val1) : sp1),
---       LabelSet ('(Att_smin, val2) : sp2)) =>
---      Record
---        '[ '(P_Leaf,
---            Fam r4 p1 -> Fam ic1 sp1 -> Fam ic1 ('(Att_smin, val1) : sp1)),
---          '(P_Node,
---            Fam r3 p2 -> Fam ic2 sp2 -> Fam ic2 ('(Att_smin, val2) : sp2))]
-
-asp_ival
-  :: (HasChild (Ch_tree, Tree) r2 r1,
-      SingleDef
-        (HasLabelChildAttsRes (Ch_tree, Tree) ic'4)
-        'True
-        Att_ival
-        (Tagged (Ch_tree, Tree) v1)
-        ic'4
-        ic'5,
-      SingleDef
-        (HasLabelChildAttsRes (Ch_l, Tree) ic'6)
-        'True
-        Att_ival
-        (Tagged (Ch_l, Tree) v2)
-        ic'6
-        ic'3,
-      SingleDef
-        (HasLabelChildAttsRes (Ch_r, Tree) ic'7)
-        'True
-        Att_ival
-        (Tagged (Ch_r, Tree) v2)
-        ic'7
-        ic'6,
-      HasLabelChildAtts (Ch_tree, Tree) ic'4,
-      HasLabelChildAtts (Ch_l, Tree) ic'6,
-      HasLabelChildAtts (Ch_r, Tree) ic'7, HasFieldAtt Att_smin r1 v1,
-      HasFieldAtt Att_ival r v2) =>
-     Record
-       '[ '(P_Root, Fam r2 p -> Fam ic'4 sp1 -> Fam ic'5 sp1),
-         '(P_Node, Fam c r -> Fam ic'7 sp2 -> Fam ic'3 sp2)]
-asp_sres
-  :: (HasChild (Ch_tree, Tree) r4 r5, HasChild (Ch_r, Tree) r3 r6,
-      HasChild (Ch_l, Tree) r3 r7, HasFieldAtt Att_sres r5 val,
-      HasFieldAtt Att_sres r6 Tree, HasFieldAtt Att_sres r7 Tree,
-      HasFieldAtt Att_ival r Int, LabelSet ('(Att_sres, Tree) : sp2),
-      LabelSet ('(Att_sres, Tree) : sp3),
-      LabelSet ('(Att_sres, val) : sp1)) =>
-     Record
-       '[ '(P_Root,
-           Fam r4 p1 -> Fam ic1 sp1 -> Fam ic1 ('(Att_sres, val) : sp1)),
-         '(P_Node,
-           Fam r3 p2 -> Fam ic2 sp2 -> Fam ic2 ('(Att_sres, Tree) : sp2)),
-         '(P_Leaf,
-           Fam c r -> Fam ic3 sp3 -> Fam ic3 ('(Att_sres, Tree) : sp3))]

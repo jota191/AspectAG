@@ -17,7 +17,7 @@
 >              TypeFamilies
 > #-}
 
-> module InternalTest where
+> module InternalTest2 where
 > import Data.Kind 
 > import Data.Type.Equality
 > import Data.Proxy
@@ -29,7 +29,7 @@
 > import Attribution
 > import Record
 > import ChildAtts
-> import AspectAG
+> --import AspectAG
 > import HList
 > import TagUtils
 
@@ -82,35 +82,33 @@ Some tests:
 
 
 
-> 
+-- --ChildAtts
 
---ChildAtts
-
-> data LabelL; data LabelR
-> labelL = Label :: Label (LabelL,Char)
-> labelR = Label :: Label (LabelR,Int)
+-- > data LabelL; data LabelR
+-- > labelL = Label :: Label (LabelL,Char)
+-- > labelR = Label :: Label (LabelR,Int)
 
 
-> childAttLR = ConsCh (TaggedChAttr labelL attrib1)$
->              ConsCh (TaggedChAttr labelR attrib2) EmptyCh
+-- > childAttLR = ConsCh (TaggedChAttr labelL attrib1)$
+-- >              ConsCh (TaggedChAttr labelR attrib2) EmptyCh
 
-> -- duplicatedLabel
-> -- childAttRRFail = ConsCh (TaggedChAttr labelR attrib1)$
-> --              ConsCh (TaggedChAttr labelR attrib2) EmptyCh
+-- > -- duplicatedLabel
+-- > -- childAttRRFail = ConsCh (TaggedChAttr labelR attrib1)$
+-- > --              ConsCh (TaggedChAttr labelR attrib2) EmptyCh
 
-> attrib1get = hLookupByChild labelL childAttLR
-> attrib2get = hLookupByChild labelR childAttLR
->  -- no instance
->  -- attrib2g = hLookupByChild label3 childAttLR
+-- > attrib1get = hLookupByChild labelL childAttLR
+-- > attrib2get = hLookupByChild labelR childAttLR
+-- >  -- no instance
+-- >  -- attrib2g = hLookupByChild label3 childAttLR
 
-> test_update_ChAtts_1 = updateAtChild labelL attrib3 childAttLR
-> test_update_ChAtts_2 = updateAtChild labelR attrib3 childAttLR
+-- > test_update_ChAtts_1 = updateAtChild labelL attrib3 childAttLR
+-- > test_update_ChAtts_2 = updateAtChild labelR attrib3 childAttLR
 
-> -- pch = Tagged True ::  Tagged  (LabelR,Int) Bool 
-> testsd = singledef (undefined :: Proxy 'True )
->                    (undefined:: Proxy 'True)
->                    (Label :: Label Label3)
->                    pch childAttLR  
+-- > -- pch = Tagged True ::  Tagged  (LabelR,Int) Bool 
+-- > testsd = singledef (undefined :: Proxy 'True )
+-- >                    (undefined:: Proxy 'True)
+-- >                    (Label :: Label Label3)
+-- >                    pch childAttLR  
 
 example explained:
 ChAttsRec
@@ -122,7 +120,7 @@ ChAttsRec
   '['(LabelL, '['(Label2, Char)]),
     '(LabelR, '['(Label3, Bool), '(Label1, Int), '(Label2, Char)])]
 
-> 
+> {-
 > nts :: HList [Bool, Int,Char]
 > nts = undefined
 
@@ -189,3 +187,9 @@ COM
 > r2 = (Tagged emptyRule) `ConsR` ((Tagged emptyRule) `ConsR` EmptyR)
 
 > r3 = r1 .+. r2
+
+
+>-- r4 = (p_Leaf =. leaf_smin) `ConsR` EmptyR
+>-- r5 = (p_Root =. root_smin) `ConsR` ( p_Leaf =. root_smin `ConsR` EmptyR)
+
+> -}
