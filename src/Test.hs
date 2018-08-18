@@ -115,16 +115,19 @@ root_smin (Fam chi par)
 
 
 
-asp_smin =       (p_Leaf =. leaf_smin) `ConsR` ((p_Node =. node_smin) `ConsR` ((p_Root =. root_smin) `ConsR` EmptyR))
-
-asp_ival = (p_Root =. root_ival) `ConsR` ((p_Node =. node_ival) `ConsR` EmptyR)
-asp_sres = (p_Root =. root_sres) `ConsR` ((p_Node =. node_sres)
-                                 `ConsR` ((p_Leaf =. leaf_sres)`ConsR` EmptyR))
-
 asp_smin = (p_Leaf =. leaf_smin)
-  `ConsR` ((p_Node =. node_smin)
-  `ConsR` ((p_Root =. root_smin)
-  `ConsR` EmptyR))
+   `ConsR` ((p_Node =. node_smin)
+   `ConsR` ((p_Root =. root_smin)
+   `ConsR` EmptyR))
+
+asp_ival = (p_Root =. root_ival)
+   `ConsR` ((p_Node =. node_ival)
+   `ConsR` EmptyR)
+asp_sres = (p_Root =. root_sres)
+   `ConsR` ((p_Node =. node_sres)
+   `ConsR` ((p_Leaf =. leaf_sres)
+   `ConsR` EmptyR))
+
 
 
 ----catamorphism
@@ -139,7 +142,8 @@ sem_Root  asp (Root t) = knit (hLookupByLabelRec p_Root asp)
                               ((ch_tree =. sem_Tree asp t) 
                               `ConsR` EmptyR )
 
-sem_Lit :: Int -> Attribution '[ '((Ch_i, Int), a)] -> Attribution '[ '((Ch_i, Int), Int)]
+sem_Lit :: Int -> Attribution '[ '((Ch_i, Int), a)]
+        -> Attribution '[ '((Ch_i, Int), Int)]
 sem_Lit i _ = (ch_i .=. i) `ConsAtt` EmptyAtt
 
 
