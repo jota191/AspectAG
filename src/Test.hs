@@ -13,7 +13,8 @@
              ConstraintKinds,
              ScopedTypeVariables,
              UnicodeSyntax,
-             NoMonomorphismRestriction
+             NoMonomorphismRestriction,
+             AllowAmbiguousTypes
 #-}
 
 module Test where
@@ -79,15 +80,6 @@ data Val
 
 
 
-leaf_smin (Fam chi par)
-  = syndef smin (lookupByLabelAtt ch_i (hLookupByChild ch_i chi))
--- = syndef smin (hLookupByChild ch_i chi)
-
-node_smin (Fam chi par)
-  = syndef smin ((lookupByLabelAtt smin (hLookupByChild ch_l chi))
-                  `min`
-                 (lookupByLabelAtt smin (hLookupByChild ch_r chi)))
-
 
 root_ival (Fam chi par)
   = inhdef ival (HCons nt_Tree HNil)
@@ -110,16 +102,6 @@ node_sres (Fam chi par)
                       (lookupByLabelAtt sres (hLookupByChild ch_r chi)))
 
 
-root_smin (Fam chi par)
-  = syndef smin (lookupByLabelAtt smin (hLookupByChild ch_tree chi))
-
-
-
-asp_smin = (p_Leaf =. leaf_smin)
-   `ConsR` ((p_Node =. node_smin)
-   `ConsR` ((p_Root =. root_smin)
-   `ConsR` EmptyR))
-
 asp_ival = (p_Root =. root_ival)
    `ConsR` ((p_Node =. node_ival)
    `ConsR` EmptyR)
@@ -129,24 +111,45 @@ asp_sres = (p_Root =. root_sres)
    `ConsR` EmptyR))
 
 
+asp_repmin = asp_smin .+. asp_sres .+. asp_ival
+
+
+leaf_smin (Fam chi par)
+  = syndef smin (lookupByLabelAtt ch_i (hLookupByChild ch_i chi))
+-- = syndef smin (hLookupByChild ch_i chi)
+
+node_smin (Fam chi par)
+  = syndef smin ((lookupByLabelAtt smin (hLookupByChild ch_l chi))
+                  `min`
+                 (lookupByLabelAtt smin (hLookupByChild ch_r chi)))
+root_smin (Fam chi par)
+  = syndef smin (lookupByLabelAtt smin (hLookupByChild ch_tree chi))
+
+
+asp_smin =  (p_Leaf =. leaf_smin)
+   `ConsR` ((p_Node =. node_smin)
+   `ConsR` EmptyR)
+
 
 ----catamorphism
 sem_Tree  asp (Node l r) = knit (hLookupByLabelRec p_Node asp )
                                 ((ch_l =. sem_Tree asp l)`ConsR`
                                 ((ch_r =. sem_Tree asp r) `ConsR` EmptyR))
+-- sem_Tree asp (Leaf i) 
+--    =  \_ -> ((smin .=. i) `ConsAtt` EmptyAtt)
+
 
 sem_Tree  asp (Leaf i) = knit (hLookupByLabelRec p_Leaf asp)
                          ((ch_i =. sem_Lit i) `ConsR` EmptyR )
+
 
 sem_Root  asp (Root t) = knit (hLookupByLabelRec p_Root asp)
                               ((ch_tree =. sem_Tree asp t) 
                               `ConsR` EmptyR )
 
-sem_Lit :: Int -> Attribution '[ '((Ch_i, Int), a)]
+sem_Lit :: Int -> Attribution p
         -> Attribution '[ '((Ch_i, Int), Int)]
 sem_Lit i _ = (ch_i .=. i) `ConsAtt` EmptyAtt
-
-
 
 --minimo = lookupByLabelAtt smin (sem_Tree (asp_smin) examplet EmptyR)
 
@@ -226,7 +229,12 @@ examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
                           (Node (Leaf 2) (Leaf 7))
                     )
 
-                    (Node (Node (Leaf 9) (Leaf (-23)))
+                    (Node (Node (Leaf (-94)) (Leaf (-23)))
                           (Leaf 6)
                     )
               )
+
+
+exampleT 0 = examplet
+exampleT n = Node (exampleT (n-1)) (exampleT (n-1))
+
