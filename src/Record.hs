@@ -74,35 +74,40 @@ infixr 2 .*.
 -- | get a field indexed by a label
 class HasFieldRec (l::k) (r :: [(k,Type)]) where
   type LookupByLabelRec l r :: Type
-  hLookupByLabelRec:: Label l -> Record r -> LookupByLabelRec l r
+  lookupByLabelRec:: Label l -> Record r -> LookupByLabelRec l r
 
 
 instance (HasFieldRec' (l == l2) l ( '(l2,v) ': r)) =>
   HasFieldRec l ( '(l2,v) ': r) where
   type LookupByLabelRec l ( '(l2,v) ': r)
     = LookupByLabelRec' (l == l2) l ( '(l2,v) ': r)
-  hLookupByLabelRec :: Label l -> Record ( '(l2,v) ': r)
+  lookupByLabelRec :: Label l -> Record ( '(l2,v) ': r)
                     -> LookupByLabelRec l ( '(l2,v) ': r)
-  hLookupByLabelRec l r
-    = hLookupByLabelRec' (Proxy :: Proxy (l == l2)) l r 
+  lookupByLabelRec l r
+    = lookupByLabelRec' (Proxy :: Proxy (l == l2)) l r 
 
 class HasFieldRec' (b::Bool) (l::k) (r :: [(k,Type)]) where
   type LookupByLabelRec' b l r :: Type
-  hLookupByLabelRec' ::
+  lookupByLabelRec' ::
      Proxy b -> Label l -> Record r -> LookupByLabelRec' b l r
 
+-- | Pretty lookup
+infixl 2 .#.
+(.#.)  :: (HasFieldRec l r)
+   => Record r -> Label l -> (LookupByLabelRec l r)
+c .#. l = lookupByLabelRec l c
 
 -- | Since the typechecker cannot decide an instance dependent of the context,
 --but on the head, an auxiliary class with an extra parameter to decide
 --if we update on the head of r or not is used
 instance HasFieldRec'    'True l ( '(l, v) ': r) where
   type LookupByLabelRec' 'True l ( '(l, v) ': r) = v
-  hLookupByLabelRec' _ _ (ConsR lv _) = unTagged lv
+  lookupByLabelRec' _ _ (ConsR lv _) = unTagged lv
 
 instance (HasFieldRec l r )=>
   HasFieldRec' 'False l ( '(l2, v) ': r) where
   type LookupByLabelRec' 'False l ( '(l2, v) ': r) = LookupByLabelRec l r
-  hLookupByLabelRec' _ l (ConsR _ r) = hLookupByLabelRec l r
+  lookupByLabelRec' _ l (ConsR _ r) = lookupByLabelRec l r
 
 -- | Error instance, using :
 instance TypeError (Text "Type Error ----" :$$:
@@ -111,7 +116,7 @@ instance TypeError (Text "Type Error ----" :$$:
                     :<>: Text " on Record" )
   => HasFieldRec l '[] where
   type LookupByLabelRec l '[] = TypeError (Text "unreachable")
-  hLookupByLabelRec = undefined
+  lookupByLabelRec = undefined
 
 
 

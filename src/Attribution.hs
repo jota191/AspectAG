@@ -75,7 +75,12 @@ instance HasFieldAtt l r v => HasFieldAtt' False l ( '(l2,v2) ': r) v where
    lookupByLabelAtt' _ l (ConsAtt _ r) = lookupByLabelAtt l r
 
 
-
+-- | Pretty lookup
+-- | Pretty lookup
+infixl 2 #.
+(#.)  :: (HasFieldAtt l r v)
+   => Attribution r -> Label l -> v
+c #. l = lookupByLabelAtt l c
 
 --UpdateAtLabel
 --I attempt to code an indexed type implementation, where the resulting Type

@@ -22,16 +22,16 @@ Implementation of strongly typed heterogeneous lists.
              UndecidableInstances,
              FunctionalDependencies,
              ConstraintKinds,
-             ScopedTypeVariables#-}
+             ScopedTypeVariables
+#-}
 
 module HList where
-import Eq
 import TPrelude
 import Data.Type.Equality
 import Data.Kind
 import TagUtils
 import Data.Proxy
-
+import GHC.Exts
 
 -- |Heterogeneous lists are implemented as a GADT
 data HList (l :: [Type]) :: Type  where
@@ -55,3 +55,7 @@ instance HMember t (t' ': ts) where
 
 
 -- | No other functionality is needed for AAG
+
+infixr 2 .:
+(.:) = HCons
+ε = HNil

@@ -21,18 +21,16 @@ module InternalTest where
 import Data.Kind 
 import Data.Type.Equality
 import Data.Proxy
-import Eq
 import Record
 import Data.Tagged
 
 
--- import Attribute
--- import TPrelude
-
--- import Attribution
--- import ChildAtts
--- import AspectAG
--- import HList
+import Attribute
+import TPrelude
+import Attribution
+import ChildAtts
+import AspectAG
+import HList
 import TagUtils
 
 
@@ -74,36 +72,37 @@ test_update_R_6 = updateAtLabelRec label3 '9' record3
 
 
 
--- --Some tests:
+--Some tests:
 
--- ---- Attribution
+---- Attribution
 
--- att1 = Attribute 3   :: Attribute Label1 Int 
--- att2 = Attribute '4' :: Attribute Label2 Char
--- att3 = Attribute '4' :: Attribute Label3 Char
+att1 = Attribute 3   :: Attribute Label1 Int 
+att2 = Attribute '4' :: Attribute Label2 Char
+att3 = Attribute '4' :: Attribute Label3 Char
 
--- attrib1 = ConsAtt att2 EmptyAtt
--- -- test2 = ConsAtt att2 test1 does not compile because of label duplication
--- attrib2 = ConsAtt att1 attrib1
--- attrib3 = ConsAtt att3 attrib2
+attrib1 = ConsAtt att2 EmptyAtt
+-- test2 = ConsAtt att2 test1 does not compile because of label duplication
+attrib2 = ConsAtt att1 attrib1
+attrib3 = ConsAtt att3 attrib2
 
--- --test_update_1 = updateAtLabelAtt label4 False attrib3 --should fail
--- test_update_2 = updateAtLabelAtt label2 False attrib3 
--- test_update_3 = updateAtLabelAtt label2 "hola" attrib3
--- test_update_4 = updateAtLabelAtt label2 '9' attrib3 
--- test_update_5 = updateAtLabelAtt label3 "hola" attrib3 
--- test_update_6 = updateAtLabelAtt label3 '9' attrib3 
-
-
--- ----ChildAtts
-
--- data LabelL; data LabelR
--- labelL = Label :: Label (LabelL,Char)
--- labelR = Label :: Label (LabelR,Int)
+--test_update_1 = updateAtLabelAtt label4 False attrib3 --should fail
+test_update_2 = updateAtLabelAtt label2 False attrib3 
+test_update_3 = updateAtLabelAtt label2 "hola" attrib3
+test_update_4 = updateAtLabelAtt label2 '9' attrib3 
+test_update_5 = updateAtLabelAtt label3 "hola" attrib3 
+test_update_6 = updateAtLabelAtt label3 '9' attrib3 
 
 
--- childAttLR = ConsCh (TaggedChAttr labelL attrib1)$
---              ConsCh (TaggedChAttr labelR attrib2) EmptyCh
+----ChildAtts
+
+data LabelCh = LabelL | LabelR
+labelL = Label :: Label '( 'LabelL,Char)
+labelR = Label :: Label '( 'LabelR,Int)
+
+
+
+
+childAttLR = (labelL .= attrib1) .* ((labelR .= attrib2) .*  emptyChild)
 
 -- -- duplicatedLabel
 -- -- childAttRRFail = ConsCh (TaggedChAttr labelR attrib1)$
@@ -200,3 +199,11 @@ test_update_R_6 = updateAtLabelRec label3 '9' record3
 -- r2 = (Tagged emptyRule) `ConsR` ((Tagged emptyRule) `ConsR` EmptyR)
 
 -- r3 = r1 .+. r2
+
+
+
+
+-- -- tests
+
+
+-- r11 = (Label :: Label Label1) .=. True .*. emptyRecord

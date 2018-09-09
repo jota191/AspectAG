@@ -38,9 +38,8 @@ import Attribution
 -- | * Constructors
 
 
-
 -- | The record of attribution fot the children, strongly kinded
-data ChAttsRec :: forall k . [(k , [(k,Type)])] -> Type where
+data ChAttsRec :: forall k k' . [(k , [(k',Type)])] -> Type where
   EmptyCh :: ChAttsRec '[]
   ConsCh  :: LabelSet ( '(l, v) ': xs) =>
    TaggedChAttr l v -> ChAttsRec xs -> ChAttsRec ( '(l,v) ': xs)
@@ -52,15 +51,15 @@ infixr 2 .*
 (.*) = ConsCh
 
 -- | no child
-emptyChilds :: ChAttsRec '[]
-emptyChilds = EmptyCh
+emptyChild :: ChAttsRec '[]
+emptyChild = EmptyCh
 
 -- |** This are the tag utils for tag attributions of the childred
 
 -- TODO: move this?
 
 -- | Tags a Label (labels of children) to an attribution
-data TaggedChAttr (l::k) (v :: [(k,Type)]) :: Type where
+data TaggedChAttr (l::k) (v :: [(k',Type)]) :: Type where
   TaggedChAttr :: Label l -> Attribution v -> TaggedChAttr l v
 
 
