@@ -1,1 +1,1 @@
-haddock -o ../haddock -h Record.hs
+haddock -o ../haddock -h AspectAG.hs
