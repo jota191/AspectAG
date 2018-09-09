@@ -137,8 +137,6 @@ sem_Lit :: Int -> Attribution p
         -> Attribution '[ '((Ch_i, Int), Int)]
 sem_Lit i _ = (ch_i =. i) *. emptyAtt
 
---minimo t = lookupByLabelAtt smin (sem_Tree asp_smin t EmptyAtt)
-
 
 
 asp_repmin = asp_smin .+. asp_sres .+. asp_ival
@@ -155,27 +153,6 @@ examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
 exampleT 0 = examplet
 exampleT n = Node (exampleT (n-1)) (exampleT (n-1))
 
---repmin t = lookupByLabelAtt sres ((sem_Root (asp_repmin) (Root t) emptyAtt))
+repmin t = sem_Root asp_repmin (Root t) emptyAtt # sres
 
-computeAspect
-  :: (t ~ p1 ,(Kn '[ '((Ch_i, Int),  Attribution t -> Attribution '[ '((Ch_i, Int), Int)])]
-          '[ '((Ch_i, Int), p1)]
-          '[ '((Ch_i, Int), '[ '((Ch_i, Int), Int)])]),
-      HasFieldRec P_Root r, HasFieldRec P_Node r,
-      HasFieldRec P_Leaf r,
-      LookupByLabelRec P_Node r
-      ~ (Fam '[ '((Ch_l, Tree), sp1), '((Ch_r, Tree), sp1)] ip1
-         -> Fam '[ '((Ch_l, Tree), '[]), '((Ch_r, Tree), '[])] '[]
-         -> Fam '[ '((Ch_l, Tree), ip1), '((Ch_r, Tree), ip1)] sp1),
-      LookupByLabelRec P_Root r
-      ~ (Fam '[ '((Ch_tree, Tree), sp1)] ip2
-         -> Fam '[ '((Ch_tree, Tree), '[])] '[]
-         -> Fam '[ '((Ch_tree, Tree), ip1)] sp2),
-      LookupByLabelRec P_Leaf r
-      ~ (Fam '[ '((Ch_i, Int), '[ '((Ch_i, Int), Int)])] ip1
-         -> Fam '[ '((Ch_i, Int), '[])] '[]
-         -> Fam '[ '((Ch_i, Int), p)] sp1)) =>
-     Record r -> Tree -> Attribution ip2 -> Attribution sp2
-computeAspect asp t env = sem_Root asp (Root t) env
-
-repmin t = computeAspect asp_repmin t emptyAtt
+minimo t = sem_Tree asp_smin t emptyAtt # smin
