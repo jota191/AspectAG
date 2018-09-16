@@ -1,26 +1,18 @@
-Change the type of Tags, general
-instead of "Tagged l v" I would prefer "Tagged '(l,v)".
-With this change the kinding on Typelevel functions may be improved
-by instance:
--------
-class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[(k,[(k,Type)])])
-                (ic' ::[(k,[(k,Type)])])
-SingleDef True True att (TaggedChAtt lch vch) ic ic' where             
-
-would be better as:
-class SingleDef (mch::Bool)(mnts::Bool)
-      att (pv::(lch,vch)) (ic ::[(k,[(k,Type)])])
-
-so in the instance definition we get rid of the wrapper
-
-
-------
-Some names can be improved, to unify criteria, specially on
-tween implementations (records)
 
 --
+
 code an interface for all record types, to use sugarized operators
 as # for all types isomorphic to records. The problem with this is
 the possible degradation of errors
 
 ---
+
+En Fam los kinds para las etiquetas de los hijos y las producciones
+se unifican, por eso no funcionaba usar tipos promovidos para las
+etiquetas, cambiar eso y testearlo con un ejemplo
+
+--
+
+Uso de template Haskell para generar las etiquetas, depende 
+
+
