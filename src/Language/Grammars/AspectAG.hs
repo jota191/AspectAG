@@ -33,7 +33,17 @@ This was implemented from scratch using the improvements on GHC on the last
              DataKinds
 #-}
 
-module Language.Grammars.AspectAG where
+module Language.Grammars.AspectAG (
+              module Language.Grammars.AspectAG,
+              module Language.Grammars.AspectAG.Utils.Attribute,
+              module Language.Grammars.AspectAG.Utils.Attribution,
+              module Language.Grammars.AspectAG.Utils.ChildAtts,
+              module Language.Grammars.AspectAG.Utils.Record,
+              module Language.Grammars.AspectAG.Utils.TagUtils,
+              module Language.Grammars.AspectAG.Utils.HList,
+              module Language.Grammars.AspectAG.Utils.Notation
+            ) where
+
 
 import Language.Grammars.AspectAG.Utils.HList
 import Language.Grammars.AspectAG.Utils.Attribution
@@ -45,11 +55,12 @@ import Language.Grammars.AspectAG.Utils.TPrelude
 import Data.Proxy
 import Language.Grammars.AspectAG.Utils.ChildAtts
 import Language.Grammars.AspectAG.Utils.TagUtils
+import Language.Grammars.AspectAG.Utils.Notation
 import GHC.TypeLits
 
 -- | In each node of the grammar, the "Fam" contains a single attribution
 --for the parent, and a collection (Record) of attributions for the children:
-data Fam (c::[(k,[(k,Type)])]) (p :: [(k,Type)]) :: Type where
+data Fam (c::[(k',[(k,Type)])]) (p :: [(k,Type)]) :: Type where
   Fam :: ChAttsRec c  -> Attribution p -> Fam c p
 
 
@@ -57,18 +68,21 @@ data Fam (c::[(k,[(k,Type)])]) (p :: [(k,Type)]) :: Type where
 --Rules are defined as a mapping from an input family to an output family,
 --the added arity is for make them composable
 
--- type Rule (sc  :: [(k,  [(k,  Type)])])
---           (ip  :: [(k,        Type)])
---           (ic  :: [(k1, [(k1, Type)])])
---           (sp  :: [(k1,       Type)])
---           (ic' :: [(k2, [(k2, Type)])])
---           (sp' :: [(k2,       Type)])
---   = Fam sc ip -> Fam ic sp -> Fam ic' sp'
+type Rule (sc  :: [(k',  [(k,  Type)])])
+          (ip  :: [(k,        Type)])
+          (ic  :: [(k', [(k, Type)])])
+          (sp  :: [(k,       Type)])
+          (ic' :: [(k', [(k, Type)])])
+          (sp' :: [(k,       Type)])
+  = Fam sc ip -> Fam ic sp -> Fam ic' sp'
 
-type Rule sc ip ic sp ic' sp'
-  = Fam sc ip -> (Fam ic sp -> Fam ic' sp')
+--type Rule sc ip ic sp ic' sp'
+--  = Fam sc ip -> (Fam ic sp -> Fam ic' sp')
 
 -- | Composition of rules
+ext :: Rule sc ip ic sp ic' sp'
+  -> (Fam sc ip -> a0 -> Fam ic sp)
+  -> (Fam sc ip -> a0 -> Fam ic' sp')
 (f `ext` g) input = f input . g input
 
 

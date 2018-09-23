@@ -57,12 +57,12 @@ import GHC.TypeLits
 
 -- | a class for all record types, to unify syntax of getters/setters
 class RecLookup
-      (l :: k)                   -- ^ The labels
-      (r :: [ (k, k') ])         -- ^ The record andd its kind
-      (wl:: k -> Type)           -- ^ the proxy for labels 
-      (c :: [ (k, k') ] -> Type) -- ^ The wrapper used to construct
-                                     --   inhabited Types
-      v                          -- ^ The type of the values
+      (l :: k)                   --  The labels
+      (r :: [ (k, k') ])         --  The record andd its kind
+      (wl:: k -> Type)           --  the proxy for labels 
+      (c :: [ (k, k') ] -> Type) --  The wrapper used to construct
+                                 --   inhabited Types
+      v                          --  The type of the values
       | l r wl c -> v
       where (#) :: c r -> wl l -> v
             
