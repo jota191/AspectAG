@@ -2,28 +2,33 @@
 
 Las gram\'aticas de atributos~\cite{Knuth68semanticsof}
 son un formalismo para describir computaciones
-recursivas sobre tipos de datos. Dada una gramática libre de contexto,
+recursivas sobre tipos de datos. Dada una gram\'atica libre de contexto,
 se le asocia una sem\'antica considerando atributos en cada producci\'on,
 que toman valores que son calculados mediante reglas a partir de los valores
 de los atributos de los padres y de los hijos del arbol de sintaxis abstracta.
 
-Los atributos se dividen cl\'asicamente en dos grupos: heredados y sintetizados.
+Los atributos se dividen cl\'asicamente en dos tipos:
+heredados y sintetizados.
 Los atributos heredados son "pasados" como un contexto desde los padres a los
 hijos. Los atributos sintetizados son calculados seg\'un las reglas
 sem\'anticas,
 en funci\'on de los atributos de los hijos (y eventualmente de los padres). 
 
+Un \emph{Aspecto} es una colecci\'on de (uno o m\'as) aspectos,
+y sus reglas de c\'omputo.
+
 Las gram\'aticas de atributos son especialmente interesantes
-para la implementaci\'on de compiladores [REF UHC, libro del dragon?],
+para la implementaci\'on de compiladores [REF UHC, Aho, etc etc],
 traduciendo el arbol sint\'actico directamente en alg\'un lenguaje de
 destino o representaci\'on intermedia. Tambi\'en es posible validar chequeos
 sem\'anticos de reglas que no est\'an presentes sint\'acticamente
 (por ejemplo compilando lenguajes con sintaxis no libre de contexto,
 parseados previamente seg\'un una gram\'atica libre de contexto
-como la mayor\'ia de los languajes de programaci\'on modernos), o para realizar
-chequeos de tipos.
+como la mayor\'ia de los languajes de programaci\'on modernos),
+o para implementar chequeadores de tipos.
 
-Las gram\'aticas de atributos son \'utiles en s\'i mismas como un paradigma de
+Adem\'as, las gram\'aticas de atributos
+son \'utiles en s\'i mismas como un paradigma de
 programaci\'on, y significan una soluci\'on a un
 conocido t\'opico de discusi\'on en la comunidad
 llamado "El problema de la expresi\'on"
@@ -43,7 +48,8 @@ es agregar un m\'etodo en una estructura de clases amplia,
 o cuantas funciones hay que modificar en los lenguajes funcionales
 si en un tipo algebr\'aico se agrega una construcci\'on).
 
-Las gram\'aticas de atributos son una propuesta de soluci\'on a este
+Las \emph{Programaci\'on orientada a aspectos}, mediante
+gram\'aticas de atributos son una propuesta de soluci\'on a este
 problema, deber\'ia ser simple agregar nuevas producciones
 (definiendo \emph{localmente} las reglas de computaci\'on de los atributos
 existentes sobre el nuevo caso, as\'i como agregar
@@ -54,8 +60,8 @@ Por sus caracter\'isticas, donde las computaciones se expresan de forma local
 en cada producci\'on combinando c\'omo la informaci\'on fluye de arriba a abajo
 y de abajo a arriba, una aplicaci\'on \'util de las AGs es la de definir
 computaciones circulares. En la pr\'oxima secci\'on introducimos
-un caso de estudio.
-[HABLAR DE ASPECTOS]
+un ejemplo.
+
 
 
 \subsection{Ejemplo: {\tt repmin}}
@@ -66,13 +72,20 @@ Como ejemplo consideramos la cl\'asica funci\'on {\tt repmin}
 misma topolog\'ia, conteniendo el menor valor del \'arbol original en cada
 hoja.
 Consideramos la siguiente estructura en haskell para representar el \'arbol:
-\footnote{explicar por que marcamos la raiz}
+
 
 > data Root = Root Tree deriving Show
 
 > data Tree = Node Tree Tree
 >           | Leaf Int
 >           deriving Show
+
+
+Notar que utilizaremos la ra\'iz ``marcada'' con el tipo algebr\'aico
+{\tt Root} en lugar de definir los \'arboles como es usual, donde la ra\'iz es
+un nodo m\'as. Lo hacemos de esta manera para tener informaci\'on de
+donde exactamente dejar de calcular el m\'inimo local, que ser\'a global
+y comenzar a propagarlo a los hijos.
 
 
 La funci\'on {\tt repmin} puede definirse como sigue:
@@ -104,10 +117,12 @@ siguinte manera:
 \end{center}
 
 Nuevamente tenemos un \'arbol con ra\'iz expl\'icita.
-La raz\'on para tomar \'esta decisi\'on de dise\~no es tener
-un s\'imbolo de inicio expl\'icito de la gram\'atica. A nivel
+La raz\'on para tomar \'esta decisi\'on de dise\~no es una vez m\'as
+tener un s\'imbolo de inicio expl\'icito de la gram\'atica, que a nivel
 operacional nos va a permitir saber cuando encadenar atributos
-sintetizados con heredados.
+sintetizados con heredados, aunque ahora la decisi\'on es m\'as natural;
+la sem\'antica (i.e. c\'omo se computan los
+atributos) difiere en un nodo ordinario y en la ra\'iz.
 
 La palabra clave {\tt SYN} introduce un atributo sintetizado.
 {\tt smin} y {\tt sres} son atributos sintetizdos de tipo

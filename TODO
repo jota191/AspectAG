@@ -1,18 +1,23 @@
 
 --
-
 code an interface for all record types, to use sugarized operators
 as # for all types isomorphic to records. The problem with this is
 the possible degradation of errors
 
----
-
+--
 En Fam los kinds para las etiquetas de los hijos y las producciones
 se unifican, por eso no funcionaba usar tipos promovidos para las
 etiquetas, cambiar eso y testearlo con un ejemplo
-
 --
-
 Uso de template Haskell para generar las etiquetas, depende 
 
+--
+Hay que trabajar en los mensajes de error
+
+
+-- reprogramar algunas de las funciones que usan fundeps con TF
+para hacerlas mas idiomaticas
+
+--
+copy rules
 

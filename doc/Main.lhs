@@ -5,9 +5,15 @@
 
 %format -> = "\rightarrow"
 
-
 \usepackage{cite}
 \usepackage{epigraph}
+\usepackage{color}   
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linktoc=all,  
+    linkcolor=blue,
+}
 
 \author{Juan Garc\'ia Garland}
 \title{Reimplementaci\'on de \emph{AspectAG} basada en nuevas
