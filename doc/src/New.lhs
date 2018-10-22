@@ -210,6 +210,7 @@ El type checker es incapaz de deducir que {\tt :+} es inyectiva.
 
 
 \subsubsection{Singletons y Proxies}
+\label{sec:sings}
 
 Existen dos \emph{hacks}, para resolver los problemas planteados en la 
 secci\'on anterior.

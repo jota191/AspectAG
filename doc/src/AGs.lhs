@@ -84,8 +84,8 @@ Consideramos la siguiente estructura en haskell para representar el \'arbol:
 Notar que utilizaremos la ra\'iz ``marcada'' con el tipo algebr\'aico
 {\tt Root} en lugar de definir los \'arboles como es usual, donde la ra\'iz es
 un nodo m\'as. Lo hacemos de esta manera para tener informaci\'on de
-donde exactamente dejar de calcular el m\'inimo local, que ser\'a global
-y comenzar a propagarlo a los hijos.
+donde exactamente dejar de calcular el m\'inimo local, que ser\'a a partir de
+ese punto global y comenzar a propagarlo a los hijos.
 
 
 La funci\'on {\tt repmin} puede definirse como sigue:
@@ -117,7 +117,7 @@ siguinte manera:
 \end{center}
 
 Nuevamente tenemos un \'arbol con ra\'iz expl\'icita.
-La raz\'on para tomar \'esta decisi\'on de dise\~no es una vez m\'as
+La raz\'on para tomar \'esta decisi\'on es una vez m\'as
 tener un s\'imbolo de inicio expl\'icito de la gram\'atica, que a nivel
 operacional nos va a permitir saber cuando encadenar atributos
 sintetizados con heredados, aunque ahora la decisi\'on es m\'as natural;
@@ -151,23 +151,34 @@ En la ra\'iz, {\tt ival} se computa como una copia del valor
 \'arbol: para saber cuando copiar.
 En los nodos, a cada sub\'arbol se le copia el valor de ival actual.
 
+
+
 \subsection{AspectAG}
 
-La implementaci\'on sige a grandes razgos la siguiente idea:
+La implementaci\'on sigue a grandes razgos la siguiente idea:
 
 En cada producci\'on, llamamos \emph{atribuci\'on} (Attribution)
 al registro de todos los atributos. Una atribuci\'on ser\'a un mapeo
 de nombres de atributos a sus valores. Los nombres de atributos
 se manejan en tiempos de compilaci\'on, por lo que una estructura
-como la presentada en la secci\'on[REF] es adecuada.
-En cada nodo, una regla sem\'antica consiste en un mapeo de
-una input family a una output family [definirlas]
+como la presentada en la secci\'on \ref{sec:hrecord}
+es adecuada. La definici\'on de la estructura en tiempo de compilaci\'on
+permitir\'a realizar chequeos est\'aticos de propiedades deseables de la
+gram\'atica.
+
+En cada producci\'on, la informaci\'on fluye de los atributos heredados del
+padre y los sintetizados de los hijos, que se llaman en la literatura
+``familia de entrada'' (\emph{input family}), a
+los sintetizados del padre y heredados de los hijos, la \emph{output family}.
+
+En cada producci\'on, una regla sem\'antica consiste en un mapeo de
+una input family a una output family.
 
 
 Presentamos una soluci\'on al problema {\tt repmin}
 en la reimplementaci\'on del EDSL, para que el lector tome contacto
 con el estilo de programaci\'on en el EDSL. Luego se presentar\'a
-mayor detalle.
+mayor detalle la implementaci\'on.
 
 Hay que definir m\'ultiples \emph{Etiquetas}.
 Hay etiquetas para los no terminales, para los atributos, y para nombrar a los

@@ -384,6 +384,7 @@ Supongamos que queremos codificar:
 
 
 \subsection{Records Heterogeneos}
+\label{sec:hrecord}
 
 AspectAG requiere de \emph{Records} heterogeneos, esto es, colecciones
 etiqueta-valor, heterogeneas, donde adem\'as las claves est\'en dadas
