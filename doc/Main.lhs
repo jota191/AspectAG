@@ -22,7 +22,7 @@
 
 \setlength\parindent{0pt} % noindent in all file
 \usepackage{geometry}
-\geometry{margin=1in}
+%\geometry{margin=1in}
 \usepackage{graphicx}
 
 \begin{document}

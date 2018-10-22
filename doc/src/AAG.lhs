@@ -279,9 +279,9 @@ En cada producci\'on, llamamos \emph{funci\'on sem\'antica} al mapeo de los
 atributos heredados a los atributos sintetizados. Obs\'ervese que una
 computaci\'on consiste en exactamente computar las funciones sem\'anticas.
 
-En el ejemplo [REF], la funci\'on {\tt sem_Tree} construye,
+En el ejemplo [REF], la funci\'on {\tt sem\_Tree} construye,
 dados un aspecto y un \'arbol una funci\'on sem\'antica.
-El tipo de {\tt sem_Tree}, si ignoramos los par\'ametros impl\'icitos
+El tipo de {\tt sem\_Tree}, si ignoramos los par\'ametros impl\'icitos
 de las restricciones de typeclasses, viene dado por:
 
 > sem_Tree :: Aspect r -> Tree -> Attribution ip -> Attribution sp
@@ -295,10 +295,10 @@ Observemos la definici\'on en uno de los casos:
 
 Es la funci\'on {\tt knit} la que se encarga de construir la funci\'on
 sem\'antica a partir de las funciones sem\'anticas de los hijos (notar que
-cada llamada recursiva a {\tt sem_Tree}, parcialmente aplicada a dos
+cada llamada recursiva a {\tt sem\_Tree}, parcialmente aplicada a dos
 par\'ametros es exactamente una funci\'on sem\'antica).
 
-El verdadero tipo de {\tt sem_Tree} viene dado por:
+El tipo completo de {\tt sem\_Tree} viene dado por:
 
 > sem_Tree
 >   :: (HasFieldRec P_Node r, HasFieldRec P_Leaf r,
@@ -313,19 +313,82 @@ El verdadero tipo de {\tt sem_Tree} viene dado por:
 >      Aspect r -> Tree -> Attribution ip -> Attribution sp
 
 Se aprecian m\'ultiples predicados que deben chequearse para que las llamadas
-a {\tt sem_Tree} {\bf compilen}. Una llamada donde el Aspecto {\tt r} no
+a {\tt sem\_Tree} {\bf compilen}. Una llamada donde el Aspecto {\tt r} no
 contenga definiciones para los nodos o para las hojas no compilar\'a.
 Adem\'as en el valor imagen de cada una de \'estas etiquetas debe haber una
 regla que cumpla ciertas restricciones de forma. Por supuesto, como un aspecto
-es un registro, no van a permitirse instancias donde se dupliquen etiquetas
+es un registro, por lo que
+no van a permitirse instancias donde se dupliquen etiquetas
 de producciones. No existe sin embargo ninguna restricci\'on sobre el largo
 de {\tt r} o las etiquetas adicionales que contiene, lo cual tiene sentido
-porque eventualmente la gram\'atica podr'\ia extenderse con nuevas producciones.
+porque eventualmente la gram\'atica podr\'ia extenderse con nuevas producciones.
 
 
 \subsubsection{La funci\'on {\tt knit}}
 
-
 La funci\'on {\tt knit}[REF] realiza la verdadera computaci\'on. Toma
 las reglas combinadas para una producci\'on, y las funciones sem\'anticas
 de los hijos, y construye la funci\'on sem\'antica del padre.
+
+> knit :: ( Empties fc , EmptiesR fc ~ ec
+>         , Kn fc ic sc )
+>   => Rule sc ip ec '[] ic sp -> Record fc -> Attribution ip -> Attribution sp
+> knit rule fc ip
+>   = let ec          = empties fc
+>         (Fam ic sp) = rule (Fam sc ip) (Fam ec EmptyAtt)
+>         sc          = kn fc ic
+>     in  sp
+
+Primero se construye una familia de salida vac\'ia, mediante la funci\'on
+{\tt empties}. \'Esta contiene atribuciones vac\'ias tanto para el padre como
+para todos los hijos. A partir de la familia de entrada y nuestra familia
+``dummy'' construimos la familia de salida. La familia de entrada consta
+de los atributos heredados del padre {\tt ip} que tenemos disponibles como
+par\'ametro, y de los sintetizados de los hijos {\tt sc}. Tenemos disponibles
+los atributos heredados de los hijos y las funciones sem\'anticas, por lo que
+para computar {\tt sc} debemos ejecutar {\tt knit} en cada uno de los hijos,
+trabajo realizado por la funci\'on {\tt kn}, que es una funci\'on {\tt map}
+especializada.
+
+
+> class Empties (fc :: [(k,Type)]) where
+>   type EmptiesR fc :: [(k, [(k, Type)])]
+>   empties :: Record fc -> ChAttsRec (EmptiesR fc)
+
+
+> instance Empties '[] where
+>   type EmptiesR '[] = '[]
+>   empties EmptyR = EmptyCh
+
+
+> instance (Empties fcr,
+>           LabelSet ( '(lch, '[]) ': EmptiesR fcr)) =>
+>   Empties ( '(lch, fch) ': fcr) where
+>   type EmptiesR ( '(lch, fch) ': fcr) = '(lch, '[]) ': EmptiesR fcr
+>   empties (ConsR pch fcr)
+>     = let lch = labelTChAtt pch -- TODO: name
+>       in  ConsCh (TaggedChAttr lch EmptyAtt) (empties fcr)
+
+> class Kn (fcr :: [(k, Type)])
+>          (icr :: [(k, [(k, Type)])])
+>          (scr :: [(k, [(k, Type)])]) | fcr -> scr icr where 
+>   kn :: Record fcr -> ChAttsRec icr -> ChAttsRec scr
+
+> instance Kn '[] '[] '[]
+>   kn _ _ = EmptyCh
+
+
+> instance ( Kn fc ic sc
+>          , LabelSet ('(lch, sch) : sc)
+>          , LabelSet ('(lch, ich) : ic))
+>   =>  Kn ( '(lch , Attribution ich -> Attribution sch) ': fc)
+>          ( '(lch , ich) ': ic)
+>          ( '(lch , sch) ': sc) where
+>   kn (ConsR pfch fcr) (ConsCh pich icr)
+>    = let scr = kn fcr icr
+>          lch = labelTChAtt pfch    :: Label lch
+>          fch = unTagged pfch       :: Attribution ich -> Attribution sch
+>          ich = unTaggedChAttr pich :: Attribution ich
+>      in ConsCh (TaggedChAttr lch (fch ich)) scr
+
+
