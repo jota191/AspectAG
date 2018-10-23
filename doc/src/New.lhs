@@ -20,45 +20,114 @@
 
 
 
-\subsubsection{DataKinds} (7.4.1)
+\subsubsection{DataKinds} 
 El desarrollo del concepto de datatype promotion
-~\cite{Yorgey:2012:GHP:2103786.2103795}
+~\cite{Yorgey:2012:GHP:2103786.2103795}, que se introduce en  GHC en su
+versi\'on {\tt 7.4.1} con la extensi\'on {\tt DataKinds}
 es un importante salto de expresividad. En lugar de tener un sistema
 de kinds en donde solamente se logra expresar la aridad de los tipos,
-pueden \emph{promoverse} datatypes adecuados.
+pueden \emph{promoverse} ciertos tipos de datos (con ciertas limitaciones,
+por ejemplo inicialmente no es posible promover {\tt GADTs}).
+Con la extensi\'on habilidata, cada declaraci\'on de tipos como 
 
-Con la extensi\'on {\tt -XDataKinds}, cada declaraci\'on de tipos como
+> data Nat = Zero | Succ Nat
 
-> data Nat = Zero | Succ Nat deriving (Show, Eq, Ord)
-
-> Zero     + n = n
-> (Succ m) + n = Succ (m + n)
-
-se duplica a nivel de Kinds.
-
-Adem\'as de introducir los t\'erminos {\tt Zero} y {\tt Succ} de tipo
-{\tt Nat}, y al propio tipo {\tt Nat } de kind {\tt *}, introduce
-los TIPOS {\tt Zero} y {\tt Succ} de Kind {\tt Nat} (y al propio kind Nat).
-
-El kind {\tt *} pasa entonces a ser el de los tipos habitados, y cada vez que
+se ``duplica'' a nivel de kinds, esto es, 
+adem\'as de introducir los t\'erminos {\tt Zero} y {\tt Succ} de tipo
+{\tt Nat}, y al propio tipo {\tt Nat } de kind {\tt *}, la declaraci\'on
+introduce los \emph{tipos}
+{\tt Zero} y {\tt Succ} de Kind {\tt Nat} (y al propio kind Nat).
+El kind {\tt *} ya no es el \'unico kind unario existente, y pasa a ser
+un kind especial: el de los tipos habitados.  Cada vez que
 declaramos un tipo promovible se introducen tipos no habitados del nuevo kind.
 
 
 En el ejemplo de la secci\'on anterior, el tipo {\tt Vec}ten\'ia kind
 {\tt * $\rightarrow$ * $\rightarrow$ *} por lo que {\tt Vec Bool Char}
 era un tipo v\'alido.
-Con DataKinds podemos construir: (+KindSignatures para anotar)
+Con DataKinds podemos construir: (Utilizando adem\'as, la extensi\'on
+{\tt KindSignatures} para anotar el kind de {\tt Vec}).
+
 
 > data Vec :: Nat -> * -> * where
 >   VZ :: Vec Zero a
 >   VS :: a -> Vec n a -> Vec (Succ n) a
 
-\subsubsection{{\tt GHC.TypeLits}}
 
-intro del modulo
+[LISTAS PROMOVIDAS]
 
-Usando el m\'odulo
-{\tt GHC.TypeLits}, podemos escribir: (+TypeOperators)
+\subsubsection{TypeFamilies} (6.8.1)
+
+[REFS: https://wiki.haskell.org/GHC/Typefamilies]
+
+ndexed type families are a new GHC extension to facilitate type-level
+programming.
+Type families are a generalisation of associated data types (Associated Types
+with Class, M. Chakravarty, G. Keller, S. Peyton Jones, and S. Marlow.
+In Proceedings of ``The 32nd Annual ACM SIGPLAN-SIGACT Symposium on
+Principles of Programming Languages (POPL'05'', pages 1-13, ACM Press, 2005)
+and associated type synonyms
+(``Type Associated Type Synonyms''. M. Chakravarty,
+G. Keller, and S. Peyton Jones. In Proceedings of ``The Tenth ACM SIGPLAN
+International Conference on Functional Programming'', ACM Press, pages 241-253,
+2005). Type families themselves are described in the paper ``Type Checking with
+Open Type Functions'', T. Schrijvers, S. Peyton-Jones, M. Chakravarty, and M.
+Sulzmann, in Proceedings of ``ICFP 2008: The 13th ACM SIGPLAN International
+Conference on Functional Programming'', ACM Press, pages 51-62, 2008.
+Type families essentially provide type-indexed data types and named functions
+on types, which are useful for generic programming and highly parameterised l
+ibrary interfaces as well as interfaces with enhanced static information,
+much like dependent types. They might also be regarded as an alternative to
+functional dependencies, but provide a more functional style of type-level
+programming than the relational style of functional dependencies.
+INTRO
+
+Las \emph{Typefamilies} permiten definir funciones a nivel de tipos, por
+ejemplo
+
+> type family (m :: Nat) + (n :: Nat) :: Nat
+> type instance Zero + n = n
+> type instance Succ m  + n = Succ (m :+ n) 
+
+\label{sec:tf}
+
+Es el equivalente de la funci\'on
+
+> Zero     + n = n
+> (Succ m) + n = Succ (m + n)
+
+definida a nivel de valores.
+
+Entonces, el {\bf tipo} {\tt (Succ Zero) + (Succ Zero)} denota, y reduce a
+{\tt Succ (Succ Zero)}.
+
+\subsubsection{Azucar sint\'actica}
+
+En la definici\'on anterior se utilizan algunas extensiones m\'as para
+lograr una sintaxis tan limpia.
+La extensi\'on {\tt TypeOperators} (implementada desde GHC {\tt 6.8.1})
+habilita el uso de simbolos operadores como constructores de tipos.
+Por ejemplo, podemos definir
+
+> data a + b = Left a | Right b
+
+O como en la definici\'on anterior, la type family {\tt (+)}, sin
+contar con {\tt TypeOperators} deber\'iamos definir la familia de tipos
+como
+
+> type family Add m n ...
+
+
+La extensi\'on {\tt KindSignatures} por otra parte
+permite anotar los kinds (del mismo
+modo que anotamos los tipos en funciones a nivel de valores), tanto para
+documentar como para desambiguar en ciertos casos.
+
+Podemos ir m\'as all\'a, el m\'odulo {\tt GHC.TypeLits}
+({\tt base-4.12.0.0}) declara Naturales y Caracteres a nivel de tipos
+con una sintaxis como la usual.
+
+Importando el m\'odulo, es c\'odigo legal, por ejemplo:
 
 < data Vec :: Nat -> * -> * where
 <   VZ :: Vec 0 a
@@ -67,31 +136,29 @@ Usando el m\'odulo
 
 \subsubsection{Sintaxis promovida (DataKinds + TypeOperators)} (7.4.1)
 
-\subsubsection{XPolyKinds}
+\subsubsection{Polimorfismo de Kinds}
 
-\subsubsection{TypeFamilies} (6.8.1)
+Yorgey et al. [REF] introducen el polimorfismo a nivel de kinds, que en GHC
+corresponde a la extensi\'on {\tt PolyKinds} implementada a partir de la
+versi\'on {\tt 7.4.1} del compilador. Con la extensi\'on habilidada
+es posible implementar funciones a nivel de tipos polim\'orficas.
+Por ejemplo:
 
-La introduccion de la extensi\'on typefamilies es previa a DataKinds, y
-PolyKinds.
-decidimos presentarla en este orden para introducir ejemplos interesantes
-con el kind Nat.
+> type family Length (list :: '[a]) :: Nat where
+>   Length '[]       = 'Zero
+>   Length (x ': xs) = 'Succ (Length xs)
 
-INTRO
 
-Algunas definiciones posibles:
+[hay que unificar la notacion, aca escribo TF cerrada antes abierta,
+uso todos los constructores promovidos con ' , etc]
 
-> type family (m :: Nat) :+ (n :: Nat) :: Nat
-> type instance Zero :+ n = n
-> type instance Succ m  :+ n = Succ (m :+ n) 
 
-{REF to THIS}
 
 
 
 \subsubsection{Programando con tipos dependientes}
 
-
-
+[explicar mejor aca]
 Utilizando esta representaci\'on, podemos programar funciones seguras,
 de forma an\'aloga a como las escribir\'iamos en lenguajes de tipos
 dependientes
@@ -145,6 +212,7 @@ MAS EJEMPLOS?
 
 
 \subsubsection{Limitaciones}
+\label{sec:limitaciones}
 
 A diferencia de lo que ocurre en implementaciones de lenguajes con tipos
 dependientes, los lenguajes de t\'erminos y de tipos en Haskell
@@ -159,7 +227,7 @@ esencialmente \emph{din\'amico} ~\cite{Lindley:2013:HPP:2578854.2503786}.
 
 En las teor\'ias de tipos intensionales
 una definici\'on como la de la type family
-{HACER REF} extiende el algoritmo de normalizaci\'on, de forma tal que el
+~\ref{sec:tf} extiende el algoritmo de normalizaci\'on, de forma tal que el
 \emph{ type checker} decidir\'a la igualdad de tipos seg\'un las formas
 normales. Si dos tipos tienen la misma forma normal entonces los mismos
 t\'erminos les habitar\'an.
