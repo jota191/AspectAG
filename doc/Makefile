@@ -16,7 +16,7 @@ pdf : Main.lhs
 	pdflatex $(REPORTE).tex
 	bibtex $(REPORTE)
 	pdflatex $(REPORTE).tex
-
+	cp Main.pdf ../Doc.pdf
 .PHONY: clean
 clean:
 	rm -f *.log *.aux *~ *.pdf *bbl
