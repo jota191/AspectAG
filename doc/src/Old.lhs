@@ -16,47 +16,59 @@ Haskell posee un sistema de \emph{TypeClasses}
 originalmente pensado para proveer polimorfismo ad-hoc
 ~\cite{Hall:1996:TCH:227699.227700}.
 Una interpretaci\'on usual es que una \emph{Typeclass}
-es como un predicado sobre tipos.
+es un predicado sobre tipos.
 Cuando las \emph{TypeClasses} fueron introducidas fueron consideradas una
 caracter\'istica experimental, por lo que tuvieron un dise\~no conservador
 ~\cite{type-classes-an-exploration-of-the-design-space}.
 
-Las \emph{Typeclasses} son una extensi'on al sistema de tipos de
-Hindley-Milner que es originalmente decidible. Para garantizar la decibilidad
-del sistema de tipos en el dise\~no original se restringieron las instancias
-que se pueden definir. En particular todas las declaraciones deben ser de la
-forma {\tt T a1 a2 ... an} en donde {\tt a1 ... an} son variables de tipo
+Las \emph{Typeclasses} son una extensi\'on al sistema de tipos de
+Hindley-Milner que es originalmente decidible. Para mantener la decibilidad
+en la extensi\'on, en el dise\~no original del sistema de clases,
+se restringieron las instancias que es posible definir.
+En particular todas las declaraciones deben ser de la
+forma:
+
+> instance <Name> (...) => T a1 a2 ... an
+
+en donde {\tt a1 ... an} son variables de tipo
 distintas, y lo mismo vale para los contextos. En la
 pr\'actica existen muchos casos de uso interesantes en que
 estas restricciones no permiten construir, y que usualmente no causan
 que la compulaci\'on diverja.
 Las extensiones de GHC {\tt FlexibleInstances} y {\tt FlexibleContexts} que
-se implementan a partir de la versi\'on {\tt 6.8.1} de GHC
-eliminan algunas de \'estas restricciones y son ampliamente utilzadas.
+se implementan a partir de su versi\'on {\tt 6.8.1}
+eliminan algunas de estas restricciones y son ampliamente utilzadas.
 
 
 Por otro lado, la
-limitaci\'on original a clases monopar\'ametro es arbitraria, y del mismo
-modo en que una clase monopar\'ametro es un subconjunto de tipos,
-podemos interpretar una case multipar\'ametro como una
-relaci\'on entre tipos.
+limitaci\'on original a clases de un solo par\'ametro es arbitraria,
+y del mismo
+modo en que una clase monopar\'ametro puede interpretarse como un
+conjunto de tipos,
+podemos interpretar una clase multipar\'ametro como una
+relaci\'on entre tipos (un subconjunto del producto cartesiano,
+o un predicado binario).
 A partir de la versi\'on {\tt 6.8.1} de GHC, se provee la
 extensi\'on {\tt MultiParamTypeclasses}, con la cual
 es posible programar typeclasses multipar\'ametro. 
 
-Existen m\'ultiples usos de las clases multipar\'ametro y no pretendemos
+Existen m\'ultiples usos de las mismas y no pretendemos
 ser exhaustivos en este documento. Uno inmediato es implementar relaciones
-como por ejemplo el isomorfismo:
+como por ejemplo, el isomorfismo:
 
 > classs Iso a b where
 >   iso :: a -> b
 >   osi :: b -> a
 
-En donde como es usual, es responsabilidad del programador que
-{\tt iso . osi = id} y {\tt osi . iso = id}.
-En ~\cite{type-classes-an-exploration-of-the-design-space} se presentan
-m\'ultiples ejemplos. Un caso de uso muy usual es la sobrecarga con
-par\'ametro restringidos, por ejemplo en la implementaci\'on de colecciones:
+En donde como es usual, las instancias que implementen la interfaz
+adem\'as del tipado (que ser\'a chequeado por el compilador) deben cumplir
+otras propiedades que ser\'an responsabilidad del programador, en este caso
+que {\tt iso.osi=id} y que {\tt osi.iso=id}.
+En~\cite{type-classes-an-exploration-of-the-design-space} se presentan
+m\'ultiples ejemplos que ilustran la utilidad de las clases multipar\'ametro.
+Un caso de uso muy usual es la \emph{sobrecarga con
+par\'ametros restringidos}, usado por ejemplo en la implementaci\'on de
+colecciones:
 
 > class Eq e => Collection c e where
 >   insert :: c -> e -> c
@@ -66,13 +78,17 @@ par\'ametro restringidos, por ejemplo en la implementaci\'on de colecciones:
 Los tipos  {\tt c} y {\tt e} est\'an relacionados en el sentido de que la
 colecci\'on (una estructura de tipo {\tt c}) contiene elementos de tipo
 {\tt e}.
-
-Por ejemplo, una implementaci\'on con listas:
+Por ejemplo, con listas podemos construir una implementaci\'on de colecciones:
 
 > instance Eq a => Collection [a] a where
 >   insert = flip (:)
 >   member = flip elem
 >   ...
+
+
+
+\subsubsection{Dependencias Funcionales}
+
 
 Supongamos que la clase {\tt Collection} tiene adem\'as un m\'etodo de tipo:
 
@@ -85,21 +101,15 @@ Obtenemos un error de compilaci\'on:
 >       from the context: Collection c e
 >         bound by the type signature for:
 >                    empty :: forall c e. Collection c e => c -> Bool
->         at Col.hs:8:3-21
 >       The type variable 'e0' is ambiguous
 
 
 Notar que si bien el tipo {\tt e} est\'a un\'ivocamente determinado por
 {\tt c} en cualquier instancia razonable, el compilador no puede deducir
 esto, por lo que en cada ocurrencia de {\tt empty} el tipo {\tt e} no puede
-determinarse y ser\'a ambig\':uo.
-
-
-\subsubsection{Dependencias Funcionales}
-
-La soluci\'on a problemas similares al planteado en la secci\'on anterior
-fu\'e tomada de las bases de datos relacionales
-~\cite{DBLP:conf/esop/Jones00}.
+determinarse y ser\'a ambig\"uo.
+La soluci\'on a este tipo de problemas
+fue tomada de las bases de datos relacionales~\cite{DBLP:conf/esop/Jones00}.
 Una dependencia funcional restringe las instancias de una clase
 multipar\'ametro.
 
@@ -107,9 +117,11 @@ En una declaraci\'on como por ejemplo:
 
 > class (...) => C a b c | a -> b
 
-Cada par de instancias de {\tt C} que coincidan en {\tt a} {\bf deben}
-coincidir en {\tt b}, de lo contrario el compilador reportar\'a un error.
-Con la extensi\'on adem\'as el type checker se extiende de forma tal que
+Cada par de instancias de {\tt C} que coincidan en el tipo concreto
+{\tt a} {\bf deben} coincidir en {\tt b},
+de lo contrario el compilador reportar\'a un error.
+Con la extensi\'on habilidasa el verificador de tipos
+se extiende de forma tal que
 una vez que se resuelva la ocurrencia de {\tt a}, podr\'a resolverse la
 de {\tt b} seg\'un la \'unica posibilidad.
 
@@ -138,10 +150,11 @@ al lenguaje a nivel de valores, en el sentido de que la definici\'on
 > data Succ n
 
 introduce constructores a nivel de tipos con aridad cero y uno, del mismo
-modo que la definici\'on:
+modo que la definici\'on
 
-> data Nat = Zero
->          | Succ Nat
+> data Nat
+>   = Zero
+>   | Succ Nat
 
 los introduce a nivel de valores (con la salvedad de que a nivel de tipos,
 los constructores solo tienen en su \emph{kind} informaci\'on
@@ -149,25 +162,21 @@ de la aridad; no est\'an fuertemente tipados).
 Como se argument\'o anteriormente la extensi\'on de clases multipar\'ametro
 vino a eliminar una restricci\'on de dise\~no, y las dependencias
 funcionales a resolver un problema con ellas. Pero la comunidad es creativa
-y los entusiastas no tardaron en darse cuenta de que \'estas extensiones
-agregaban la posibilidad de expresar computaciones en tiempo de compilaci\'on,
+y los entusiastas no tardaron en explotar la posibilidad que proveen las
+extensiones de expresar computaciones en tiempo de compilaci\'on,
 abusando del sistema de tipos~\cite{Hallgren00funwith}.
 Las clases multiparametro definen relaciones sobre tipos, que combinadas con
-las dependencias funcionales permiten esencialmente expresar funciones sobre
-los mismos, y \emph{decidir} una resoluci\'on a nivel del typechecker es
-fundamentalmente computar con \'el.
-
+las dependencias funcionales permiten esencialmente expresar {\bf funciones}
+sobre los mismos, y \emph{decidir} una resoluci\'on por una dependencia
+funciona es esencialmente \emph{computar} con \'el.
 
 \subsubsection{Ejemplo: Naturales a Nivel de tipos}
 
-Considremos por ejemplo la siguiente implementaci\'on de los naturales
-unarios, como tipo inductivo:
-
-> data Nat = Zero
->          | Succ Nat
+Considremos la definici\'on de la secci\'on anterior del tipo Nat
+(la usual, con la primitiva {\tt data}).
 
 \'Esta definici\'on introduce los constructores
-{\tt Zero :: Nat} y {\tt Succ :: Nat -> Nat}.
+{\tt Zero::Nat} y {\tt Succ::Nat -> Nat}.
 Podemos entonces construir t\'erminos de tipo {\tt Nat} de la forma
 
 < n0 = Zero 
@@ -184,8 +193,8 @@ Por otra parte la definici\'on a nivel de tipos:
 > data Zero
 > data Succ n
 
-tambi\'en introduce constructores (de tipos) {\tt Zero :: *}
-y {\tt Succ :: * -> *}
+tambi\'en introduce constructores (de tipos) {\tt Zero:: *}
+y {\tt Succ:: * -> *}
 An\'alogamente podemos implementar la suma a nivel de tipos de la siguiente
 manera:
 
@@ -202,14 +211,11 @@ Ahora el t\'ermino:
 
 > u3 = tAdd (undefined :: Succ (Succ Zero))(undefined :: Succ Zero)
 
-tiene tipo {\tt Succ (Succ (Succ Zero))}, que es computado gracias a la
-dependencia funcional.
-
+tiene tipo {\tt Succ (Succ (Succ Zero))}, que es computado en tiempo
+de compilaci\'on gracias a la dependencia funcional.
 
 \paragraph{Programaci\'on l\'ogica y Programaci\'on con clases}
-
 \'Este tipo de programaci\'on se asemeja a la programaci\'on l\'ogica.
-
 En Prolog[REF] escribir\'iamos:
 
 
@@ -219,17 +225,17 @@ En Prolog[REF] escribir\'iamos:
 <     add(X,Y,Z).
 
 Sin embargo, programar relaciones funcionales con Typeclasses difiere
-respecto a programar en Prolog, dado que el type checker de GHC no realiza
-backtracking al resolver una instancia. 
+respecto a programar en Prolog, dado que el verificador de tipos de GHC
+no realiza \emph{backtracking} al resolver una instancia. 
 
 Cuando tenemos una sentencia de la forma:
 
 < class (A x, B x) => C x
 
-y GHC debe probar {\tt C a}, primero el typechecker \emph{matchea}
+y GHC debe probar {\tt C a}, primero el compilador \emph{matchea}
 su objetivo con la \emph{cabeza} {\tt C x},
-agregando las restricci\'on {\tt x $\sim$ a}, y
-{\bf luego} pasa a probarse el contexto. Si se falla habr\'a un error
+agregando las restricci\'on {\tt x $\sim$ a} a su ambiente, y
+luego busca probarse el contexto. Si se falla habr\'a un error
 de compilaci\'on se abortar\'a.
 
 En Prolog es v\'alido:
@@ -244,19 +250,24 @@ ni siquiera es legal (GHC retorna error por \emph{Overlapping Instances}).
 
 En particular entonces no podemos decidir la implementaci\'on de las
 operaciones de una clase a partir de la
-resoluci\'on de un contexto u otro.
-Esto sigue siendo relevante cuando programamos con las t\'ecniicas modernas
-y existe una soluci\'on sistem\'atica que ilustraremos m\'as adelante.
+satisfacci\'on de uno u otro contexto. Esto es una sana decisi\'on
+de dise\~no (de lo contrario, por ejemplo, al intercambiar el \'orden de
+declaraciones puede cambiarse la sem\'antica de un programa si ambas
+conducen a una prueba). Tanto utilizando clases con dependencias
+funcionales o las t\'ecnicas m\'as modernas de programaci\'on a nivel
+de tipos que m\'as adelante se presentar\'an, este comportamiento de la
+resoluci\'on de clases es relevante y condiciona el estilo de
+programaci\'on que utilizaremos.
 
-\subsubsection{Completitud (de Turing)}
 
+\subsubsection{Poder computacional}
 Con estas t\'ecnicas se pueden realizar computaciones sofisticadas
 en tiempo de compilaci\'on~\cite{parker:tlii}~\cite{McBride2002FakingIS},
 y puede demostrarse que de hecho, que las t\'ecnicas para definir
 computaciones en tiempo de compilaci\'on con estas extensiones tienen
 el poder de expresividad de un lenguaje Turing Completo,
 lo cual queda demostrado al codificar, por ejemplo un calculo de
-combinadores SKI ~\cite{OlegSKI}.
+combinadores SKI~\cite{OlegSKI}.
 
 
 \subsubsection{Tipado a nivel de Tipos}
@@ -332,4 +343,4 @@ antiguas de programaci\'on a nivel de tipos tenemos que resolver
 todas las limitaciones presentadas en la secci\'on \ref{sec:limitaciones},
 y m\'as. La biblioteca HList~\cite{Kiselyov:2004:STH:1017472.1017488} es
 una recopilaci\'on exhaustiva de estas t\'ecnicas. A los efectos de este
-documento no nos interesa ser exhaustivos con esto [redactar mejor esto].
+documento no nos interesa profundizar en estos detalles.
