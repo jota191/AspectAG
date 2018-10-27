@@ -104,9 +104,18 @@ library
   -- Base language which the package is written in.
   default-language:    Haskell2010
 
-Test-Suite test-AspectAG
+Test-Suite test-Repmin
     type:             exitcode-stdio-1.0
-    main-is:          test/Test.hs
+    main-is:          test/Repmin.hs
+    build-depends:    base >=4.11 && <4.12,
+                      tagged >=0.8 && <0.9,
+                      AspectAG >= 0.4,
+                      QuickCheck
+    default-language: Haskell2010
+
+Test-Suite test-Arith
+    type:             exitcode-stdio-1.0
+    main-is:          test/Arith.hs
     build-depends:    base >=4.11 && <4.12,
                       tagged >=0.8 && <0.9,
                       AspectAG >= 0.4,

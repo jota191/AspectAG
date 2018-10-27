@@ -160,7 +160,7 @@ class Defs att (nts :: [Type]) (vals :: [(k,Type)])
 instance Defs att nts '[] ic ic where
   defs _ _ _ ic = ic
 
--- TODO: duplicated context
+--  TODO: duplicated context
 instance ( Defs att nts vs ic ic'
          , HasLabelChildAttsRes (lch,t) ic' ~ mch
          , HasLabelChildAtts (lch,t) ic'
@@ -200,14 +200,14 @@ class Com (r₁ :: [(k,Type)]) (r₂ :: [(k, Type)]) (r₃ :: [(k,Type)])
 
 
 
--- |Unicode pretty operator
+-- | Unicode pretty operator
 (⊕) :: (Com r s t) => Aspect r -> Aspect s -> Aspect t
 (⊕) = (.+.)
 
 
 -- | Comsingle combinates a rule with an aspect.
 -- Since we'll need to decide what to do depending on context, we use the
---   usual technique.
+-- usual technique.
 class ComSingle (b::Bool) (prd :: k) (rule :: Type) (r₁ :: [(k,Type)])
                 (r₂ :: [(k,Type)]) | b prd rule r₁ -> r₂ where
   comSingle :: Proxy b -> Prd prd rule -> Aspect r₁ -> Aspect r₂
@@ -218,7 +218,7 @@ instance (LabelSet ('(prd, rule) : r₁))
    => ComSingle 'False prd rule r₁ ( '(prd,rule) ': r₁) where
   comSingle _ prd asp = prd `ConsR` asp
 
--- 
+
 instance ( HasFieldRec prd r₁,
            LookupByLabelRec prd r₁ ~ (Rule sc ip ic' sp' ic'' sp'')
          , UpdateAtLabelRec prd (Rule sc ip ic  sp  ic'' sp'') r₁ r₂
@@ -292,7 +292,7 @@ instance ( Kn fc ic sc
          ( '(lch , sch) ': sc) where
   kn (ConsR pfch fcr) (ConsCh pich icr)
    = let scr = kn fcr icr
-         lch = labelTChAtt pfch    :: Label lch-- TODO: name
+         lch = labelTChAtt pfch    :: Label lch
          fch = unTagged pfch       :: Attribution ich -> Attribution sch
          ich = unTaggedChAttr pich :: Attribution ich
      in ConsCh (TaggedChAttr lch (fch ich)) scr
@@ -302,7 +302,7 @@ instance ( Kn fc ic sc
 --   semantic functions of the children, and builds a
 --   function from the inherited attributes of the parent to its
 --   synthesized attributes.
-knit :: ( Empties fc ,EmptiesR fc ~ ec
+knit :: ( Empties fc , EmptiesR fc ~ ec
         , Kn fc ic sc )
   => Rule sc ip ec '[] ic sp
      -> Record fc -> Attribution ip -> Attribution sp
