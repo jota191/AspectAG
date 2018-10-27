@@ -38,46 +38,43 @@ por distintos motivos:
 
 \begin{itemize}
 \item
-  HList es una biblioteca experimental, en constante cambio, que no pretende
-  ser una fuente estable de dependencias, y que constantemente cambia
+  HList es una biblioteca experimental, que no pretende
+  ser utilizada como dependencia de desarrollos de producci\'on
+  por lo que constantemente cambia
   su interfaz sin ser compatible hacia atr\'as. Implementar
   hoy dependiendo de HList implica depender posiblemente de una versi\'on
   antigua y distinta de la versi\'on final en poco tiempo.
 \item
   Cuando programamos a nivel de tipos el lenguaje no provee fuertes
-  mecanismos de modularizaci\'on. Es com\'un que se fugue implementaci\'on
+  mecanismos de modularizaci\'on, dado que no fu\'e dise\~nado para
+  este prop\'osito. Es com\'un que se fugue implementaci\'on
   con los mensajes de error. Y la implementaci\'on basada en HList va a
   filtrar errores de HList, que no utilizan los mismo t\'erminos que
   la jerga de nuestro DSL.
   Si bien proveemos una soluci\'on al manejo
-  de errores [TODO: REF], no es necesariamente exhaustiva.
-  La biblioteca AspectAG utiliza m\'ultiples estructuras isomorfas a Records,
+  de errores, no es necesariamente exhaustiva.
+  La biblioteca AspectAG utiliza m\'ultiples estructuras isomorfas a
+  Registros heterogeneos,
   y dentro del propio desarrollo de la misma result\'o m\'as c\'omodo
   trabajar con estructuras con sus nombres mnem\'onicos.
 \item
   HList no es necesariamente adecuada si queremos tipar todo lo fuertemente
   posible.
-  Por una parte es restrictiva. Por ejemplo, en la implementaci\'on
+  Por ejemplo, en la implementaci\'on
   vamos a utilizar una estructura que es esencialmente un
-  Record de Records. Usando tipos de datos a medida podemos programar
+  Registro de Registros. Usando tipos de datos a medida podemos programar
   una soluci\'on elegante donde esto queda expresado correctamente
-  en el kind. Implementando el Record externo como un Record de HList
+  a nivel de kinds. La alternativa de implementar el Registro externo
+  como un Registro de HList
   ofusca al interno, tratandolo como un tipo "plano".
-  Por otra parte es muy general (se implementan varias veces las mismas
-  funcionalidades para comparar)
 \item
   Por inter\'es acad\'emico. Reescribir HList (varias veces, un subconjunto
-  mayor al necesario para AspectAG) fu\'e la forma de dominar las t\'ecnicas.
-
-  { ``?`C\'omo se aprende a programar?
-    Con leer mucho c\'odigo y escribir mucho c\'odigo." \\[5pt]
-    \rightline{{\rm --- Richard Stallman}}
-  }
-
+  mayor al necesario para AspectAG) fu\'e la forma de dominar las t\'ecnicas
+  de programaci\'on a nivel de tipos.
   Esto no es una raz\'on en si para efectivamente depender de
   una nueva implementaci\'on en lugar de la implementaci\'on moderna de
-  HList, pero a los argumentos anteriores se le suma que no
-  requerimos de mayor costo.
+  HList, pero a los argumentos anteriores se le suma el hecho de que
+  reimplementar no significa un costo: ya lo hicimos. 
 \end{itemize}
 
 \paragraph{Definici\'on}
@@ -94,10 +91,9 @@ Por ejemplo
 conduce a un error de tipos.
 Existen varios enfoques para construir colecciones heterogeneas en Haskell,
 REF: https://wiki.haskell.org/Heterogenous\_collections
-
-A nosotros nos interesan las que son fuertemente tipadas, se conoce
-est\'aticamente el tipo de cada miembro (an\'alogamente al largo en la
-implementaci\'on de vectores).
+Nos interesan en particular las que son fuertemente tipadas, se conoce
+est\'aticamente el tipo de cada miembro (del mismo modo en el que
+conoc\'iamos los largos en la implementaci\'on de vectores).
 
 Existen variantes para definir HList
 (incluso considerando las t\'ecnicas modernas)
@@ -374,16 +370,8 @@ La compilaci\'on produce un error mucho m\'as legible:
 <     . In the expression: updateAtNat (SS (SS (SS SZ))) True boolStrChar
 
 
-\subsubsection{Logic vs Functional}
 
-Supongamos que queremos codificar:
-
-< getByType :: x -> HList xs
-
-
-
-
-\subsection{Records Heterogeneos}
+\subsection{Registros Heterogeneos}
 \label{sec:hrecord}
 
 AspectAG requiere de \emph{Records} heterogeneos, esto es, colecciones
@@ -452,6 +440,6 @@ Las typeclasses, entendidas como predicados sobre tipos
 
 > instance TypeError (Text "LabelSet Error:" :$$:
 >                     Text "Duplicated Label on Record" :$$:
->                    Text "On fields:" :$$: ShowType l1 :$$:
->                    Text " and " :$$: ShowType l1 )
+>                     Text "On fields:" :$$: ShowType l1 :$$:
+>                     Text " and " :$$: ShowType l1 )
 >           => LabelSet' l1 l2 True r
