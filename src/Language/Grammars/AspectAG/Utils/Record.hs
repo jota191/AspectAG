@@ -110,10 +110,11 @@ instance (HasFieldRec l r )=>
   lookupByLabelRec' _ l (ConsR _ r) = lookupByLabelRec l r
 
 -- | Error instance, using :
-instance TypeError (Text "Type Error ----" :$$:
-                    Text "From the use of 'HasFieldRec' :" :$$:
-                    Text "No Field of type " :<>: ShowType l
-                    :<>: Text " on Record" )
+instance TypeError ( Text "Type Error : No Field found on Record:" :$$:
+    Text "(Possibly, in some aspect there are productions " :<>:
+    Text "where the attribute is undefined)" :$$:
+    Text "No Field of type " :<>: ShowType l
+    :<>: Text " on Record" )
   => HasFieldRec l '[] where
   type LookupByLabelRec l '[] = TypeError (Text "unreachable")
   lookupByLabelRec = undefined
@@ -153,11 +154,16 @@ instance ( UpdateAtLabelRec l v r r', LabelSet  ( a ': r' ) ) =>
     = case (updateAtLabelRec l v xs) of
         xs' -> ConsR att xs' :: Record( a ': r')
 
--- | Type errors using GHC.TypeLits
-instance TypeError (Text "Type Error ----" :$$:
-                    Text "From the use of 'HasFieldRec' :" :$$:
-                    Text "No Field of type " :<>: ShowType l
-                    :<>: Text " on Record" )
+--  Type errors using GHC.TypeLits
+
+-- | No field on record, On AAG usually appears when an aspect was not
+-- defined in all its required labels
+instance TypeError
+  ( Text "Type Error : No Field found on Record:" :$$:
+    Text "(Possibly, in some aspect there are productions " :<>:
+    Text "where the attribute is undefined)" :$$:
+    Text "No Field of type " :<>: ShowType l
+    :<>: Text " on Record" )
   => UpdateAtLabelRec l v '[] '[] where
   updateAtLabelRec _ _ r = r
 
