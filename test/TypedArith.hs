@@ -1,11 +1,12 @@
-{-# LANGUAGE TemplateHaskell, FlexibleContexts,
+{-# LANGUAGE FlexibleContexts,
   DataKinds, GADTs, TypeFamilies, NoMonomorphismRestriction #-}
-module Main where
+module TypedArith where
 
 import Language.Grammars.AspectAG
-import Language.Haskell.TH
 import Data.Maybe
 import Control.Monad.Except
+
+type Name = String
 
 -- | The AST for a simple expression language
 data Expr
@@ -14,6 +15,8 @@ data Expr
   | Add  Expr Expr
   | Cond Expr Expr Expr
   | IsZ  Expr
+  | Var Name
+  | Let Name Expr Expr
   deriving (Eq, Show)
 
 
@@ -23,7 +26,8 @@ data P_N    ; p_N    = Label :: Label P_N
 data P_Add  ; p_Add  = Label :: Label P_Add
 data P_Cond ; p_Cond = Label :: Label P_Cond
 data P_IsZ  ; p_IsZ  = Label :: Label P_IsZ
-
+data P_Var  ; p_Var  = Label :: Label P_Var
+data P_Let  ; p_Let  = Label :: Label P_Let
 
 -- | Labels for children
 data Ch_B;      ch_B      = Label :: Label (Ch_B,      Bool)
@@ -34,11 +38,15 @@ data Ch_Cond_C; ch_Cond_C = Label :: Label (Ch_Cond_C, Expr)
 data Ch_Cond_T; ch_Cond_T = Label :: Label (Ch_Cond_T, Expr)
 data Ch_Cond_E; ch_Cond_E = Label :: Label (Ch_Cond_E, Expr)
 data Ch_IsZ;    ch_IsZ    = Label :: Label (Ch_IsZ,    Expr)
+data Ch_Var;    ch_Var    = Label :: Label (Ch_Var,    Name)
+data Ch_Let_N;  ch_Let_N  = Label :: Label (Ch_Let_N,  Name)
+data Ch_Let_E;  ch_Let_E  = Label :: Label (Ch_Let_E,  Expr)
+data Ch_Let_B;  ch_Let_B  = Label :: Label (Ch_Let_B,  Expr)
 
 -- | Labels for terminals
-data BVal; bval = Label :: Label (BVal,Bool)
-data NVal; nval = Label :: Label (NVal,Int)
-
+data BVal; bval = Label :: Label (BVal, Bool)
+data NVal; nval = Label :: Label (NVal, Int)
+data VVal; vval = Label :: Label (VVal, Name)
 
 
 
@@ -47,6 +55,8 @@ sem_Nat :: Int -> Attribution p -> Attribution '[ '((NVal, Int), Int) ]
 sem_Nat  n _ = (nval =. n) *. emptyAtt
 sem_Bool :: Bool -> Attribution p -> Attribution '[ '((BVal, Bool), Bool) ]
 sem_Bool b _ = (bval =. b) *. emptyAtt
+sem_Var :: Name -> Attribution p -> Attribution '[ '((VVal, Name), Name) ]
+sem_Var nam _ = (vval =. nam) *. emptyAtt
 
 sem_Expr asp (N n)
   = knit (asp .#. p_N) $ (ch_N .=. sem_Nat n) .*. emptyRecord
@@ -66,7 +76,9 @@ sem_Expr asp (Cond c t e)
 sem_Expr asp (IsZ e)
   = knit (asp .#. p_IsZ) $  ch_IsZ .=. sem_Expr asp e
                         .*. emptyRecord
-
+--sem_Expr asp (Var nam)
+-- = knit (asp .#. p_Var) $  ch_Var .=. sem_Var nam
+--                       .*. emptyRecord
 
 
 -- | An attribute type is used to compute the type of an expression
@@ -158,9 +170,6 @@ asp_sval
   .*. emptyRecord 
 
 eval e = sem_Expr asp_sval e EmptyAtt # sval
-
-main
-  = return ()
 
 
 -- | expressions for testing
