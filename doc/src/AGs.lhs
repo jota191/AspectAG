@@ -2,73 +2,96 @@
 
 Las gram\'aticas de atributos~\cite{Knuth68semanticsof}
 son un formalismo para describir computaciones
-recursivas sobre tipos de datos. Dada una gram\'atica libre de contexto,
-se le asocia una sem\'antica considerando atributos en cada producci\'on,
-que toman valores que son calculados mediante reglas a partir de los valores
+recursivas sobre tipos de datos\footnote{Tipos de datos algebr\'aicos
+o gram\'aticas son formalismos equivalentes}.
+Dada una gram\'atica libre de contexto,
+se le asocia una sem\'antica considerando \emph{atributos}
+en cada producci\'on,
+los cuales toman valores calculados mediante reglas a partir de los valores
 de los atributos de los padres y de los hijos del arbol de sintaxis abstracta.
-
 Los atributos se dividen cl\'asicamente en dos tipos:
 heredados y sintetizados.
-Los atributos heredados son "pasados" como un contexto desde los padres a los
+Los atributos heredados son ``pasados'' como contexto desde los padres a los
 hijos. Los atributos sintetizados son calculados seg\'un las reglas
-sem\'anticas,
+sem\'anticas
 en funci\'on de los atributos de los hijos (y eventualmente de los padres). 
-
-Un \emph{Aspecto} es una colecci\'on de (uno o m\'as) aspectos,
+Un \emph{Aspecto} es una colecci\'on de (uno o m\'as) aributos
 y sus reglas de c\'omputo.
 
 Las gram\'aticas de atributos son especialmente interesantes
-para la implementaci\'on de compiladores [REF UHC, Aho, etc etc],
+para la implementaci\'on de
+compiladores~\cite{Dijkstra:2009:AUH:1596638.1596650}~\cite{Aho:1986:CPT:6448}
 traduciendo el arbol sint\'actico directamente en alg\'un lenguaje de
 destino o representaci\'on intermedia. Tambi\'en es posible validar chequeos
 sem\'anticos de reglas que no est\'an presentes sint\'acticamente
 (por ejemplo compilando lenguajes con sintaxis no libre de contexto,
 parseados previamente seg\'un una gram\'atica libre de contexto
-como la mayor\'ia de los languajes de programaci\'on modernos),
-o para implementar chequeadores de tipos.
+como ocurre en la mayor\'ia de los languajes de programaci\'on modernos)
+o para implementar verificadores de tipos.
 
 Adem\'as, las gram\'aticas de atributos
 son \'utiles en s\'i mismas como un paradigma de
-programaci\'on, y significan una soluci\'on a un
+programaci\'on (programaci\'on orientada a aspectos).
+Buena parte de la programaci\'on funcional consiste en
+componer computaciones sobre \'arboles
+(expresadas mediante \'algebras~\cite{Bird:1996:AP:256095.256116}, aplicadas
+a un catamorfismo). Un
+\'algebra en definitiva especifica una sem\'antica para una estructura
+sint\'actica.
+Cuando las estructuras de datos son complejas (por ejemplo, en la
+representaci\'on del \'arbol
+de sintaxis abstracta de un lenguaje de programaci\'on complejo),
+surgen ciertas dificultades~\cite{Dijkstra:2009:AUH:1596638.1596650}.
+Por ejemplo ante un cambio en la estructura
+es necesario el retrabajo dado que
+cambia el catamorfismo y todas las \'algebras. Las gram\'aticas de
+atributos buscan proveer una soluci\'on m\'as escalable.
+
+M\'as en general la programaci\'on mediante gram\'aticas de atributos
+significa una soluci\'on a un
 conocido t\'opico de discusi\'on en la comunidad
 llamado "El problema de la expresi\'on"
-("The expression problem", t\'ermino acu\~nado por P. Wadler
-~\cite{ExpressionProblem}).
-Cuando el software se construye de manera incremental es deseable que sea
+("The expression problem", t\'ermino acu\~nado por
+P. Wadler~\cite{ExpressionProblem}).
+Cuando el software se construye de forma incremental es deseable que sea
 sencillo introducir nuevos tipos de datos
-o enriquecer los existentes, y tambi\'en que sea simple
-implementar nuevas operaciones. Normalmente dise\~nar un lenguaje pensando en
-una de las utilidades va en desmedro de la otra, siendo la programaci\'on
+o enriquecer los existentes con nuevos constructores,
+y tambi\'en que sea simple implementar nuevas operaciones.
+Normalmente en el dise\~no de un lenguaje las decisiones que facilitan
+una de las utilidades van en desmedro de la otra, siendo la programaci\'on
 orientada objetos el ejemplo paradigm\'atico de t\'ecnica orientada a los
 datos, y la programaci\'on funcional,
 por el contrario el ejemplo donde es simple
-agregar funciones, siendo costoso en cada paradigma hacer lo dual (pensar en
-cuan complicado (y cuantos m\'odulos hay que modificar)
+agregar funciones, siendo costoso en cada paradigma hacer lo dual. Pensar en
+cuan complicado (y cuantos m\'odulos hay que modificar, y por tanto recompilar)
 es agregar un m\'etodo en una estructura de clases amplia,
 o cuantas funciones hay que modificar en los lenguajes funcionales
-si en un tipo algebr\'aico se agrega una construcci\'on).
+si en un tipo algebr\'aico se agrega un constructor (y nuevamente,
+cu\'antos m\'odulos se deben recompilar).
 
 Las \emph{Programaci\'on orientada a aspectos}, mediante
 gram\'aticas de atributos son una propuesta de soluci\'on a este
 problema, deber\'ia ser simple agregar nuevas producciones
-(definiendo \emph{localmente} las reglas de computaci\'on de los atributos
-existentes sobre el nuevo caso, as\'i como agregar
-nuevas funcionalidades (definiendo \emph{localmente}
+(definiendo localmente las reglas de computaci\'on de los atributos
+existentes sobre la nueva producci\'on, as\'i como agregar
+nuevas funcionalidades (definiendo localmente
 nuevos atributos con sus reglas, o bien combinando los ya existentes).
 
-Por sus caracter\'isticas, donde las computaciones se expresan de forma local
-en cada producci\'on combinando c\'omo la informaci\'on fluye de arriba a abajo
-y de abajo a arriba, una aplicaci\'on \'util de las AGs es la de definir
-computaciones circulares. En la pr\'oxima secci\'on introducimos
-un ejemplo.
+Por su caracter\'istica, donde las computaciones se expresan de forma local
+en cada producci\'on combinando c\'omo la informaci\'on fluye
+``de arriba a abajo''
+y de ``abajo a arriba'', una aplicaci\'on \'util de las AGs es la de definir
+computaciones circulares. En la pr\'oxima secci\'on se presenta un ejemplo.
+
 
 
 
 \subsection{Ejemplo: {\tt repmin}}
 
-Como ejemplo consideramos la cl\'asica funci\'on {\tt repmin}
-~\cite{birdRepmin}, que dado un \'arbol de enteros
-(por ejemplo con la informaci\'on en las hojas), retorna un \'arbol con la
+Como ejemplo consideramos la cl\'asica funci\'on
+{\tt repmin}~\cite{birdRepmin}, que dado un \'arbol contenedor de enteros
+(por ejemplo; binario y con la informaci\'on en las hojas),
+retorna un \'arbol con la
 misma topolog\'ia, conteniendo el menor valor del \'arbol original en cada
 hoja.
 Consideramos la siguiente estructura en haskell para representar el \'arbol:
@@ -86,7 +109,6 @@ Notar que utilizaremos la ra\'iz ``marcada'' con el tipo algebr\'aico
 un nodo m\'as. Lo hacemos de esta manera para tener informaci\'on de
 donde exactamente dejar de calcular el m\'inimo local, que ser\'a a partir de
 ese punto global y comenzar a propagarlo a los hijos.
-
 
 La funci\'on {\tt repmin} puede definirse como sigue:
 
@@ -111,7 +133,6 @@ Por otra parte, una
 definici\'on por gram\'aticas de atributos viene dada de la
 siguinte manera:
 
-
 \begin{center}
 \includegraphics[width=8cm]{./src/img/ag-repmin.png}
 \end{center}
@@ -121,7 +142,7 @@ La raz\'on para tomar \'esta decisi\'on es una vez m\'as
 tener un s\'imbolo de inicio expl\'icito de la gram\'atica, que a nivel
 operacional nos va a permitir saber cuando encadenar atributos
 sintetizados con heredados, aunque ahora la decisi\'on es m\'as natural;
-la sem\'antica (i.e. c\'omo se computan los
+la sem\'antica (i.e. c\'omo se computar\'an los
 atributos) difiere en un nodo ordinario y en la ra\'iz.
 
 La palabra clave {\tt SYN} introduce un atributo sintetizado.
@@ -145,61 +166,79 @@ atributo heredado {\tt ival}.
 Los atributos heredados se definen con la sentencia {\tt INH}.
 En el ejemplo {\tt ival} es el \'unico atributo heredado,
 que representa el valor m\'inimo global en el \'arbol.
-
 En la ra\'iz, {\tt ival} se computa como una copia del valor
 {\tt smin}. Se aprecia por qu\'e necesitabamos marcar la ra\'iz del
-\'arbol: para saber cuando copiar.
-En los nodos, a cada sub\'arbol se le copia el valor de ival actual.
+\'arbol: para saber cuando el m\'inimo local es global y computar {\tt ival}.
+En los nodos, a cada sub\'arbol se le copia el valor de {\tt ival}
+actual, que fluir\'a ``hacia'' abajo.
 
-
+\newpage
 
 \subsection{AspectAG}
 
-La implementaci\'on sigue a grandes razgos la siguiente idea:
+AspectAG es un lenguaje de dominio espec\'ifico embebido en haskell
+que implementa gram\'aticas de atributos y explota el sistema de tipos
+para chequear est\'aticamente ciertas propiedades de buena formaci\'on.
 
-En cada producci\'on, llamamos \emph{atribuci\'on} (Attribution)
+La implementaci\'on sigue a grandes razgos la siguiente idea:
+Dada una estructura de datos sobre la que vamos a definir los atributos,
+en cada producci\'on llamamos \emph{atribuci\'on} (Attribution)
 al registro de todos los atributos. Una atribuci\'on ser\'a un mapeo
 de nombres de atributos a sus valores. Los nombres de atributos
 se manejan en tiempos de compilaci\'on, por lo que una estructura
 como la presentada en la secci\'on \ref{sec:hrecord}
-es adecuada. La definici\'on de la estructura en tiempo de compilaci\'on
-permitir\'a realizar chequeos est\'aticos de propiedades deseables de la
-gram\'atica.
-
+es adecuada.
 En cada producci\'on, la informaci\'on fluye de los atributos heredados del
 padre y los sintetizados de los hijos, que se llaman en la literatura
 ``familia de entrada'' (\emph{input family}), a
 los sintetizados del padre y heredados de los hijos, la \emph{output family}.
+Una regla sem\'antica consiste en un mapeo de
+una input family a una output family. 
+Se le proveen al programador primitivas para definir atributos y sus reglas
+sem\'anticas, que agrupar\'a en aspectos. Se provee tambi\'en una primitiva
+para combinar aspectos. Una funci\'on (el catamorfismo)
+se encarga de combinar las reglas sem\'anticas para efectivamente producir
+una recorrida sobre la estructura de datos.
 
-En cada producci\'on, una regla sem\'antica consiste en un mapeo de
-una input family a una output family.
+Notar que una especificaci\'on de gram\'atica de atributos
+podr\'ia estar mal formada
+(por ejemplo, al intentar usar atributos que no est\'an definidos para cierta
+producci\'on). Como las atribuciones se conocen est\'aticamente,
+los ejemplos mal formados ser\'an rechazados en tiempo de compilaci\'on.
 
 
 Presentamos una soluci\'on al problema {\tt repmin}
 en la reimplementaci\'on del EDSL, para que el lector tome contacto
-con el estilo de programaci\'on en el EDSL. Luego se presentar\'a
-mayor detalle la implementaci\'on.
+con el estilo de programaci\'on en el mismo. Luego se presentar\'a
+mayor detalle de la implementaci\'on.
 
-Hay que definir m\'ultiples \emph{Etiquetas}.
-Hay etiquetas para los no terminales, para los atributos, y para nombrar a los
-hijos en cada producci\'on. Por ejemplo, para los atributos:
+Hay que definir m\'ultiples \emph{Etiquetas}\footnote{La biblioteca provee
+funciones de templateHaskell para ahorrarnos el trabajo}.
+Hay etiquetas para los s\'imbolos no terminales,
+para los atributos, y para nombrar a los
+hijos de cada producci\'on. Por ejemplo, para los atributos definimos:
 
 > data Att_smin; smin = Label :: Label Att_smin
 > data Att_ival; ival = Label :: Label Att_ival
 > data Att_sres; sres = Label :: Label Att_sres
 
-Las etiquetas existen solo a nivel de tipos([REF phantom types]),
+Las etiquetas tienen informaci\'on solo a nivel de tipos,
 {\tt Label} es una implementaci\'on especializada de {\tt Proxy}.
-En nuestra implementaci\'on todos
-los Records extensibles son polim\'orficos en el kind de los \'indices, por
-lo cual es posible definir tipos de datos para cada tipo de etiqueta
-y utilizar el kind promovido.
+  
+> data Label l = Label
+
+Bajo la extensi\'on {\tt PolyKinds} la declaraci\'on anterior tiene
+kind {\tt k -> *}. En nuestra implementaci\'on todos
+los registros extensibles son polim\'orficos en el kind de los \'indices,
+por lo cual tambi\'en ser\'ia posible definir tipos de datos para cada
+tipo de etiqueta y utilizar el kind promovido.
 
 
-Def\'inanse las reglas para el atributo {\tt smin}.
-Notar en la especificaci\'on de la gram\'atica de atributos
-que tiene reglas de computaci\'on en el \'arbol, por lo que hay dos
-producciones (Node y Leaf). 
+Presentamos las reglas para el atributo {\tt smin}.
+En la especificaci\'on de la gram\'atica de atributos, puede observarse
+que tiene el atributo tiene reglas de computaci\'on en el \'arbol,
+por lo que hay dos producciones donde hace falta definirlas
+({\tt Node} y {\tt Leaf}). 
 En AspectAG:
 
 > node_smin (Fam chi par)
@@ -208,22 +247,25 @@ En AspectAG:
 > leaf_smin (Fam chi par)
 >   = syndef smin $ chi # ch_i # leafVal
 
-Informalmente, para el nodo se define un atributo {\tt smin}, que se
+Informalmente, para el nodo se defini\'o un atributo sintetizado {\tt smin},
+que se
 calcula como el m\'inimo entre el valor de {\tt smin} del hijo {\tt ch\_l}
-(nombre del hijo izquierdo), y el valor de {\tt smin} del hijo {\tt ch\_r}.
-En el caso de la hoja, se toma el valor de leafVal (que es un nombre para
-el valor guardado), para el (unico) hijo en la producci\'on {\tt ch\_i}.
-Si bien todos los terminales van a tener un \'unico hijo con su valor,
+(nombre del hijo izquierdo), y el valor de {\tt smin} del hijo {\tt ch\_r}
+(nombre del hijo derecho).
+En el caso de la hoja, se toma el valor de {\tt leafVal}
+(que es un nombre para
+el valor guardado) para el (\'unico) hijo en la producci\'on {\tt ch\_i}.
+Si bien generalmente los terminales van a tener un \'unico hijo con su valor
+-parecen innecesarias dos etiquetas-
 implementar fuertemente tipado nos obliga a respetar esta estructura
 (o complicar mucho la implementaci\'on).
-
 
 Notar que lo que definimos son en realidad funciones: un mapeo de la
 \emph{input family} (atributos heredados del padre y sintetizados de los hijos)
 a la \emph{output family} (sintetizados del padre, heredados a los hijos).
-Los valores de arriba tienen tipo \emph{Rule} [RFRENCIA MAS ADELANTE].
+Las expresiones (funciones) definidas tienen tipo {\tt Rule}(~\ref{rule}).
 
-An\'alogamente se define el atributo heredado {\tt sres}:
+An\'alogamente se define el atributo sintetizado {\tt sres}:
 
 > root_sres (Fam chi par)
 >   = syndef sres $ chi # ch_tree # sres
@@ -234,28 +276,31 @@ An\'alogamente se define el atributo heredado {\tt sres}:
 > leaf_sres (Fam chi par)
 >   = syndef sres $ Leaf (par # ival)
 
-Notar que est\'a definido para la ra\'iz, y que en la hoja usamos un atributo
-sintetizado para computar.
+En este caso el atributo estaba definido para la ra\'iz,
+y en la hoja usamos un atributo
+sintetizado para computarle (el m\'inimo global).
 
 Por \'ultimo presentamos el atributo sintetizado:
 
-
 > root_ival (Fam chi par) =
->   inhdef ival [nt_Tree] ( ch_tree .=.(chi # ch_tree # smin)
->                        .*. emptyRecord)
+>   inhdef ival [nt_Tree] $ ch_tree .=. chi # ch_tree # smin
+>                        .*. emptyRecord
   
 > node_ival (Fam chi par) =
->   inhdef ival [nt_Tree] (  ch_l .=. par # ival
+>   inhdef ival [nt_Tree] $  ch_l .=. par # ival
 >                        .*. ch_r .=. par # ival
->                        .*. emptyRecord)
+>                        .*. emptyRecord
 
-Informalmente, declaramos que se define un atributo heredado llamado
-{\tt ival}, y se declara un registro donde se especifica para cada hijo
-c\'omo se computar\'a {\tt ival}.
-El par\'ametro extra {\tt [nt\_Tree]} es una lista de no terminales,
-por ahora no le damos importancia.
+Declaramos la definici\'on de un atributo heredado llamado
+{\tt ival}. La funci\'on requiere un registro donde se especifica
+para cada hijo c\'omo se computar\'a {\tt ival}: desde la ra\'iz se
+propaga el valor
+del atributo sintetizado {\tt smin}, en los nodos del \'arbol se propaga
+el valor de {\tt ival} tomado del padre, incambiado.
+El par\'ametro extra {\tt [nt\_Tree]} es una lista de no terminales utilizada
+para hacer ciertos chequeos est\'aticos, por ahora no le damos importancia.
 
-Los \emph{aspectos} se definen como un registro con las reglas para
+Los aspectos se definen como un registro con las reglas para
 cada producci\'on:
 
 
@@ -270,13 +315,24 @@ cada producci\'on:
 >         .*. p_Node .=. node_smin
 >         .*. emptyRecord
 
-Que pueden combinarse mediante el operador {\tt .+.}:
+El operador {\tt (.*.)} concatena regitros heterogeneos, {\tt emptyRecord}
+es el registro vac\'io. El operador {\tt (.=.)} construye campos del registro
+dados un valor con el tipo de la etiqueta y su correspondiente regla.
+
+Los aspectos pueden combinarse para formar uno nuevo
+mediante el operador {\tt (.+.)}:
 
 > asp_repmin = asp_smin .+. asp_sres .+. asp_ival
 
-Finalmente {\tt repmin : Tree -> Tree } viene dado por:
+Finalmente {\tt repmin:Tree->Tree} viene dado por:
 
 > repmin t = sem_Root asp_repmin (Root t) emptyAtt # sres
 
-En donde {\tt sem\_Root} es una funci\'on definida una sola vez.
+En donde {\tt sem\_Root} es el catamorfismo,
+una funci\'on definida una sola vez\footnote{El catamorfismo es derivable
+a partir del functor de la estructura de datos. Al momento de la escritura
+de este documento el programador debe proveer el catamorfismo, pero es
+uno de los objetivos inmediatos de trabajo futuro automatizar la generaci\'on
+del mismo.}.
+
 

@@ -124,14 +124,14 @@ la biblioteca.
 %include ./src/AGs.lhs
 
 
-
-\section{Reimplementación de AspectAG}
+\newpage
+\section{Reimplementaci\'on de AspectAG}
 
 %include ./src/AAG.lhs
 
 
-\section{Comparaci\'on}
-
+\section{Conclusi\'on}
+%include ./src/Conc.lhs
 
 ambiguous types al final
 
