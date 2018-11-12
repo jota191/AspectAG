@@ -22,7 +22,7 @@
 
 \setlength\parindent{0pt} % noindent in all file
 \usepackage{geometry}
-%\geometry{margin=1in}
+\geometry{margin=1in}
 \usepackage{graphicx}
 
 \begin{document}
@@ -38,36 +38,36 @@
 
 \section{Introducci\'on}
 
-AspectAG [ref] es un EDSL (DSL embebido) desarrollado en Haskell que permite
+AspectAG~\cite{Viera:2009:AGF:1596550.1596586}
+es un EDSL (DSL embebido) desarrollado en Haskell que permite
 la construcción modular de Gram\'aticas de Atributos. En AspectAG,
 los fragmentos de una Gram\'atica de Atributos son definidos en forma
 independiente y luego combinados a trav\'es del uso de operadores de
 composici\'on que el propio EDSL provee. AspectAG se basa fuertemente en el
 uso de registros extensibles, los cuales son implementados en t\'erminos
-de HList [ref], una biblioteca de Haskell para la manipulaci\'on
+de HList~\cite{Kiselyov:2004:STH:1017472.1017488},
+una biblioteca de Haskell para la manipulaci\'on
 de listas heterog\'eneas de forma fuertemente tipada.
-HList est\'a implementada utilizando técnicas de programaci\'on a nivel
+HList est\'a implementada utilizando t\'ecnicas de programaci\'on a nivel
 de tipos en las que los tipos son usados para representar ``valores''
 a nivel de tipos y las clases de tipos son usadas para representar
-``tipos'' y ``funcione'' en la manipulación a nivel de tipos. 
+``tipos'' y ``funciones'' en la manipulación a nivel de tipos.
 
-Desde el momento de la implementación original de AspectAG hasta ahora
+Desde el momento de la implementaci\'on original de AspectAG hasta
+la actualidad
 la programación a nivel de tipos en Haskell ha tenido una evoluci\'on
 importante, habi\'endose incorporado nuevas extensiones como
-data promotion o polimorfismo de kinds, entre otras,
+\emph{data promotion} o polimorfismo de kinds, entre otras,
 las cuales constituyen elementos fundamentales debido
-a que permiten programar de forma “fuertemente tipada” a nivel de
+a que permiten programar de forma ``fuertemente tipad'' a nivel de
 tipos de la misma forma que cuando se programa a nivel de
-valores en Haskell (algo que originalmente era imposible
+valores (algo que originalmente era imposible
 o muy difícil de lograr). El uso de estas extensiones da
 como resultado una programaci\'on a nivel de tipos más robusta y segura.
-Sobre la base de estas extensiones, el planteo de este proyecto
-es realizar una reimplementación de un subconjunto de AspectAG
-que las tome en cuenta.
-Esto implica una reimplementaci'on de las funcionalidades de AspectAG
-y de las que sean necesarias de HList.
+Sobre la base de estas extensiones, implementamos un subconjunto
+de la biblioteca original.
 
-\paragraph{}
+
 Estructura del documento:
 
 En la secci\'on 2 [ref] se presenta un estudio de las
@@ -101,16 +101,220 @@ En la secci\'on te tests se implementan ejemplos de utilizaci\'on de
 la biblioteca.
 
 
-
 \section{Programaci\'on a nivel de tipos}
-\subsection{T\'ecnicas antiguas}
+\subsection{T\'ecnicas de programaci\'on}
+La biblioteca AspectAG presentada originalmente
+en 2009, adem\'as de implementar un sistema de gram\'aticas de atributos
+como un EDSL, provee un buen ejemplo de c\'omo usar las
+programaci\'on a nivel de tipos en Haskell.
+La implementaci\'on utiliza fuertemente los registros extensibles implementados
+por la biblioteca HList. Ambas bibliotecas se basan en la combinaci\'on
+de las extensi\'ones {\tt MultiParamTypeClasses}
+(que proveen la implementaci\'on de relaciones a nivel de tipos) con
+{\tt FunctionalDependencies}~\cite{DBLP:conf/esop/Jones00}
+(que permite expresar en particular
+relaciones funcionales).\footnote{Adem\'as de otras relaciones de uso
+extendido como {\tt FlexibleContexts}, {\tt FlexibleInstances}, etc}
 
-%include ./src/Old.lhs
+Durante la d\'ecada siguiente~\footnote{Algunas extensiones como
+{\tt GADTS} o incluso {\tt TypeFamilies} ya exist\'ian en la \'epoca
+de la publicaci\'on original de AspectAG, pero eran experimentales,
+y de uso poco extendido.}
+se han implementado m\'ultiples extensiones
+en el compilador GHC que proveen herramientas para hacer la programaci\'on
+a nivel de tipos m\'as expresiva. Las familias de tipos implementadas
+en la extensi\'on
+{\tt TypeFamilies}~\cite{Chakravarty:2005:ATC:1047659.1040306}
+~\cite{Chakravarty:2005:ATS:1090189.1086397}
+~\cite{Sulzmann:2007:SFT:1190315.1190324}
+nos permiten definir funciones a nivel
+de tipos de una forma m\'as idiom\'atica que el estilo l\'ogico de la
+programaci\'on orientada a relaciones. La extensi\'on
+{\tt DataKinds}~\cite{Yorgey:2012:GHP:2103786.2103795}
+implementa la \emph{data promotion} que provee la posibilidad de definir
+tipos de datos -tipados- a nivel de tipos, introduciendo nuevos kinds.
+Bajo el mismo trabajo Yorgey et al. implementan la
+extensi\'on {\tt PolyKinds} proveyendo polimorfismo a nivel de kinds.
+Adem\'as la extensi\'on {\tt KindSignatures} permite anotar kinds a los
+t\'erminos en el nivel de tipos. Con toda esta maquinaria se tiene
+un lenguaje a nivel de tipos casi tan expresivo como a nivel
+de t\'erminos\footnote{no es posible, por ejemplo la aplicaci\'on parcial}.
+La extensi\'on {\tt GADTs} combinada con las anteriores nos permite escribir
+familias indizadas, como en los lenguajes dependientes.
+{\tt TypeOperators}
+habilita el uso de simbolos operadores como constructores de tipos.
+El m\'odulo {\tt Data.Kind} exporta la notaci\'on {\tt Type} para
+el kind {\tt *}. Esto fu\'e implementado originalmente con la extensi\'on
+{\tt TypeInType}, que en las \'ultimas versiones del compilador es
+equivalente a {\tt PolyKinds + DataKinds + KindSignatures}
 
-\newpage
-\subsection{T\'ecnicas modernas}
+Con todas extensiones combinadas, una declaraci\'on como
 
-%include ./src/New.lhs
+> data Nat = Zero | Succ Nat
+
+se ``duplica'' a nivel de kinds {\tt DataKinds}. Esto es, 
+adem\'as de introducir los t\'erminos {\tt Zero} y {\tt Succ} de tipo
+{\tt Nat}, y al propio tipo {\tt Nat} de kind {\tt *} la declaraci\'on
+introduce los \emph{tipos}
+{\tt Zero} y {\tt Succ} de Kind {\tt Nat} (y al propio kind Nat).
+Luego es posible declarar, por ejemplo ({\tt GADTs}, {\tt KindSignatures})
+
+> data Vec :: Nat -> Type -> Type where
+>   VZ :: Vec Zero a
+>   VS :: a -> Vec n a -> Vec (Succ n) a
+
+Y funciones seguras como
+
+> vTail :: Vec (Succ n) a -> Vec n a
+> vTail (VS _ as) = as
+
+> vZipWith :: (a -> b -> c) -> Vec n a -> Vec n b -> Vec n c
+> vZipWith _ VZ VZ = VZ
+> vZipWith f (VS x xs) (VS y ys)
+>   = VS (f x y)(vZipWith f xs ys)
+
+o incluso
+
+
+> vAppend :: Vec n a -> Vec m a -> Vec (n + m) a
+> vAppend (VZ) bs      = bs
+> vAppend (VS a as) bs = VS a (vAppend as bs)
+
+Es posible definir funciones puramene a nivel de tipos
+({\tt TypeFamilies}, {\tt TypeOperators}, {\tt DataKinds},
+{\tt KindSignatures}) como la suma:
+
+> type family (m :: Nat) + (n :: Nat) :: Nat
+> type instance Zero + n = n
+> type instance Succ m  + n = Succ (m :+ n) 
+
+\subsection{Limitaciones}
+\label{sec:limitaciones}
+
+A diferencia de lo que ocurre en implementaciones de lenguajes con tipos
+dependientes, los lenguajes de t\'erminos y de tipos en Haskell
+contin\'uan habitando mundos separados.
+La correspondencia entre nuestra definici\'on de vectores
+y las familias inductivas en los lenguajes de tipos dependientes no es tal.
+
+Las ocurrencias de {\tt n} los tipos de las funciones anteriores son
+est\'aticas, y borradas en tiempo de
+ejecuci\'on, mientras que en un lenguaje de tipos dependientes estos
+par\'ametros son esencialmente
+\emph{din\'amicos}~\cite{Lindley:2013:HPP:2578854.2503786}.
+En las teor\'ias de tipos intensionales
+una definici\'on como la suma declarada anteriormente
+extiende el algoritmo de normalizaci\'on, de forma tal que el
+compilador decidir\'a la igualdad de tipos seg\'un las formas
+normales. Si dos tipos tienen la misma forma normal entonces los mismos
+t\'erminos les habitar\'an.
+Por ejemplo, los tipos  {\tt Vec (S (S Z) :+ n) a} y {\tt Vec (S (S n)) a}
+tendr\'an los mismos habitantes.
+Esto no va a ser cierto para tipos como
+{\tt Vec (n :+ S (S Z)) a} y {\tt Vec (S (S n)) a}, aunque que los tipos
+coincidan para todas las instancias concretas de {\tt n}.
+Para expresar propiedades como la conmutatividad
+se utilizan evidencias de las ecuaciones utilizando
+\emph{tipos de igualdad proposicional}
+\footnote{Propositional Types}~\cite{Lindley:2013:HPP:2578854.2503786}. 
+
+En el sistema de tipos de Haskell sin embargo, la igualdad de tipos
+es puramente sint\'actica.
+{\tt Vec (n :+ S (S Z)) a} y {\tt Vec (S (S n)) a} {\bf no} son el mismo
+tipo, y no tienen los mismos habitantes.
+
+La definici\'on de una familia de tipos axiomatiza {\tt (+)} para la igualdad
+proposicional de Haskell. Cada ocurrencia de {\tt (+)} debe estar soportada
+con evidencia expl\'icita derivada de estos axiomas.
+Cuando GHC traduce desde el lenguaje externo al lenguaje del kernel,
+busca generar evidencia mediante heur\'isticas de resoluci\'on de
+restricciones.
+
+La evidencia sugiere que el \emph{constraint solver} computa agresivamente,
+y esta es la raz\'on por la cual la funci\'on {\tt vAppend} definida
+anteriormente compila y funciona correctamente.
+
+Sin embargo, dada la funci\'on:
+
+> vchop :: Vec (m + n) x -> (Vec m x, Vec n x)
+
+resulta imposible definirla si no tenemos la informaci\'on de
+{\tt m} o {\tt n} en tiempo de ejecuci\'on (intuitivamente,
+ocurre que ``no sabemos donde partir el vector'').
+
+Por otra parte la funci\'on:
+
+< vtake :: Vec (m + n) x -> Vec m x
+
+tiene un problema m\'as sutil. Incluso asuminedo que tuvieramos forma
+de obtener {\tt m} en tiempo
+de ejecuci\'on, no es posible para el verificador de tipos aceptarla.
+No hay forma de deducir {\tt n} a partir del tipo del tipo {\tt m + n}
+sin la informaci\'on de que {\tt (+)} es una funci\'on inyectiva, lo cual
+el verificador de tipos es incapaz de deducir.
+
+
+\subsection{Singletons y Proxies}
+\label{sec:sings}
+
+Existen dos \emph{hacks}, para resolver los problemas planteados en la 
+secci\'on anterior.
+
+\paragraph{Singletons}
+
+Si pretendemos implementar {\tt vChop} cuyo tipo
+podemos escribir m\'as expl\'icitamente como 
+
+> vChop :: forall (m n :: Nat). Vec (m + n) x -> (Vec m x, Vec n x)
+
+necesitamos hacer
+referencia expl\'icita a {\tt m} para decidir donde cortar.
+Como en Haskell el cuantificador $\forall$ dependiente solo habla
+de objetos est\'aticos (los lenguajes de tipos y t\'erminos est\'an
+separados), esto no es posible directamente.
+
+Un tipo \emph{singleton}, en el contexto de Haskell, es un {\tt GADT}
+que replica datos est\'aticos a nivel de t\'erminos.
+
+> data SNat :: Nat -> * where
+>   SZ :: SNat Zero
+>   SS :: SNat n -> SNat (Succ n)
+
+Existe por cada tipo {\tt n} de kind {\tt Nat}, {\bf un}
+\footnote{Formalmente esto no es cierto, si consideramos el valor $\bot$}
+valor de tipo {\tt SNat n}.
+
+Podemos implementar {\tt vChop}:
+
+> vChop :: SNat m -> Vec (m :+ n) x -> (Vec m x, Vec n x)
+> vChop SZ xs            = (VZ, xs)
+> vChop (SS m) (VS x xs) = let (ys, zs) = vChop m xs
+>                          in (VS x ys, zs)
+
+\paragraph{Proxies}
+
+An\'alogamente para definir {\tt vTake} necesitamos {\tt m} en tiempo
+de ejecuci\'on. Esta vez no es necesaria una representaci\'on de {\tt n}
+en tiempo de ejecuci\'on. {\tt n} es est\'atico pero necesitamos que sea
+expl\'icito.
+
+Consideramos la definici\'on:
+
+> data Proxy :: k -> * where
+>   Proxy :: Proxy a
+
+Proxy es un tipo que no contiene datos, pero contiene un par\'ametro
+\emph{phantom} de tipo arbitrario (de hecho, de kind arbitrario).
+El uso de un proxy va a resolver el problema de {\tt vTake}, indicando
+simplemente que la ocurrencia del proxy tiene la informaci\'on del tipo
+{\tt n} en el vector.
+
+La siguiente implementaci\'on de vTake compila y funciona correctamente:
+
+> vTake :: SNat m -> Proxy n -> Vec (m :+ n) x -> Vec m x
+> vTake SZ _ xs            = VZ
+> vTake (SS m) n (VS x xs) = VS x (vTake m n xs)
+
 
 \newpage
 \subsection{HList : Colecciones Heterogeneas Fuertemente tipadas}
@@ -132,13 +336,6 @@ la biblioteca.
 
 \section{Conclusi\'on}
 %include ./src/Conc.lhs
-
-ambiguous types al final
-
-monomorphism restriction
-
-hack con las funciones semanticas
-
 
 \newpage
 
