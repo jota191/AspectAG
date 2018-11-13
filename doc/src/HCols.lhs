@@ -23,7 +23,8 @@
 
 \subsubsection{Listas Heterogeneas}
 
-En \cite{Kiselyov:2004:STH:1017472.1017488} se presenta un buen ejemplo
+En la biblioteca HList\cite{Kiselyov:2004:STH:1017472.1017488}
+se presenta un buen ejemplo
 de aplicaci\'on de las t\'ecnicas de programaci\'on a nivel de tipos, usando
 las t\'ecnicas antiguas.
 La implementaci\'on original de AspectAG hace uso intensivo de estas
@@ -41,33 +42,32 @@ por distintos motivos:
   por lo que constantemente cambia
   su interfaz sin ser compatible hacia atr\'as. Implementar
   hoy dependiendo de HList implica depender posiblemente de una versi\'on
-  antigua y distinta de la versi\'on final en poco tiempo.
+  antigua y distinta de la versi\'on corriente en poco tiempo.
 \item
   Cuando programamos a nivel de tipos el lenguaje no provee fuertes
-  mecanismos de modularizaci\'on, dado que no fu\'e dise\~nado para
-  este prop\'osito. Es com\'un que se fugue implementaci\'on
-  con los mensajes de error. Y la implementaci\'on basada en HList va a
-  filtrar errores de HList, que no utilizan los mismo t\'erminos que
-  la jerga de nuestro DSL.
-  Si bien proveemos una soluci\'on al manejo
-  de errores, no es necesariamente exhaustiva.
-  La biblioteca AspectAG utiliza m\'ultiples estructuras isomorfas a
-  Registros heterogeneos,
-  y dentro del propio desarrollo de la misma result\'o m\'as c\'omodo
-  trabajar con estructuras con sus nombres mnem\'onicos.
+  mecanismos de modularizaci\'on, dado que no fue dise\~nado para
+  este prop\'osito. Es com\'un que por ejemplo, se fugue implementaci\'on
+  con los mensajes de error. La implementaci\'on basada en HList filtrar\'ia
+  errores de HList, que no utilizan el mismo vocabulario que nuestro
+  EDSL. La imposibilidad de modularizar nos obliga a que si pretendemos
+  tener estructuras distinguibles por sus nombres mnem\'onicos tenemos
+  que reimplementarlas. Buscar mejores soluciones a esta complicaci\'on
+  es parte de la investigaci\'on en el \'area, e idea de trabajo futuro.
 \item
   HList no es necesariamente adecuada si queremos tipar todo lo fuertemente
   posible.
   Por ejemplo, en la implementaci\'on
-  vamos a utilizar una estructura que es esencialmente un
-  Registro de Registros. Usando tipos de datos a medida podemos programar
+  una de las estructuras a utilizar es esencialmente un
+  registro que contiene registros.
+  Usando tipos de datos a medida podemos programar
   una soluci\'on elegante donde esto queda expresado correctamente
-  a nivel de kinds. La alternativa de implementar el Registro externo
-  como un Registro de HList
-  ofusca al interno, tratandolo como un tipo "plano".
+  a nivel de kinds. La alternativa de implementar el registro externo
+  como un registro de HList trata al interno como un tipo plano.
 \item
-  Por inter\'es acad\'emico. Reescribir HList (varias veces, un subconjunto
-  mayor al necesario para AspectAG) fu\'e la forma de dominar las t\'ecnicas
+  Por inter\'es acad\'emico. Reescribir funcionalidades de HList
+  (de hecho, varias veces,
+  un subconjunto mayor al necesario para AspectAG)
+  fu\'e la forma de dominar las t\'ecnicas
   de programaci\'on a nivel de tipos.
   Esto no es una raz\'on en si para efectivamente depender de
   una nueva implementaci\'on en lugar de la implementaci\'on moderna de
@@ -75,19 +75,14 @@ por distintos motivos:
   reimplementar no significa un costo: ya lo hicimos. 
 \end{itemize}
 
-Una lista (o \'as en general una colecci\'on)
+Una lista (o m\'as en general una colecci\'on)
 heterogenea es tal si contiene valores de distintos tipos.
-Existen varios enfoques para construir colecciones heterogeneas en Haskell,
-REF: https://wiki.haskell.org/Heterogenous\_collections
-Nos interesan en particular las que son fuertemente tipadas, se conoce
-est\'aticamente el tipo de cada miembro (del mismo modo en el que
-conoc\'iamos los largos en la implementaci\'on de vectores).
+Existen varios enfoques para construir colecciones heterogeneas en
+Haskell\cite{HColsWiki}
+Nos interesan en particular las que son fuertemente tipadas, donde se conoce
+est\'aticamente el tipo de cada miembro.
 
 Existen variantes para definir HList
-(incluso considerando las t\'ecnicas modernas)
-REF:
-https://hackage.haskell.org/package/HList-0.5.0.0/docs/Data-HList-HList.html
-
 Las versiones m\'as antiguas (y sobre estas se implement\'o originalmente
 AspectAG) utilizan la siguiente representaci\'on, isomorfa a pares anidados:
 
@@ -96,11 +91,12 @@ AspectAG) utilizan la siguiente representaci\'on, isomorfa a pares anidados:
 
 El inconveniente de esta
 representaci\'on es que podemos
-construir tipos sin sentido como {\tt HCons Bool Char}.
+construir tipos sin sentido como {\tt HCons Bool Char}, lo cual puede
+solucionarse mediante el uso de clases, como es usual en
+el enfoque antig\"uo de la programaci\'on a nivel de tipos.
 
 En versiones posteriores HList utiliz\'o un GADT, y en las
 \'ultimas versiones se utiliza una data Family.
-
 En la documentaci\'on de la biblioteca
 se explicita cual es la ventaja de cada representaci\'on. Dado que el GADT y
 la data Family son pr\'acticamente equivalentes
@@ -120,14 +116,14 @@ Es intuitivo definir funciones en este contexto, por ejemplo
 > hTail (HCons _ xs) = xs
 
 
-si queremos concatenar dos listas,
-primero definimod la concatenaci\'on a nivel de tipos:
+Para, por ejemplo concatenar dos listas,
+primero definimos la concatenaci\'on a nivel de tipos:
 
 > type family (xs :: [Type]) :++ ( ys :: [Type]) :: [Type]
 > type instance '[]       :++ ys = ys
 > type instance (x ': xs) :++ ys = x ': (xs :++ ys)
 
-A nivel de t\'erminos:
+Y luego a nivel de t\'erminos:
 
 > hAppend :: HList xs -> HList ys -> HList (xs :++ ys)
 > hAppend HNil ys = ys
@@ -148,24 +144,13 @@ Una alternativa es usar la familia cerrada:
 >   chAppend (HCons x xs) ys = HCons x (chAppend xs ys)
 
 
-Consideramos por ejemplo la funci\'on reverse:
-
-> type family Reverse (l::[Type]) :: [Type]
-> type instance Reverse '[]       = '[]
-> type instance Reverse (x ': xs) = Reverse xs :++ '[x]
-
-Si intentemos programar una funci\'on que actualiza la $n$-\'esima entrada en
-una lista heterogenea, incluso eventualmente cambiando el tipo.
-Intuitivamente deber\'ia tener el tipo:
-
-< updateAtNat :: Nat -> x -> HList xs -> HList xs'
-
-Donde {\tt xs'} depende de x y del {\bf valor} del natural del tipo {\tt Nat}.
-Evidentemente esto no es posible, y necesitamos el natural a nivel de tipos.
-
-La soluci\'on es usar Proxys, o singletons
-(en este caso singleton es m\'as adecuado, vamos a hacer pattern Matching
-sobre el natural as\'i que lo necesitamos en runtime)
+Si intentemos, por ejemplo
+programar una funci\'on que actualiza la $n$-\'esima entrada en
+una lista heterogenea
+(eventualmente cambiando el tipo del dato en esa posici\'on),
+estamos claramente ante una funci\'on de tipos dependientes (el tipo
+de salida depende de $n$). \'Este es el escenario donde ser\'an
+necesarios {\tt Proxies} y\o {\tt Singletons}.
 
 < type family UpdateAtNat (n :: Nat)(x :: Type)(xs :: [Type]) :: [Type]
 < type instance UpdateAtNat Zero     x (y ': ys) = x ': ys
@@ -176,29 +161,27 @@ sobre el natural as\'i que lo necesitamos en runtime)
 < updateAtNat (SS n) y (HCons x xs) = HCons x (updateAtNat n y xs)
 
 
-
-
 \subsection{Registros Heterogeneos}
 \label{sec:hrecord}
 
-AspectAG requiere de \emph{Records} heterogeneos, esto es, colecciones
+AspectAG requiere de registros heterogeneos, esto es, colecciones
 etiqueta-valor, heterogeneas, donde adem\'as las claves est\'en dadas
-por tipos, y no por valores.
-
-El enfoque de HList para implementarles era utilizar una lista Heterogenea,
+por tipos.
+El enfoque original de HList para implementarles es utilizar una lista
+Heterogenea,
 donde cada entrada era del tipo {\tt Tagged l v}, definido como
 
 < Tagged l v = Tagged v
 
-Esto no es satisfactorio con las herramientas modernas,
-no se est\'a utilizando la posibilidad de tipar que nos provee la
+Consideramos que no es satisfactorio si pretendemos utilizar todo el poder
+de las t\'ecnicas modernas.
+No se est\'a utilizando la posibilidad de tipar que nos provee la
 promoci\'on de datos. HList implementa predicados como typeclasses
 para asegurar que todos los miembros son de tipo {\tt Tagged} cuando
-podr\'ia expresarse en el kind.
-Adem\'as las etiquetas son de kind {\tt Type}, cuando en realidad nunca
-requieren estar habitadas a nivel de valores. AspectAG genera etiquetas
-utilizando metaprogramaci\'on con Template Haskell [REF], mientras
-podr\'ia usarse simplemente data promotion.
+podr\'ia expresarse directamente en el kind.
+Adem\'as las etiquetas de HList
+son de kind {\tt Type}, cuando en realidad nunca
+requieren estar habitadas a nivel de valores.
 
 En su lugar se propone la siguiente implementaci\'on:
 
@@ -207,39 +190,31 @@ En su lugar se propone la siguiente implementaci\'on:
 >   ConsR  :: LabelSet ( '(l, v) ': xs) =>
 >    Tagged l v -> Record xs -> Record ( '(l,v) ': xs)
 
-Un registro es una lista con m\'as estructura, el
-vac\'io es an\'alogo a la lista vac\'ia, 
-para agregar un campo, requerimos un valor de tipo {\tt Tagged l v}
+Un registro es una lista con m\'as estructura, a nivel de tipos
+es una lista de pares, usamos la promoci\'on de listas y de pares
+a nivel de tipos. Para agregar un campo,
+requerimos un valor de tipo {\tt Tagged l v}
 definido como:
 
 > data Tagged (l :: k) (v :: Type) where
 >   Tagged :: v -> Tagged l v
 
-Tagged es polimorfico en el kind de las etiquetas. Notar que
-para construir un valor hay que anotar el tipo de {\tt l} o utilizar
-un {\tt constructor inteligente} que use un proxy
-(o en la jerga de AspectAG, una etiqueta).
-
-< tag :: Label l -> v -> Tagged l v
-
-La restricci\'on Labelset garantiza que las etiquetas no se repitan,
-y se explica en la secci\'on siguiente.
+Tagged es polimorfico en el kind de las etiquetas.
+La restricci\'on Labelset garantiza que las mismas no se repitan,
+su implementaci\'on se explica a contunuaci\'on.
 
 
 \subsubsection{Predicados sobre tipos}
 
-A pesar de que las extensiones modernas nos permiten adoptar
+Si bien las extensiones modernas nos permiten adoptar
 el estilo funcional en la programaci\'on a nivel de
 tipos, el estilo l\'ogico sigue siendo adecuado para codificar predicados.
-\footnote{Podr\'iamos tambi\'en codificar la funci\'on
-booleana a nivel de tipos, luego se propaga como una restricci\'on 
-con el calor que queremos, pero no parece natural.
-}
-Una lista heterogenea de pares satisface el predicado {\tt LabelSet}
-si y solo si las primeras componentes son \'unicas. As\'i, la lista
-de pares representa un mapeo.
-
-Se implementa a la prolog:
+Una lista promovida de pares satisface el predicado {\tt LabelSet}
+si las primeras componentes son \'unicas. As\'i, la lista
+de pares representa un mapeo, o registro indizado por las primeras
+componentes. El predicado se implementa a la prolog, aunque usamos
+el poder de las extensiones modernas para tipar fuertemente los
+functores.
 
 > class LabelSet (l :: [(k,k2)])
 > instance LabelSet '[]         -- empty set
@@ -259,3 +234,9 @@ donde {\tt HEqK l1 l2 False} es instancia solo si {\tt l1}
 y {\tt l2} son probables distintos. Para ello
 se utiliza la igualdad sobre kinds que implementa el m\'odulo
 {\tt Data.Type.Equality}. 
+
+Notar que podr\'iamos tambi\'en codificar el predicado como una funci\'on
+booleana a nivel de tipos, luego se propaga como una restricci\'on 
+con el valor que queremos. En general, la programaci\'on mediante
+clases es siempre sustituible por familias,  
+pero no parece natural en este caso.

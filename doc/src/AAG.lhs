@@ -2,14 +2,11 @@
 
 Como se defini\'o antes,
 una atribuci\'on (\emph{attribution}) es un mapeo de nombres de atributos
-(represenentados puramente a nivel de tipos)
-a sus valores. La estructura de registro heterogeneo extensible
-(fuertemente tipado)
-presentada anteriormente es ideal para representarles.
+a sus valores, que representamos como un registro heterogeneo.
 Para obtener mensajes de error precisos y evitar que se filtre
 implementaci\'on en los mismos decidimos tener estructuras especializadas.
 
-Un atributo (etiquetado) viene entonces dado por:
+Un atributo (etiquetado por su nombre) viene dado por:
 
 > newtype Attribute label value = Attribute value
 
@@ -20,15 +17,14 @@ que es el componente principal para construir atribuciones:
 >   ConsAtt  :: LabelSet ( '(att, val) ': atts) =>
 >    Attribute att val -> Attribution atts -> Attribution ( '(att,val) ': atts)
 
-Notar que ya estamos utilizando todo el poder de las extensiones modernas.
+Notar que estamos utilizando todo el poder de las extensiones modernas.
 Se utilizan kinds promovidos en las listas ({\tt DataKinds}),
 polimorfismo en kinds en las etiquetas ({\tt PolyKinds})
 la estructura es un GADT ({\tt GADTs}), LabelSet est\'a predicando sobre
 un kind
-polim\'orfico (por lo que usamos igualdad de kinds)({\tt ConstraintKinds}),
-y el kind {\tt Type} fu\'e introducido en {\tt TypeInType}.
+polim\'orfico, donde usamos igualdad de kinds, ({\tt ConstraintKinds}).
 
-Una {\tt familia} consiste en la atribuci\'on del padre y una colecci\'on
+Una \emph{familia} consiste en la atribuci\'on del padre y una colecci\'on
 de atribuciones para los hijos (etiquetadas por sus nombres).
 
 Representamos \'esta \'ultima estructura como
@@ -39,17 +35,9 @@ Representamos \'esta \'ultima estructura como
 >    TaggedChAttr l v -> ChAttsRec xs -> ChAttsRec ( '(l,v) ': xs)
 
 La estructura es an\'aloga a la anterior: es de nuevo una implementaci\'on de
-Registro heterogeneo especializada.
-Dado que una atribuci\'on una vez bajo
-el wrapper {\tt Attribution} tiene kind {\tt Type}
-(como todo tipo habitado) podr\'iamos haber
-implementado a los hijos como un registro agn\'ostico respecto al contenido.
-Se prefiere una implementaci\'on fuertemente tipada (a nivel de kinds,
-queda ahora expl\'icito que tenemos un registro de registros)
-sobre reutilizar el c\'odigo existente.
+registro heterogeneo especializada.
 
-En cada nodo de la gram\'atica, una \emph{Familia} contiene la atribuci\'on
-del padre y la colecci\'on de atribuciones de los hijos.
+Estamos en condiciones de definir las familias:
 
 > data Fam (c::[(k,[(k,Type)])]) (p :: [(k,Type)]) :: Type where
 >   Fam :: ChAttsRec c  -> Attribution p -> Fam c p
@@ -64,7 +52,7 @@ componibles~\cite{Moor99first-classattribute}.
 > (f `ext` g) input = f input . g input
 
 
-Para ser m\'as precisos, el tipo de rule:
+Para ser m\'as precisos, podr\'ia declararse como:
 
 > type Rule (sc  :: [(k', [(k, Type)])])
 >           (ip  :: [(k,       Type)])
@@ -87,7 +75,7 @@ del trabajo futuro pasa por codificar nuevas.
 La primitiva {\tt syndef} provee la definici\'on de un nuevo
 atributo sintetizado.
 Dada una etiqueta no definida previamente que represente el
-nombre del atributo a definir y un valor para el mismo,
+nombre del atributo a definir, y un valor para el mismo,
 construye una funci\'on que actualiza la familia construida hasta el momento.
 
 > syndef  :: LabelSet ( '(att,val) ': sp) =>
@@ -95,10 +83,11 @@ construye una funci\'on que actualiza la familia construida hasta el momento.
 > syndef latt val (Fam ic sp) = Fam ic (latt =. val *. sp)
 
 Los operadores {\tt (=.)} y {\tt (*.)} son azucar sint\'actica para
-El cunstructor de atributos {\tt Attribute} y para {\tt ConsAtt},
+El constructor de atributos {\tt Attribute} y para {\tt ConsAtt},
 respectivamente.
 
-Como ejemplo de una primitiva alternativa, podemos citar {\tt synmod},
+Como ejemplo de una primitiva no usada en {\tt repmin}
+podemos citar {\tt synmod},
 que redefine un atributo sintetizado existente.
 
 
@@ -142,13 +131,9 @@ la atribuci\'on de un hijo:
 >           och = lookupByChild lch ic
 
 
-Los par\'ametros {\tt mch} y {\tt mnts} son booleanos a nivel de tipos
+Los par\'ametros {\tt mch} y {\tt mnts} son Proxys de booleanos,
 que proveen evidencia de la existencia de las etiquetas del hijo o los
 terminales.
-Como se detall\'o en la secci\'on \ref{sec:sings}, en Haskell
-requerimos testigos en tiempo de ejecuci\'on en computaciones de tipos
-dependientes, por lo que debemos incluir los par\'ametros {\tt Proxy}.
-
 Finalmente estamos en condiciones de definir la funci\'on {\tt defs}.
 Se hace recursi\'on sobre
 el registro {\tt vals} que contiene las nuevas definiciones. Utilizanando
@@ -212,7 +197,7 @@ Notar que el contenido computacional de la definici\'on existe solo
 a nivel de tipos, a nivel de valores la funci\'on tan solo propaga evidencia.
 
 {\tt Or} es una funci\'on definida puramente a nivel de tipos,
-y la implementamos como una \emph{Type Family}
+y la implementamos como familia.
 
 > type family Or (l :: Bool)(r :: Bool) :: Bool where
 >   Or False b = b
@@ -308,12 +293,12 @@ chequeamos que efectivamente estamos combinando reglas.
 >           oldR = lookupByLabelRec l r    
 >           newR = rulePrd f
 
-\newpage
 \subsection{Funciones sem\'anticas}
 
 En cada producci\'on, llamamos \emph{funci\'on sem\'antica} al mapeo de los
-atributos heredados a los atributos sintetizados. Obs\'ervese que una
-computaci\'on consiste en exactamente computar las funciones sem\'anticas.
+atributos heredados a los atributos sintetizados. Una
+computaci\'on sobre la gram\'atica
+consiste en exactamente computar las funciones sem\'anticas.
 
 En el ejemplo {\tt repmin}, la funci\'on {\tt sem\_Tree} construye,
 dados un aspecto y un \'arbol una funci\'on sem\'antica.
