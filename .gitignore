@@ -1,4 +1,4 @@
-*ptb
+o*ptb
 *.t
 ./src/HList/*
 *tex
@@ -31,3 +31,11 @@ cabal.sandbox.config
 .stack-work/
 cabal.project.local
 .HTF/
+doc/Main.bbl
+doc/Main.blg
+doc/Main.out
+doc/Main.toc
+test/Fail.hs
+test/GraphsBroken.hs
+test/Test2.hs
+test/TypedArithExtension.hs
