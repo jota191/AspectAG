@@ -113,8 +113,9 @@ synmod att v (Fam ic sp) = Fam ic (updateAtLabelAtt att v sp)
 --              describing how to compute the attribute being defined at each 
 --              of the applicable child  positions.
 --   It builds a function which updates the output constructed thus far.
-inhdef :: Defs att nts vals ic ic'
-  => Label att -> HList nts -> Record vals -> (Fam ic sp -> Fam ic' sp)
+inhdef :: Defs att nts vals ic
+  => Label att -> HList nts -> Record vals
+  -> (Fam ic sp -> Fam (DefsR att nts vals ic) sp)
 inhdef att nts vals (Fam ic sp) = Fam (defs att nts vals ic) sp
 
 
@@ -129,8 +130,8 @@ inhdef att nts vals (Fam ic sp) = Fam (defs att nts vals ic) sp
 -- mch  ~ memnership of chld
 -- mnts ~ membership of nonterminals
 
-class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[(k,[(k,Type)])]) where
-  type SingleDefR mch mnts att pv ic :: [(k,[(k,Type)])]
+class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[(k',[(k,Type)])]) where
+  type SingleDefR mch mnts att pv ic :: [(k',[(k,Type)])]
   singledef :: Proxy mch -> Proxy mnts -> Label att -> pv -> ChAttsRec ic
                 -> ChAttsRec (SingleDefR mch mnts att pv ic)
 
@@ -153,30 +154,60 @@ instance ( HasChildF lch ic
 --   containing the new definitions. 
 --   The function 'defs' inserts each definition into the attribution 
 --   of the corresponding child.
---class Defs att (nts :: [Type]) (vals :: [(k,Type)]) (ic :: [(k,(k,Type))])
 
-class Defs att (nts :: [Type]) (vals :: [(k,Type)])
-           (ic :: [(k,[(k,Type)])]) (ic' :: [(k,[(k,Type)])])
-          | att nts vals ic -> ic' where
+class Defs att (nts :: [Type])
+            (vals :: [(k,Type)]) (ic :: [(k',[(k,Type)])]) where
+  type DefsR att nts vals ic :: [(k',[(k,Type)])]
   defs :: Label att -> HList nts -> Record vals -> ChAttsRec ic
-       -> ChAttsRec ic'
+       -> ChAttsRec (DefsR att nts vals ic)
 
-instance Defs att nts '[] ic ic where
+instance Defs att nts '[] ic where
+  type DefsR att nts '[] ic = ic
   defs _ _ _ ic = ic
 
-instance ( Defs att nts vs ic ic'
-         , HasLabelChildAtts (lch,t) ic'
+
+instance ( Defs att nts vs ic
+         , ic' ~ DefsR att nts vs ic
+         , HMember t nts
          , HMemberRes t nts ~ mnts
          , HasLabelChildAttsRes (lch,t) ic' ~ mch
-         , HMember t nts
-         , SingleDefR mch mnts att (Tagged (lch,t) vch) ic' ~ ic''
-         , SingleDef mch mnts att (Tagged (lch,t) vch) ic')
-    => Defs att nts ( '((lch,t), vch) ': vs) ic ic'' where
+         , HasLabelChildAtts (lch,t) ic'
+         , SingleDef mch mnts att (Tagged (lch,t) vch) ic') => 
+  Defs att nts ( '((lch,t), vch) ': vs) ic where
+  type DefsR att nts ( '((lch,t), vch) ': vs) ic
+    = SingleDefR (HasLabelChildAttsRes (lch,t) (DefsR att nts vs ic))
+                 (HMemberRes t nts)
+                 att
+                 (Tagged (lch,t) vch)
+                 (DefsR att nts vs ic)
   defs att nts (ConsR pch vs) ic = singledef mch mnts att pch ic' 
       where ic'  = defs att nts vs ic
             lch  = labelLVPair pch
             mch  = hasLabelChildAtts lch ic'
             mnts = hMember (sndLabel lch) nts
+
+-- class Defs att (nts :: [Type]) (vals :: [(k,Type)])
+--            (ic :: [(k,[(k,Type)])]) (ic' :: [(k,[(k,Type)])])
+--           | att nts vals ic -> ic' where
+--   defs :: Label att -> HList nts -> Record vals -> ChAttsRec ic
+--        -> ChAttsRec ic'
+
+-- instance Defs att nts '[] ic ic where
+--   defs _ _ _ ic = ic
+
+-- instance ( Defs att nts vs ic ic'
+--          , HasLabelChildAtts (lch,t) ic'
+--          , HMemberRes t nts ~ mnts
+--          , HasLabelChildAttsRes (lch,t) ic' ~ mch
+--          , HMember t nts
+--          , SingleDefR mch mnts att (Tagged (lch,t) vch) ic' ~ ic''
+--          , SingleDef mch mnts att (Tagged (lch,t) vch) ic')
+--     => Defs att nts ( '((lch,t), vch) ': vs) ic ic'' where
+--   defs att nts (ConsR pch vs) ic = singledef mch mnts att pch ic' 
+--       where ic'  = defs att nts vs ic
+--             lch  = labelLVPair pch
+--             mch  = hasLabelChildAtts lch ic'
+--             mnts = hMember (sndLabel lch) nts
 
 
 
