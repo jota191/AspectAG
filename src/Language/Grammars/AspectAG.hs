@@ -122,27 +122,12 @@ inhdef att nts vals (Fam ic sp) = Fam (defs att nts vals ic) sp
 
 
 
---mch --> memnership of chld
---mnts--> membership of nonterminals
 
-{- ######################################################################### -}
+
 -- | singledef is an auxiliar function to implement Defs.
 --   it inserts a definition into the attribution of the corresponding child
-
-
--- class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[(k,[(k,Type)])])
---                  (ic' ::[(k,[(k,Type)])]) | mch mnts att pv ic -> ic' where
---   singledef :: Proxy mch -> Proxy mnts -> Label att -> pv -> ChAttsRec ic
---                -> ChAttsRec ic'
--- instance ( HasChild lch ic och
---          , UpdateAtChild lch ( '(att,vch) ': och) ic ic'
---          , LabelSet ( '(att, vch) ': och))
---   => SingleDef True True att (Tagged lch vch) ic ic' where
---   singledef _ _ att pch ic =
---     updateAtChild (Label :: Label lch) ( att =. vch *. och) ic
---     where lch = labelTChAtt pch
---           vch = unTaggedChAtt pch
---           och = lookupByChild lch ic
+-- mch  ~ memnership of chld
+-- mnts ~ membership of nonterminals
 
 class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[(k,[(k,Type)])]) where
   type SingleDefR mch mnts att pv ic :: [(k,[(k,Type)])]
@@ -163,7 +148,7 @@ instance ( HasChildF lch ic
           och = lookupByChildF lch ic
 
 
-{- ######################################################################### -}
+
 -- | The class 'Defs' is defined by induction over the record 'vals' 
 --   containing the new definitions. 
 --   The function 'defs' inserts each definition into the attribution 
@@ -179,7 +164,6 @@ class Defs att (nts :: [Type]) (vals :: [(k,Type)])
 instance Defs att nts '[] ic ic where
   defs _ _ _ ic = ic
 
---  TODO: duplicated context
 instance ( Defs att nts vs ic ic'
          , HasLabelChildAtts (lch,t) ic'
          , HMemberRes t nts ~ mnts
@@ -197,8 +181,6 @@ instance ( Defs att nts vs ic ic'
 
 
 -- * Aspects: Aspects are record that have a rule for each production:
-
----- TODO: use specialized datatypes?
 
 -- | aspects are actually records
 type Aspect = Record
