@@ -39,3 +39,4 @@ test/Fail.hs
 test/GraphsBroken.hs
 test/Test2.hs
 test/TypedArithExtension.hs
+.gitignore
