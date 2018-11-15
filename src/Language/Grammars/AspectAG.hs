@@ -119,12 +119,6 @@ inhdef :: Defs att nts vals ic
 inhdef att nts vals (Fam ic sp) = Fam (defs att nts vals ic) sp
 
 
-
-
-
-
-
-
 -- | singledef is an auxiliar function to implement Defs.
 --   it inserts a definition into the attribution of the corresponding child
 -- mch  ~ memnership of chld
@@ -147,7 +141,6 @@ instance ( HasChildF lch ic
     where lch = labelTChAtt pch
           vch = unTaggedChAtt pch
           och = lookupByChildF lch ic
-
 
 
 -- | The class 'Defs' is defined by induction over the record 'vals' 
@@ -186,31 +179,6 @@ instance ( Defs att nts vs ic
             mch  = hasLabelChildAtts lch ic'
             mnts = hMember (sndLabel lch) nts
 
--- class Defs att (nts :: [Type]) (vals :: [(k,Type)])
---            (ic :: [(k,[(k,Type)])]) (ic' :: [(k,[(k,Type)])])
---           | att nts vals ic -> ic' where
---   defs :: Label att -> HList nts -> Record vals -> ChAttsRec ic
---        -> ChAttsRec ic'
-
--- instance Defs att nts '[] ic ic where
---   defs _ _ _ ic = ic
-
--- instance ( Defs att nts vs ic ic'
---          , HasLabelChildAtts (lch,t) ic'
---          , HMemberRes t nts ~ mnts
---          , HasLabelChildAttsRes (lch,t) ic' ~ mch
---          , HMember t nts
---          , SingleDefR mch mnts att (Tagged (lch,t) vch) ic' ~ ic''
---          , SingleDef mch mnts att (Tagged (lch,t) vch) ic')
---     => Defs att nts ( '((lch,t), vch) ': vs) ic ic'' where
---   defs att nts (ConsR pch vs) ic = singledef mch mnts att pch ic' 
---       where ic'  = defs att nts vs ic
---             lch  = labelLVPair pch
---             mch  = hasLabelChildAtts lch ic'
---             mnts = hMember (sndLabel lch) nts
-
-
-
 -- * Aspects: Aspects are record that have a rule for each production:
 
 -- | aspects are actually records
@@ -220,7 +188,7 @@ type Aspect = Record
 -- | Let a Type for the fields:
 type Prd prd rule = Tagged prd rule
 
-labelPrd (Tagged v :: Tagged l v)= Label :: Label l 
+labelPrd (Tagged v :: Tagged l v) = Label :: Label l 
 rulePrd (Tagged v)= v
 
 

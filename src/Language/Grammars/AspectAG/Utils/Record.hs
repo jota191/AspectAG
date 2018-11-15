@@ -123,7 +123,8 @@ instance TypeError ( Text "Type Error : No Field found on Record:" :$$:
 
 -- * Updating
 
--- | updating the value on a label, possibly changing the type of the index
+-- | updating the value on a label, possibly changing the type of the index,
+-- fundep version
 class UpdateAtLabelRec (l :: k)(v :: Type)(r :: [(k,Type)])(r' :: [(k,Type)])
    | l v r -> r' where
   updateAtLabelRec :: Label l -> v -> Record r -> Record r'
@@ -139,13 +140,10 @@ class UpdateAtLabelRec' (b::Bool)(l::k)(v::Type)(r::[(k,Type)])(r'::[(k,Type)])
     | b l v r -> r'  where
   updateAtLabelRec' :: Proxy b -> Label l -> v -> Record r -> Record r'
 
-
-
 instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r) ) =>
          UpdateAtLabelRec' 'True l v ( '(l,v') ': r) ( '(l,v) ': r) where
   updateAtLabelRec' _ (l :: Label l) v (att `ConsR` atts)
     = (Tagged v :: Tagged l v) `ConsR` atts
-
 
 instance ( UpdateAtLabelRec l v r r', LabelSet  ( a ': r' ) ) =>
          UpdateAtLabelRec' False l v ( a ': r) ( a ': r') where
@@ -154,7 +152,39 @@ instance ( UpdateAtLabelRec l v r r', LabelSet  ( a ': r' ) ) =>
     = case (updateAtLabelRec l v xs) of
         xs' -> ConsR att xs' :: Record( a ': r')
 
---  Type errors using GHC.TypeLits
+-- | Type family version of update
+
+class UpdateAtLabelRecF (l :: k)(v :: Type)(r :: [(k,Type)]) where
+  type UpdateAtLabelRecFR l v r :: [(k,Type)]
+  updateAtLabelRecF :: Label l -> v -> Record r
+                    -> Record (UpdateAtLabelRecFR l v r)
+
+class UpdateAtLabelRecF' (b :: Bool)(l :: k)(v :: Type)(r :: [(k,Type)]) where
+  type UpdateAtLabelRecFR' b l v r :: [(k,Type)]
+  updateAtLabelRecF' :: Proxy b -> Label l -> v -> Record r
+                    -> Record (UpdateAtLabelRecFR' b l v r)
+
+instance (UpdateAtLabelRecF' (l == l') l v ( '(l',v') ': r)) => 
+  UpdateAtLabelRecF l v ( '(l',v') ': r) where
+  type UpdateAtLabelRecFR l v ( '(l',v') ': r)
+    = UpdateAtLabelRecFR' (l == l') l v ( '(l',v') ': r)
+  updateAtLabelRecF = updateAtLabelRecF' (Proxy :: Proxy (l == l'))
+
+instance (LabelSet ( '(l, v) ': r)) => 
+  UpdateAtLabelRecF' 'True l v ( '(l, v') ': r) where
+  type UpdateAtLabelRecFR' 'True l v ( '(l, v') ': r) = ( '(l, v) ': r)
+  updateAtLabelRecF' _ (l :: Label l) v (att `ConsR` atts)
+    = (Tagged v :: Tagged l v) .*. atts
+
+instance ( UpdateAtLabelRecF l v r
+         , LabelSet ( '(l', v') ': UpdateAtLabelRecFR l v r)) => 
+  UpdateAtLabelRecF' 'False l v ( '(l', v') ': r) where
+  type UpdateAtLabelRecFR' 'False l v ( '(l', v') ': r)
+    = '(l', v') ': UpdateAtLabelRecFR l v r
+  updateAtLabelRecF' _ l v (ConsR x xs)
+    = x .*. updateAtLabelRecF l v xs
+
+
 
 -- | No field on record, On AAG usually appears when an aspect was not
 -- defined in all its required labels
