@@ -100,8 +100,6 @@ labelL = Label :: Label '( 'LabelL,Char)
 labelR = Label :: Label '( 'LabelR,Int)
 
 
-
-
 childAttLR = (labelL .= attrib1) .* ((labelR .= attrib2) .*  emptyChild)
 
 -- -- duplicatedLabel

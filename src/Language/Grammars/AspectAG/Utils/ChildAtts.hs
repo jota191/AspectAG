@@ -80,7 +80,7 @@ labelChAttr _ = Label
                                                  
 -- |* Lookup
 
--- | Haschild is like HasField
+-- | Haschild is a predicate that implements a lookup at term level
 class HasChild (l::k) (r :: [(k ,[(k,Type)])]) v | l r -> v where
    lookupByChild :: Label l -> ChAttsRec r -> Attribution v
 
@@ -97,6 +97,36 @@ instance HasChild' True l ( '(l,v) ': r) v where
 instance HasChild l r v => HasChild' False l ( '(l2,v2) ': r) v where
    lookupByChild' _ l (ConsCh _ r) = lookupByChild l r
 
+
+-- | HaschildF is the type family version of HasChild
+
+class HasChildF (l::k) (r :: [(k ,[(k,Type)])]) where
+  type LookupByChildFR l r :: [(k,Type)]
+  lookupByChildF :: Label l -> ChAttsRec r -> Attribution (LookupByChildFR l r)
+
+class HasChildF' (b :: Bool) (l::k) (r :: [(k ,[(k,Type)])]) where
+  type LookupByChildFR' b l r :: [(k,Type)]
+  lookupByChildF' :: Proxy b -> Label l -> ChAttsRec r
+    -> Attribution (LookupByChildFR' b l r)
+
+instance (HasChildF' (l==l1) l ( '(l1,v) ': r)) =>
+  HasChildF l ( '(l1,v) ': r) where
+  type LookupByChildFR l ( '(l1,v) ': r)
+    =  LookupByChildFR' (l == l1) l ( '(l1,v) ': r)
+  lookupByChildF l r = lookupByChildF' (Proxy :: Proxy (l == l1)) l r
+
+
+instance
+  HasChildF' 'True l ( '(l,v) ': r) where
+  type LookupByChildFR' 'True l ( '(l,v) ': r) = v
+  lookupByChildF' _ _ (ConsCh lv _) = unTaggedChAttr lv
+
+instance (HasChildF l r) => 
+  HasChildF' 'False l ( '(l1,v) ': r) where
+  type LookupByChildFR' 'False l ( '(l1,v) ': r) = LookupByChildFR l r
+  lookupByChildF' _ l (ConsCh _ r) = lookupByChildF l r
+
+
 -- | Pretty lookup
 infixl 2 .#
 (.#)  :: (HasChild l r v) => ChAttsRec r -> Label l ->  Attribution v
@@ -105,7 +135,7 @@ c .# l = lookupByChild l c
 -- |* Update
 
 -- | updates an attribution at a child, this is the implementation of
---UpdateAtLabel for children
+--   UpdateAtLabel for children, using functional dependencies
 class UpdateAtChild (l :: k)(v :: [(k,Type)])
       (r :: [(k,[(k,Type)])])(r' :: [(k,[(k,Type)])])
    | l v r -> r' where
@@ -117,9 +147,8 @@ class UpdateAtChild (l :: k)(v :: [(k,Type)])
 class UpdateAtChild' (b::Bool)(l::k)(v::[(k,Type)])
       (r::[(k,[(k,Type)])])(r'::[(k,[(k,Type)])])
     | b l v r -> r'  where
-  updateAtChild' :: Proxy b -> Label l -> Attribution v -> ChAttsRec r -> ChAttsRec r'
-
-
+  updateAtChild' :: Proxy b -> Label l -> Attribution v -> ChAttsRec r
+                 -> ChAttsRec r'
 
 instance (HEqK l l' b, UpdateAtChild' b l v ( '(l',v')': r) r')
  -- note that if pattern over r is not written this does not compile
@@ -144,6 +173,43 @@ instance ( UpdateAtChild l v r r', LabelSet  ( a ': r' ) ) =>
 -- TODO: Type errors
 --instance Fail (FieldNotFound l) => UpdateAtChild l v '[] '[] where
 --    updateAtChild _ _ r = r
+
+
+-- | updates an attribution at a child, this is the implementation of
+--   UpdateAtLabel for children, using type families
+class UpdateAtChildF (l :: k)(v :: [(k,Type)])(r :: [(k,[(k,Type)])]) where
+  type UpdateAtChildFR l v r :: [(k,[(k,Type)])]
+  updateAtChildF :: Label l -> Attribution v -> ChAttsRec r
+                 -> ChAttsRec (UpdateAtChildFR l v r)
+
+class UpdateAtChildF' (b :: Bool)
+                      (l :: k)(v :: [(k,Type)])(r :: [(k,[(k,Type)])]) where
+  type UpdateAtChildFR' b l v r :: [(k,[(k,Type)])]
+  updateAtChildF' :: Proxy b -> Label l -> Attribution v -> ChAttsRec r
+                 -> ChAttsRec (UpdateAtChildFR' b l v r)
+
+
+instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r)) =>
+  UpdateAtChildF' 'True l v ( '(l,v') ': r) where
+  type UpdateAtChildFR' 'True l v ( '(l,v') ': r) = ( '(l,v) ': r)
+  updateAtChildF' Proxy l natbtn (oatbtn `ConsCh` atbtns)
+    = l .= natbtn .* atbtns
+
+instance (UpdateAtChildF l v r, LabelSet (a ': (UpdateAtChildFR l v r))) => 
+  UpdateAtChildF' 'False l v (a ': r) where
+  type UpdateAtChildFR' 'False l v (a ': r) = a ': (UpdateAtChildFR l v r)
+  updateAtChildF' b l v (ConsCh atbtn atbtns)
+    = case (updateAtChildF l v atbtns) of
+        atbtns' -> atbtn .* atbtns'
+
+instance (UpdateAtChildF' (l==l') l v ( '(l',v')': r)) =>
+  UpdateAtChildF l v ( '(l',v') ': r)  where
+  type UpdateAtChildFR l v ( '(l',v') ': r)
+    = UpdateAtChildFR' (l == l') l v ( '(l',v')': r)
+  updateAtChildF = updateAtChildF' (Proxy :: Proxy (l==l'))
+
+
+
 
 
 

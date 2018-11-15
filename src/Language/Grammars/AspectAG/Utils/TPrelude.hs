@@ -101,3 +101,5 @@ class HEq (x :: k) (y :: k) (b :: Bool) | x y -> b
 type HEqK (x :: k1) (y :: k2) (b :: Bool) = HEq (Proxy x) (Proxy y) b
 instance ((Proxy x == Proxy y) ~ b) => HEq x y b
 
+type family HEqKF (a :: k)(b :: k) :: Bool
+type instance HEqKF a b = a == b

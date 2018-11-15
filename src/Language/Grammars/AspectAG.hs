@@ -125,32 +125,51 @@ inhdef att nts vals (Fam ic sp) = Fam (defs att nts vals ic) sp
 --mch --> memnership of chld
 --mnts--> membership of nonterminals
 
--- TODO this pv is a pair label-value, I should improve the typing
---at type level, Attribute, Tagged and that kind of stuff can be improved
+{- ######################################################################### -}
+-- | singledef is an auxiliar function to implement Defs.
+--   it inserts a definition into the attribution of the corresponding child
 
--- | singledef is auxiliar, for Defs.
---   inserts a definition into the attribution of the corresponding child
-class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[(k,[(k,Type)])])
-                 (ic' ::[(k,[(k,Type)])]) | mch mnts att pv ic -> ic' where
+
+-- class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[(k,[(k,Type)])])
+--                  (ic' ::[(k,[(k,Type)])]) | mch mnts att pv ic -> ic' where
+--   singledef :: Proxy mch -> Proxy mnts -> Label att -> pv -> ChAttsRec ic
+--                -> ChAttsRec ic'
+-- instance ( HasChild lch ic och
+--          , UpdateAtChild lch ( '(att,vch) ': och) ic ic'
+--          , LabelSet ( '(att, vch) ': och))
+--   => SingleDef True True att (Tagged lch vch) ic ic' where
+--   singledef _ _ att pch ic =
+--     updateAtChild (Label :: Label lch) ( att =. vch *. och) ic
+--     where lch = labelTChAtt pch
+--           vch = unTaggedChAtt pch
+--           och = lookupByChild lch ic
+
+class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[(k,[(k,Type)])]) where
+  type SingleDefR mch mnts att pv ic :: [(k,[(k,Type)])]
   singledef :: Proxy mch -> Proxy mnts -> Label att -> pv -> ChAttsRec ic
-               -> ChAttsRec ic'
+                -> ChAttsRec (SingleDefR mch mnts att pv ic)
 
-
-instance ( HasChild lch ic och
-         , UpdateAtChild lch ( '(att,vch) ': och) ic ic'
-         , LabelSet ( '(att, vch) ': och))
-  => SingleDef True True att (Tagged lch vch) ic ic' where
-  singledef _ _ att pch ic =
-    updateAtChild (Label :: Label lch) ( att =. vch *. och) ic
+instance ( HasChildF lch ic
+         , och ~ LookupByChildFR lch ic
+         , UpdateAtChildF lch ( '(att,vch) ': och) ic
+         , LabelSet ( '(att, vch) ': och)) =>
+  SingleDef 'True 'True att (Tagged lch vch) ic where
+  type SingleDefR 'True 'True att (Tagged lch vch) ic
+    = UpdateAtChildFR lch ( '(att,vch) ': (LookupByChildFR lch ic)) ic
+  singledef _ _ att pch ic
+    = updateAtChildF (Label :: Label lch) ( att =. vch *. och) ic
     where lch = labelTChAtt pch
           vch = unTaggedChAtt pch
-          och = lookupByChild lch ic
+          och = lookupByChildF lch ic
 
 
+{- ######################################################################### -}
 -- | The class 'Defs' is defined by induction over the record 'vals' 
 --   containing the new definitions. 
 --   The function 'defs' inserts each definition into the attribution 
---   of the corresponding child. 
+--   of the corresponding child.
+--class Defs att (nts :: [Type]) (vals :: [(k,Type)]) (ic :: [(k,(k,Type))])
+
 class Defs att (nts :: [Type]) (vals :: [(k,Type)])
            (ic :: [(k,[(k,Type)])]) (ic' :: [(k,[(k,Type)])])
           | att nts vals ic -> ic' where
@@ -162,17 +181,18 @@ instance Defs att nts '[] ic ic where
 
 --  TODO: duplicated context
 instance ( Defs att nts vs ic ic'
-         , HasLabelChildAttsRes (lch,t) ic' ~ mch
          , HasLabelChildAtts (lch,t) ic'
          , HMemberRes t nts ~ mnts
+         , HasLabelChildAttsRes (lch,t) ic' ~ mch
          , HMember t nts
-         , SingleDef mch mnts att (Tagged (lch,t) vch) ic' ic'')
+         , SingleDefR mch mnts att (Tagged (lch,t) vch) ic' ~ ic''
+         , SingleDef mch mnts att (Tagged (lch,t) vch) ic')
     => Defs att nts ( '((lch,t), vch) ': vs) ic ic'' where
   defs att nts (ConsR pch vs) ic = singledef mch mnts att pch ic' 
-      where ic'  = defs att nts vs ic         -- :: ChAttsRec ic'
-            lch  = labelLVPair pch            -- :: Label (lch,t)
-            mch  = hasLabelChildAtts lch ic'  -- :: Proxy mch
-            mnts = hMember (sndLabel lch) nts -- :: Proxy mnts
+      where ic'  = defs att nts vs ic
+            lch  = labelLVPair pch
+            mch  = hasLabelChildAtts lch ic'
+            mnts = hMember (sndLabel lch) nts
 
 
 
