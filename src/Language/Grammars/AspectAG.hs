@@ -22,9 +22,7 @@ This was implemented from scratch using the improvements on GHC on the last
              FlexibleContexts,
              ScopedTypeVariables,
              NoMonomorphismRestriction,
-             AllowAmbiguousTypes,
              ImplicitParams,
-             ExtendedDefaultRules,
              UnicodeSyntax,
              DataKinds,
              TypeOperators,
@@ -33,9 +31,7 @@ This was implemented from scratch using the improvements on GHC on the last
              MultiParamTypeClasses,
              FlexibleContexts,
              FlexibleInstances,
-             UndecidableInstances,
-             FunctionalDependencies,
-             TypeFamilyDependencies
+             UndecidableInstances
 #-}
 
 module Language.Grammars.AspectAG (
@@ -285,7 +281,7 @@ instance ( Com (ComSingleR (HasLabelRecRes prd r) prd rule r)  r'
 
 
 class Empties (fc :: [(k,Type)]) where
-  type EmptiesR fc :: [(k, [(k, Type)])]
+  type EmptiesR fc :: [(k, [(k, Type)])] -- KnownBug, k = k' from here
   empties :: Record fc -> ChAttsRec (EmptiesR fc)
 
 
@@ -294,39 +290,41 @@ instance Empties '[] where
   empties EmptyR = EmptyCh
 
 
-instance (Empties fcr,
-          LabelSet ( '(lch, '[]) ': EmptiesR fcr)) =>
+instance ( Empties fcr
+         , LabelSet ( '(lch, '[]) ': EmptiesR fcr)) =>
   Empties ( '(lch, fch) ': fcr) where
   type EmptiesR ( '(lch, fch) ': fcr) = '(lch, '[]) ': EmptiesR fcr
   empties (ConsR pch fcr)
-    = let lch = labelTChAtt pch -- TODO: name
-      in  ConsCh (TaggedChAttr lch EmptyAtt) (empties fcr)
+    = let lch = labelTChAtt pch
+      in  ConsCh (TaggedChAttr lch EmptyAtt)
+          (empties fcr)
 
 
 -- the Kn class
 
+class Kn (fcr :: [(k, Type)]) where
+  type ICh fcr :: [(k, [(k, Type)])]
+  type SCh fcr :: [(k, [(k, Type)])]
+  kn :: Record fcr -> ChAttsRec (ICh fcr) -> ChAttsRec (SCh fcr)
 
-
-class Kn (fcr :: [(k, Type)])
-         (icr :: [(k, [(k, Type)])])
-         (scr :: [(k, [(k, Type)])]) | fcr -> scr icr where 
-  kn :: Record fcr -> ChAttsRec icr -> ChAttsRec scr
-
-instance Kn '[] '[] '[] where
+instance Kn '[] where
+  type ICh '[] = '[]
+  type SCh '[] = '[] 
   kn _ _ = EmptyCh
 
-
-instance ( Kn fc ic sc
-         , LabelSet ('(lch, sch) : sc)
-         , LabelSet ('(lch, ich) : ic))
-  =>  Kn ( '(lch , Attribution ich -> Attribution sch) ': fc)
-         ( '(lch , ich) ': ic)
-         ( '(lch , sch) ': sc) where
+instance ( Kn fc
+         , LabelSet ('(lch, sch) : SCh fc)
+         , LabelSet ('(lch, ich) : ICh fc)) => 
+  Kn ( '(lch , Attribution ich -> Attribution sch) ': fc) where
+  type ICh ( '(lch , Attribution ich -> Attribution sch) ': fc)
+    = '(lch , ich) ': ICh fc
+  type SCh ( '(lch , Attribution ich -> Attribution sch) ': fc)
+    = '(lch , sch) ': SCh fc
   kn (ConsR pfch fcr) (ConsCh pich icr)
    = let scr = kn fcr icr
-         lch = labelTChAtt pfch    :: Label lch
-         fch = unTagged pfch       :: Attribution ich -> Attribution sch
-         ich = unTaggedChAttr pich :: Attribution ich
+         lch = labelTChAtt pfch
+         fch = unTagged pfch
+         ich = unTaggedChAttr pich
      in ConsCh (TaggedChAttr lch (fch ich)) scr
 
 
@@ -334,9 +332,9 @@ instance ( Kn fc ic sc
 --   semantic functions of the children, and builds a
 --   function from the inherited attributes of the parent to its
 --   synthesized attributes.
-knit :: ( Empties fc , EmptiesR fc ~ ec
-        , Kn fc ic sc )
-  => Rule sc ip ec '[] ic sp
+knit :: ( Empties fc
+        , Kn fc ) =>
+  Rule (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp
      -> Record fc -> Attribution ip -> Attribution sp
 knit rule fc ip
   = let ec          = empties fc
