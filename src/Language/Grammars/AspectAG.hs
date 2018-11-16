@@ -1,3 +1,4 @@
+
 {-|
 
 Module      : Language.Grammars.AspectAG
@@ -17,20 +18,24 @@ This was implemented from scratch using the improvements on GHC on the last
 
 -}
 
-{-# LANGUAGE TypeInType,
-             GADTs,
-             KindSignatures,
-             TypeOperators,
-             TypeFamilies,
-             MultiParamTypeClasses,
-             FlexibleInstances,
+{-# LANGUAGE TypeFamilies,
              FlexibleContexts,
-             StandaloneDeriving,
+             ScopedTypeVariables,
+             NoMonomorphismRestriction,
+             AllowAmbiguousTypes,
+             ImplicitParams,
+             ExtendedDefaultRules,
+             UnicodeSyntax,
+             DataKinds,
+             TypeOperators,
+             PolyKinds,
+             GADTs,
+             MultiParamTypeClasses,
+             FlexibleContexts,
+             FlexibleInstances,
              UndecidableInstances,
              FunctionalDependencies,
-             ConstraintKinds,
-             ScopedTypeVariables,
-             DataKinds
+             TypeFamilyDependencies
 #-}
 
 module Language.Grammars.AspectAG (
@@ -76,14 +81,28 @@ type Rule (sc  :: [(k',  [(k,  Type)])])
           (sp' :: [(k,       Type)])
   = Fam sc ip -> Fam ic sp -> Fam ic' sp'
 
---type Rule sc ip ic sp ic' sp'
---  = Fam sc ip -> (Fam ic sp -> Fam ic' sp')
-
 -- | Composition of rules
 ext :: Rule sc ip ic sp ic' sp'
   -> (Fam sc ip -> a0 -> Fam ic sp)
   -> (Fam sc ip -> a0 -> Fam ic' sp')
 (f `ext` g) input = f input . g input
+
+
+-- | Type level getters for Rules
+type family Syn1 (rule :: Type) :: [(k', [(k, Type)])] where
+  Syn1 (Rule sc ip ic  sp  ic'' sp'') = sc
+type family Inh1 (rule :: Type) :: [(k, Type)] where
+  Inh1 (Rule sc ip ic  sp  ic'' sp'') = ip
+type family Syn2 (rule :: Type) :: [(k', [(k, Type)])] where
+  Syn2 (Rule sc ip ic  sp  ic'' sp'') = ic
+type family Inh2 (rule :: Type) :: [(k, Type)] where
+  Inh2 (Rule sc ip ic  sp  ic'' sp'') = sp
+type family Syn3 (rule :: Type) :: [(k', [(k, Type)])] where
+  Syn3 (Rule sc ip ic  sp  ic'' sp'') = ic''
+type family Inh3 (rule :: Type) :: [(k, Type)] where
+  Inh3 (Rule sc ip ic  sp  ic'' sp'') = sp''
+
+
 
 
 -- |The function 'syndef' adds the definition of a synthesized attribute.
@@ -195,61 +214,71 @@ rulePrd (Tagged v)= v
 -- | Lets define the combination of aspects. When labels are only present once,
 --  the new aspect has a copy of the field. In the other hand, when a label is
 --  repeated, rules are combined with the function ext.
-class Com (r₁ :: [(k,Type)]) (r₂ :: [(k, Type)]) (r₃ :: [(k,Type)])
-  | r₁ r₂ -> r₃ where
-  (.+.) :: Aspect r₁ ->  Aspect r₂ ->  Aspect r₃
+class Com (r :: [(k,Type)]) (s :: [(k, Type)]) where
+  type (.++.) r s :: [(k,Type)]
+  (.+.) :: Aspect r -> Aspect s -> Aspect (r .++. s)
 
+
+-- | ComSingle inserts one Rule in an aspect
+-- The boolean parameter is True if prd is a label in the record.
+class ComSingle (b::Bool) (prd :: k) (rule :: Type) (r :: [(k,Type)]) where
+  type ComSingleR b prd rule r :: [(k, Type)]
+  comSingle :: Proxy b -> Prd prd rule -> Aspect r
+            -> Aspect (ComSingleR b prd rule r)
+
+
+-- | When there is no production with the name prd, the map is simply extended
+instance ( LabelSet ('(prd, rule) ': r)) => 
+  ComSingle 'False prd rule r where
+  type ComSingleR 'False prd rule r = '(prd, rule) ': r
+  comSingle _ prd asp = prd .*. asp
+
+-- | When the production is already defined, the new
+-- rule must be combined with the previous one
+instance ( UpdateAtLabelRecF prd (Rule sc ip ic  sp  ic'' sp'') r
+         , HasFieldRec prd r
+         , LookupByLabelRec prd r ~ (Rule sc ip ic' sp' ic'' sp'')
+         , ic'' ~ (Syn3 (LookupByLabelRec prd r))
+         , sp'' ~ (Inh3  (LookupByLabelRec prd r))
+         ) =>
+  ComSingle 'True prd (Rule sc ip ic  sp  ic'  sp') r where
+  type ComSingleR 'True prd (Rule sc ip ic  sp  ic'  sp') r
+    = UpdateAtLabelRecFR prd (Rule sc ip ic sp (Syn3 (LookupByLabelRec prd r))
+                                              (Inh3 (LookupByLabelRec prd r))) r
+  comSingle _ f r = updateAtLabelRecF l (oldR `ext` newR) r 
+    where l    = labelPrd f
+          oldR = lookupByLabelRec l r
+          newR = rulePrd f
 
 
 -- | Unicode pretty operator
-(⊕) :: (Com r s t) => Aspect r -> Aspect s -> Aspect t
+(⊕) :: (Com r s) => Aspect r -> Aspect s -> Aspect (r .++. s)
 (⊕) = (.+.)
-
-
--- | Comsingle combinates a rule with an aspect.
--- Since we'll need to decide what to do depending on context, we use the
--- usual technique.
-class ComSingle (b::Bool) (prd :: k) (rule :: Type) (r₁ :: [(k,Type)])
-                (r₂ :: [(k,Type)]) | b prd rule r₁ -> r₂ where
-  comSingle :: Proxy b -> Prd prd rule -> Aspect r₁ -> Aspect r₂
-
---The boolean parameter is the indicator of prd being a label in the record.
-
-instance (LabelSet ('(prd, rule) : r₁))
-   => ComSingle 'False prd rule r₁ ( '(prd,rule) ': r₁) where
-  comSingle _ prd asp = prd `ConsR` asp
-
-
-instance ( HasFieldRec prd r₁,
-           LookupByLabelRec prd r₁ ~ (Rule sc ip ic' sp' ic'' sp'')
-         , UpdateAtLabelRec prd (Rule sc ip ic  sp  ic'' sp'') r₁ r₂
-         )
-  => ComSingle 'True prd        (Rule sc ip ic  sp  ic'  sp') r₁ r₂ where
-  comSingle _ f r = updateAtLabelRec l (oldR `ext` newR) r :: Aspect r₂ 
-    where l    = labelPrd f                                :: Label prd
-          oldR = lookupByLabelRec l r    
-          newR = rulePrd f
 
 
 -- | The proper Com, by induction over the second Aspect.
 
 -- | The empty record is a neutral element by right
-instance Com r '[] r where
+instance Com r '[] where
+  type r .++. '[] = r
   r .+. _ = r
 
 -- | For the recursive step, take the head of the second argument,
 -- use comsingle on the first parameter, call (.+.) with the result
 -- and the tail
-instance ( Com r''' r' r''
+instance ( Com (ComSingleR (HasLabelRecRes prd r) prd rule r)  r'
          , HasLabelRecRes prd r ~ b
          , HasLabelRec prd r
-         , ComSingle b prd rule r r''')
-  => Com r ( '(prd, rule) ': r') r'' where
-     r .+. (pr `ConsR` r') = let 
-                                 b   = hasLabelRec (labelPrd pr) r
+         , ComSingle b prd rule r)
+  => Com r ( '(prd, rule) ': r') where
+     type r .++. ( '(prd, rule) ': r')
+       = (ComSingleR (HasLabelRecRes prd r) prd rule r) .++. r'
+     r .+. (pr `ConsR` r') = let b   = hasLabelRec (labelPrd pr) r
                                  r'''= comSingle b pr r
                                  r'' = r''' .+. r'
                              in  r''
+
+
 
 ------------------------------------------------------------------------------
 
@@ -274,7 +303,9 @@ instance (Empties fcr,
       in  ConsCh (TaggedChAttr lch EmptyAtt) (empties fcr)
 
 
----- the Kn class
+-- the Kn class
+
+
 
 class Kn (fcr :: [(k, Type)])
          (icr :: [(k, [(k, Type)])])
