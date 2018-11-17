@@ -87,7 +87,7 @@ asp_sres =  p_Root .=. root_sres
         .*. p_Leaf .=. leaf_sres
         .*. emptyRecord
 asp_smin =  p_Leaf .=. leaf_smin
---        .*. p_Node .=. node_smin
+        .*. p_Node .=. node_smin
         .*. emptyRecord
 
 sem_Tree asp (Node l r) = knit (asp .#. p_Node)$

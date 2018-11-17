@@ -11,7 +11,8 @@ Portability : POSIX
 
 
 The original version of the library is documented in the paper:
-/Attribute Grammars Fly First-Class. How to do aspect oriented programming in Haskell/
+/Attribute Grammars Fly First-Class.
+How to do aspect oriented programming in Haskell/
 
 This was implemented from scratch using the improvements on GHC on the last
 10 years, allowing a broad set of techniques for doing type level programming.
@@ -22,7 +23,6 @@ This was implemented from scratch using the improvements on GHC on the last
              FlexibleContexts,
              ScopedTypeVariables,
              NoMonomorphismRestriction,
-             ImplicitParams,
              UnicodeSyntax,
              DataKinds,
              TypeOperators,
