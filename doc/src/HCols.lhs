@@ -46,8 +46,9 @@ por distintos motivos:
 \item
   Cuando programamos a nivel de tipos el lenguaje no provee fuertes
   mecanismos de modularizaci\'on, dado que no fue dise\~nado para
-  este prop\'osito. Es com\'un que por ejemplo, se fugue implementaci\'on
-  con los mensajes de error. La implementaci\'on basada en HList filtrar\'ia
+  este prop\'osito. Es com\'un que por ejemplo, se fugue informaci\'on en los
+  mensajes de error sobre las estructuras de datos utilizadas.
+  La implementaci\'on basada en HList filtrar\'ia
   errores de HList, que no utilizan el mismo vocabulario que nuestro
   EDSL. La imposibilidad de modularizar nos obliga a que si pretendemos
   tener estructuras distinguibles por sus nombres mnem\'onicos tenemos
@@ -116,7 +117,7 @@ Es intuitivo definir funciones en este contexto, por ejemplo
 > hTail (HCons _ xs) = xs
 
 
-Para, por ejemplo concatenar dos listas,
+Para concatenar dos listas,
 primero definimos la concatenaci\'on a nivel de tipos:
 
 > type family (xs :: [Type]) :++ ( ys :: [Type]) :: [Type]
@@ -144,13 +145,13 @@ Una alternativa es usar la familia cerrada:
 >   chAppend (HCons x xs) ys = HCons x (chAppend xs ys)
 
 
-Si intentemos, por ejemplo
+Si intentemos a modo de ejemplo
 programar una funci\'on que actualiza la $n$-\'esima entrada en
 una lista heterogenea
 (eventualmente cambiando el tipo del dato en esa posici\'on),
 estamos claramente ante una funci\'on de tipos dependientes (el tipo
 de salida depende de $n$). \'Este es el escenario donde ser\'an
-necesarios {\tt Proxies} y\o {\tt Singletons}.
+necesarios {\tt Proxies} y/o {\tt Singletons}.
 
 < type family UpdateAtNat (n :: Nat)(x :: Type)(xs :: [Type]) :: [Type]
 < type instance UpdateAtNat Zero     x (y ': ys) = x ': ys
@@ -162,7 +163,7 @@ necesarios {\tt Proxies} y\o {\tt Singletons}.
 
 
 \subsection{Registros Heterogeneos}
-\label{sec:hrecord}
+\label{hrecord}
 
 AspectAG requiere de registros heterogeneos, esto es, colecciones
 etiqueta-valor, heterogeneas, donde adem\'as las claves est\'en dadas

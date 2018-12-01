@@ -114,21 +114,23 @@ definiciones en los hijos a los que corresponda.
 Primero, es necesario proveer la inserci\'on en
 la atribuci\'on de un hijo:
 
-> class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[(k,[(k,Type)])])
->                  (ic' ::[(k,[(k,Type)])]) | mch mnts att pv ic -> ic' where
+> class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[(k',[(k,Type)])]) where
+>   type SingleDefR mch mnts att pv ic :: [(k',[(k,Type)])]
 >   singledef :: Proxy mch -> Proxy mnts -> Label att -> pv -> ChAttsRec ic
->                -> ChAttsRec ic'
+>                 -> ChAttsRec (SingleDefR mch mnts att pv ic)
 
-
-> instance ( HasChild lch ic och
->          , UpdateAtChild lch ( '(att,vch) ': och) ic ic'
->          , LabelSet ( '(att, vch) ': och))
->   => SingleDef True True att (Tagged lch vch) ic ic' where
->   singledef _ _ att pch ic =
->     updateAtChild (Label :: Label lch) ( att =. vch *. och) ic
+> instance ( HasChildF lch ic
+>          , och ~ LookupByChildFR lch ic
+>          , UpdateAtChildF lch ( '(att,vch) ': och) ic
+>          , LabelSet ( '(att, vch) ': och)) =>
+>   SingleDef 'True 'True att (Tagged lch vch) ic where
+>   type SingleDefR 'True 'True att (Tagged lch vch) ic
+>     = UpdateAtChildFR lch ( '(att,vch) ': (LookupByChildFR lch ic)) ic
+>   singledef _ _ att pch ic
+>     = updateAtChildF (Label :: Label lch) ( att =. vch *. och) ic
 >     where lch = labelTChAtt pch
 >           vch = unTaggedChAtt pch
->           och = lookupByChild lch ic
+>           och = lookupByChildF lch ic
 
 
 Los par\'ametros {\tt mch} y {\tt mnts} son Proxys de booleanos,
@@ -139,34 +141,41 @@ Se hace recursi\'on sobre
 el registro {\tt vals} que contiene las nuevas definiciones. Utilizanando
 {\tt singledef} se insertan las definiciones.
 
-> class Defs att (nts :: [Type]) (vals :: [(k,Type)])
->            (ic :: [(k,[(k,Type)])]) (ic' :: [(k,[(k,Type)])])
->           | att nts vals ic -> ic' where
+> class Defs att (nts :: [Type])
+>             (vals :: [(k,Type)]) (ic :: [(k',[(k,Type)])]) where
+>   type DefsR att nts vals ic :: [(k',[(k,Type)])]
 >   defs :: Label att -> HList nts -> Record vals -> ChAttsRec ic
->        -> ChAttsRec ic'
+>        -> ChAttsRec (DefsR att nts vals ic)
 
 
 Si el registro est\'a vac\'io no se inserta ninguna definici\'on:
 
-> instance Defs att nts '[] ic ic where
+> instance Defs att nts '[] ic where
+>   type DefsR att nts '[] ic = ic
 >   defs _ _ _ ic = ic
 
 En el caso recursivo, combinamos la primer componente del registro
 con la llamada recursiva.
 
-> instance ( Defs att nts vs ic ic'
+> instance ( Defs att nts vs ic
+>          , ic' ~ DefsR att nts vs ic
+>          , HMember t nts
+>          , HMemberRes t nts ~ mnts
 >          , HasLabelChildAttsRes (lch,t) ic' ~ mch
 >          , HasLabelChildAtts (lch,t) ic'
->          , HMemberRes t nts ~ mnts
->          , HMember t nts
->          , SingleDef mch mnts att (Tagged (lch,t) vch) ic' ic'')
->     => Defs att nts ( '((lch,t), vch) ': vs) ic ic'' where
->   defs att nts (ConsR pch vs) ic  
->     = let ic'  = defs att nts vs ic         -- :: ChAttsRec ic'
->           lch  = labelLVPair pch            -- :: Label (lch,t)
->           mch  = hasLabelChildAtts lch ic'  -- :: Proxy mch
->           mnts = hMember (sndLabel lch) nts -- :: Proxy mnts
->       in singledef mch mnts att pch ic'
+>          , SingleDef mch mnts att (Tagged (lch,t) vch) ic') => 
+>   Defs att nts ( '((lch,t), vch) ': vs) ic where
+>   type DefsR att nts ( '((lch,t), vch) ': vs) ic
+>     = SingleDefR (HasLabelChildAttsRes (lch,t) (DefsR att nts vs ic))
+>                  (HMemberRes t nts)
+>                  att
+>                  (Tagged (lch,t) vch)
+>                  (DefsR att nts vs ic)
+>   defs att nts (ConsR pch vs) ic = singledef mch mnts att pch ic' 
+>       where ic'  = defs att nts vs ic
+>             lch  = labelLVPair pch
+>             mch  = hasLabelChildAtts lch ic'
+>             mnts = hMember (sndLabel lch) nts
 
 En todos los casos las funciones auxiliares utilizadas en la
 cl\'ausula {\tt let} son funciones de acceso o predicados relativamente
@@ -230,9 +239,9 @@ est\'an bien formadas, como vemos m\'as adelante.
 La combinaci\'on de aspectos viene dada por la funci\'on {\tt (.+.)}
 definida a nivel de tipos como la clase {\tt Com}.
 
-> class Com (r :: [(k,Type)]) (r' :: [(k, Type)]) (r'' :: [(k,Type)])
->   | r r' -> r'' where
->   (.+.) :: Aspect r ->  Aspect r' ->  Aspect r''
+> class Com (r :: [(k,Type)]) (s :: [(k, Type)]) where
+>   type (.++.) r s :: [(k,Type)]
+>   (.+.) :: Aspect r -> Aspect s -> Aspect (r .++. s)
 
 La funci\'on inserta en el resultado intactas las producciones que aparecen
 en un solo aspecto par\'ametro. Por otro lado las
@@ -243,7 +252,8 @@ La funci\'on de combinaci\'on viene definida por recursi\'on en la
 segunda componente. Si el segundo registro es vac\'io,
 en la operaci\'on es neutro.
 
-> instance Com r '[] r where
+> instance Com r '[] where
+>   type r .++. '[] = r
 >   r .+. _ = r
 
 Si la segunda componente consiste en al menos una producci\'on con su regla,
@@ -251,14 +261,18 @@ la combinamos al primer aspecto mediante la funci\'on {\tt comSingle},
 y llamamos recursivamente a la combinaci\'on del nuevo registro creado con la
 cola del segundo par\'ametro.
 
-> instance ( Com r''' r' r''
+> instance ( Com (ComSingleR (HasLabelRecRes prd r) prd rule r)  r'
+>          , HasLabelRecRes prd r ~ b
 >          , HasLabelRec prd r
->          , ComSingle (HasLabelRecRes prd r) prd rule r r''')
->   => Com r ( '(prd, rule) ': r') r'' where
+>          , ComSingle b prd rule r)
+>   => Com r ( '(prd, rule) ': r') where
+>      type r .++. ( '(prd, rule) ': r')
+>        = (ComSingleR (HasLabelRecRes prd r) prd rule r) .++. r'
 >      r .+. (pr `ConsR` r') = let b   = hasLabelRec (labelPrd pr) r
 >                                  r'''= comSingle b pr r
 >                                  r'' = r''' .+. r'
 >                              in  r''
+
 
 La funci\'on {\tt comSingle} es una funci\'on cuyo comportamiento
 es dependiente de los tipos de la producci\'on y el Aspecto par\'ametro.
@@ -268,9 +282,11 @@ Implementamos {\tt ComSingle} con un par\'ametro booleano extra que indica
 la pertenencia o no de la etiqueta {\tt prd} al registro {\tt r}
 La firma viene dada por:
 
-> class ComSingle (b::Bool) (prd :: k) (rule :: Type) (r₁ :: [(k,Type)])
->                 (r₂ :: [(k,Type)]) | b prd rule r₁ -> r₂ where
->   comSingle :: Proxy b -> Prd prd rule -> Aspect r₁ -> Aspect r₂
+> class ComSingle (b::Bool) (prd :: k) (rule :: Type) (r :: [(k,Type)]) where
+>   type ComSingleR b prd rule r :: [(k, Type)]
+>   comSingle :: Proxy b -> Prd prd rule -> Aspect r
+>             -> Aspect (ComSingleR b prd rule r)
+
 
 Nuevamente hacemos uso del proxy para propagar pruebas.
 {\tt hasLabelRec} se define an\'alogamente a {\tt hasLabelChildAtts}.
@@ -279,19 +295,36 @@ Luego podemos definir las instancias posibles de {\tt ComSingle}, y adem\'as
 chequeamos ciertas propiedades. En particular cuando combinamos reglas
 chequeamos que efectivamente estamos combinando reglas.
 
-> instance (LabelSet ('(prd, rule) : r₁))
->    => ComSingle 'False prd rule r₁ ( '(prd,rule) ': r₁) where
->   comSingle _ prd asp = prd `ConsR` asp
+> instance ( LabelSet ('(prd, rule) ': r)) => 
+>   ComSingle 'False prd rule r where
+>   type ComSingleR 'False prd rule r = '(prd, rule) ': r
+>   comSingle _ prd asp = prd .*. asp
 
-> instance ( HasFieldRec prd r,
->            LookupByLabelRec prd r ~ (Rule sc ip ic' sp' ic'' sp'')
->          , UpdateAtLabelRec prd (Rule sc ip ic  sp  ic'' sp'') r r'
->          )
->   => ComSingle 'True prd        (Rule sc ip ic  sp  ic'  sp') r r' where
->   comSingle _ f r = updateAtLabelRec l (oldR `ext` newR) r :: Aspect r' 
->     where l    = labelPrd f                                :: Label prd
->           oldR = lookupByLabelRec l r    
+> instance ( UpdateAtLabelRecF prd (Rule sc ip ic  sp  ic'' sp'') r
+>          , HasFieldRec prd r
+>          , LookupByLabelRec prd r ~ (Rule sc ip ic' sp' ic'' sp'')
+>          , ic'' ~ (Syn3 (LookupByLabelRec prd r))
+>          , sp'' ~ (Inh3  (LookupByLabelRec prd r))
+>          ) =>
+>   ComSingle 'True prd (Rule sc ip ic  sp  ic'  sp') r where
+>   type ComSingleR 'True prd (Rule sc ip ic  sp  ic'  sp') r
+>     = UpdateAtLabelRecFR prd (Rule sc ip ic sp (Syn3 (LookupByLabelRec prd r))
+>                                                (Inh3 (LookupByLabelRec prd r))) r
+>   comSingle _ f r = updateAtLabelRecF l (oldR `ext` newR) r 
+>     where l    = labelPrd f
+>           oldR = lookupByLabelRec l r
 >           newR = rulePrd f
+
+
+Donde {\tt Syn3} e {\tt Inh3} son funciones definidas
+puramente a nivel de tipos que implementan proyecciones.
+
+> type family Syn3 (rule :: Type) :: [(k', [(k, Type)])] where
+>   Syn3 (Rule sc ip ic  sp  ic'' sp'') = ic''
+> type family Inh3 (rule :: Type) :: [(k, Type)] where
+>   Inh3 (Rule sc ip ic  sp  ic'' sp'') = sp''
+
+
 
 \subsection{Funciones sem\'anticas}
 
@@ -391,26 +424,28 @@ especializada.
 >     = let lch = labelTChAtt pch -- TODO: name
 >       in  ConsCh (TaggedChAttr lch EmptyAtt) (empties fcr)
 
-> class Kn (fcr :: [(k, Type)])
->          (icr :: [(k, [(k, Type)])])
->          (scr :: [(k, [(k, Type)])]) | fcr -> scr icr where 
->   kn :: Record fcr -> ChAttsRec icr -> ChAttsRec scr
 
-> instance Kn '[] '[] '[]
+> class Kn (fcr :: [(k, Type)]) where
+>   type ICh fcr :: [(k, [(k, Type)])]
+>   type SCh fcr :: [(k, [(k, Type)])]
+>   kn :: Record fcr -> ChAttsRec (ICh fcr) -> ChAttsRec (SCh fcr)
+
+> instance Kn '[] where
+>   type ICh '[] = '[]
+>   type SCh '[] = '[] 
 >   kn _ _ = EmptyCh
 
-
-> instance ( Kn fc ic sc
->          , LabelSet ('(lch, sch) : sc)
->          , LabelSet ('(lch, ich) : ic))
->   =>  Kn ( '(lch , Attribution ich -> Attribution sch) ': fc)
->          ( '(lch , ich) ': ic)
->          ( '(lch , sch) ': sc) where
+> instance ( Kn fc
+>          , LabelSet ('(lch, sch) : SCh fc)
+>          , LabelSet ('(lch, ich) : ICh fc)) => 
+>   Kn ( '(lch , Attribution ich -> Attribution sch) ': fc) where
+>   type ICh ( '(lch , Attribution ich -> Attribution sch) ': fc)
+>     = '(lch , ich) ': ICh fc
+>   type SCh ( '(lch , Attribution ich -> Attribution sch) ': fc)
+>     = '(lch , sch) ': SCh fc
 >   kn (ConsR pfch fcr) (ConsCh pich icr)
 >    = let scr = kn fcr icr
->          lch = labelTChAtt pfch    :: Label lch
->          fch = unTagged pfch       :: Attribution ich -> Attribution sch
->          ich = unTaggedChAttr pich :: Attribution ich
+>          lch = labelTChAtt pfch
+>          fch = unTagged pfch
+>          ich = unTaggedChAttr pich
 >      in ConsCh (TaggedChAttr lch (fch ich)) scr
-
-

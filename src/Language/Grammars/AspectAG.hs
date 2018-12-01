@@ -240,7 +240,7 @@ instance ( UpdateAtLabelRecF prd (Rule sc ip ic  sp  ic'' sp'') r
   ComSingle 'True prd (Rule sc ip ic  sp  ic'  sp') r where
   type ComSingleR 'True prd (Rule sc ip ic  sp  ic'  sp') r
     = UpdateAtLabelRecFR prd (Rule sc ip ic sp (Syn3 (LookupByLabelRec prd r))
-                                              (Inh3 (LookupByLabelRec prd r))) r
+                                               (Inh3 (LookupByLabelRec prd r))) r
   comSingle _ f r = updateAtLabelRecF l (oldR `ext` newR) r 
     where l    = labelPrd f
           oldR = lookupByLabelRec l r
