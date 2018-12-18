@@ -70,7 +70,7 @@ library
 
   -- Modules included in this library but not exported.
   -- other-modules:
-
+                       Language.Grammars.AspectAG.Utils.GenRecord
   -- LANGUAGE extensions used by modules in this package.
   other-extensions:    TypeInType,
                        TypeFamilies,
@@ -117,6 +117,7 @@ Test-Suite test-Arith
     type:             exitcode-stdio-1.0
     main-is:          test/Arith.hs
     build-depends:    base >=4.11 && <4.12,
+                      containers >= 0.5,
                       tagged >=0.8 && <0.9,
                       AspectAG >= 0.4,
                       QuickCheck
