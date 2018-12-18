@@ -20,10 +20,12 @@ En la nueva implementaci\'on {\tt Fam} tiene \emph{kind}
 
 > Fam :: [(k', [(k, Type)])] -> [(k, Type)] -> Type
 
+Y el tipo del constructor {\tt Fam} est\'a dado por
+
 > Fam :: forall k' k (c :: [(k', [(k, Type)])]) (p :: [(k, Type)]).
 >        ChAttsRec c -> Attribution p -> Fam c p
 
-Lo cual es mucho m\'as expresivo.
+lo cual es mucho m\'as expresivo.
 Notar que de todas formas el tipo {\tt Fam} a priori
 no expresa la especificaci\'on
 completa del tipo de datos (lo que podr\'iamos lograr en un lenguaje
