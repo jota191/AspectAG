@@ -27,34 +27,45 @@ Used to build attributions, which are mappings from labels to values
              TypeFamilies
 #-}
 
-module Language.Grammars.AspectAG.Utils.Attribution where
+module Language.Grammars.AspectAG.Utils.Attribution  where
+
+-- (
+--   (*.),
+--   lookupByLabelAtt,
+
+--                                                     )where
 
 import Data.Kind 
 import Data.Type.Equality
 import Data.Proxy
+
+import Language.Grammars.AspectAG.Utils.GenRecord
+
 import Language.Grammars.AspectAG.Utils.Attribute
 import Language.Grammars.AspectAG.Utils.TPrelude
 import Language.Grammars.AspectAG.Utils.TagUtils
 
 
--- | Internal representation, isomorphic to a 'Record'
-data Attribution :: forall k . [(k,Type)] -> Type where
-  EmptyAtt :: Attribution '[]
-  ConsAtt  :: LabelSet ( '(att, val) ': atts) =>
-   Attribute att val -> Attribution atts -> Attribution ( '(att,val) ': atts)
+-- -- | Internal representation, isomorphic to a 'Record'
+-- data Attribution :: forall k . [(k,Type)] -> Type where
+--   EmptyAtt :: Attribution '[]
+--   ConsAtt  :: LabelSet ( '(att, val) ': atts) =>
+--    Attribute att val -> Attribution atts -> Attribution ( '(att,val) ': atts)
 
+type Attribution = REC Attribute 
 
 -- * Pretty constructors
 
 -- | Extending
 infixr 2 *.
 (*.) :: LabelSet ('(att, val) : atts) =>
-    Attribute att val -> Attribution atts -> Attribution ('(att, val) : atts)
-(*.) = ConsAtt
+    Attribute att val -> Attribution atts
+      -> Attribution ('(att, val) : atts)
+(*.) = ConsR
 
 -- | Empty
 emptyAtt :: Attribution '[]
-emptyAtt = EmptyAtt
+emptyAtt = EmptyR
 
 -- | A getter, also works as a predicate
 class HasFieldAtt (l::k) (r :: [(k,Type)]) v | l r -> v where
@@ -70,9 +81,9 @@ class HasFieldAtt' (b::Bool) (l :: k) (r::[(k,Type)]) v | b l r -> v where
     lookupByLabelAtt':: Proxy b -> Label l -> Attribution r -> v
 
 instance HasFieldAtt' True l ( '(l,v) ': r) v where
-   lookupByLabelAtt' _ _ (ConsAtt (Attribute v) _) = v
+   lookupByLabelAtt' _ _ (ConsR (Attribute v) _) = v
 instance HasFieldAtt l r v => HasFieldAtt' False l ( '(l2,v2) ': r) v where
-   lookupByLabelAtt' _ l (ConsAtt _ r) = lookupByLabelAtt l r
+   lookupByLabelAtt' _ l (ConsR _ r) = lookupByLabelAtt l r
 
 
 -- | Pretty lookup
@@ -117,16 +128,16 @@ instance (HEqK l l' b, UpdateAtLabelAtt' b l v ( '(l',v')': r) r')
 
 instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r) ) =>
          UpdateAtLabelAtt' 'True l v ( '(l,v') ': r) ( '(l,v) ': r) where
-  updateAtLabelAtt' _ (l :: Label l) v (att `ConsAtt` atts)
-    = (Attribute v :: Attribute l v) `ConsAtt` atts
+  updateAtLabelAtt' _ (l :: Label l) v (att `ConsR` atts)
+    = (Attribute v :: Attribute l v) `ConsR` atts
 
 
 instance ( UpdateAtLabelAtt l v r r', LabelSet  ( a ': r' ) ) =>
          UpdateAtLabelAtt' False l v ( a ': r) ( a ': r') where
   updateAtLabelAtt' (b :: Proxy False) (l :: Label l) (v :: v)
-    (ConsAtt att xs :: Attribution ( a ': r))
+    (ConsR att xs :: Attribution ( a ': r))
     = case (updateAtLabelAtt l v xs) of
-        xs' -> ConsAtt att xs' :: Attribution( a ': r')
+        xs' -> ConsR att xs' :: Attribution( a ': r')
 
 
 
@@ -137,10 +148,10 @@ instance ( UpdateAtLabelAtt l v r r', LabelSet  ( a ': r' ) ) =>
 
 
 
-instance Show (Attribution '[]) where
-  show _ = "«»"
+-- instance Show (Attribution '[]) where
+--   show _ = "«»"
 
-instance (Show val, Show (Attribution atts)) =>
-         Show (Attribution  ( '(att,val) ': atts ) ) where
-  show (ConsAtt att atts) = let tail = show atts
-                            in "«" ++ show (getVal att) ++ "," ++ drop 1 tail 
+-- instance (Show val, Show (Attribution atts)) =>
+--          Show (Attribution  ( '(att,val) ': atts ) ) where
+--   show (ConsAtt att atts) = let tail = show atts
+--                             in "«" ++ show (getVal att) ++ "," ++ drop 1 tail 

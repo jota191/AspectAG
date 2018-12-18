@@ -48,7 +48,8 @@ data ChAttsRec :: forall k k' . [(k , [(k',Type)])] -> Type where
 -- | Pretty constructors
 infixr 2 .*
 (.*) :: LabelSet ('(ch, attrib) : attribs) =>
-  TaggedChAttr ch attrib -> ChAttsRec attribs -> ChAttsRec ('(ch, attrib) : attribs)
+  TaggedChAttr ch attrib -> ChAttsRec attribs
+    -> ChAttsRec ('(ch, attrib) : attribs)
 (.*) = ConsCh
 
 -- | no child

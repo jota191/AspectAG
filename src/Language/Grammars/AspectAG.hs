@@ -296,8 +296,7 @@ instance ( Empties fcr
   type EmptiesR ( '(lch, fch) ': fcr) = '(lch, '[]) ': EmptiesR fcr
   empties (ConsR pch fcr)
     = let lch = labelTChAtt pch
-      in  ConsCh (TaggedChAttr lch EmptyAtt)
-          (empties fcr)
+      in  (lch .= emptyAtt) .* (empties fcr)
 
 
 -- the Kn class
@@ -338,7 +337,7 @@ knit :: ( Empties fc
      -> Record fc -> Attribution ip -> Attribution sp
 knit rule fc ip
   = let ec          = empties fc
-        (Fam ic sp) = rule (Fam sc ip) (Fam ec EmptyAtt)
+        (Fam ic sp) = rule (Fam sc ip) (Fam ec emptyAtt)
         sc          = kn fc ic
     in  sp
 
