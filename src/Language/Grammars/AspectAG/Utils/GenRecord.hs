@@ -14,7 +14,8 @@
              UndecidableInstances,
              ScopedTypeVariables,
              TypeFamilies,
-             InstanceSigs
+             InstanceSigs,
+             AllowAmbiguousTypes
 #-}
 
 module Language.Grammars.AspectAG.Utils.GenRecord where
@@ -32,13 +33,29 @@ import GHC.TypeLits
 
 import Language.Grammars.AspectAG.Utils.Attribute
 
-
 -----
 
+-- * Definition 
+
+-- | REC is a generic definition parametrized by the datatype used to build
+-- fields. 
 data REC :: forall k k'. (k -> k' -> Type) -> [(k,k')] -> Type where
   EmptyR :: REC field '[]
-  ConsR  :: LabelSet ( '(l,t) ': rs) =>
-            field l t -> REC field rs -> REC field ( '(l,t) ': rs)
+  ConsR  :: LabelSet ( '(l,v) ': r) =>
+            field l v -> REC field r -> REC field ( '(l,v) ': r)
 
 
--- type Attribution = REC Attribute 
+-- * Pretty constructors
+
+infixr 2 .*.
+(.*.) :: LabelSet ( '(l, v) ': r) =>
+    field l v -> REC field r -> REC field ( '(l,v) ': r)
+(.*.) = ConsR
+
+-- * destructors
+
+-- | A getter, also a predicate
+
+class HasField (l :: k) (r :: [(k,k')]) field where
+  type LookupByLabel field l r :: Type
+  (##) :: Label l -> REC field r -> LookupByLabel field l v

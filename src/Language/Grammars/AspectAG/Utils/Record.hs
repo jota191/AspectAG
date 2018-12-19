@@ -37,6 +37,7 @@ import Language.Grammars.AspectAG.Utils.TPrelude
 import Data.Tagged hiding (unTagged)
 import Language.Grammars.AspectAG.Utils.TagUtils
 import GHC.TypeLits
+import Language.Grammars.AspectAG.Utils.GenRecord
 
 -- * Constructors
 
@@ -46,11 +47,14 @@ import GHC.TypeLits
 -- | A Record is a map from labels to values. Labels must be unique,
 --so we use a proof of 'LabelSet' as an implicit parameter to construct a new
 --instance
-data Record :: forall k . [(k,Type)] -> Type where
-  EmptyR :: Record '[]
-  ConsR  :: LabelSet ( '(l, v) ': xs) =>
-   Tagged l v -> Record xs -> Record ( '(l,v) ': xs)
 
+-- data Record :: forall k . [(k,Type)] -> Type where
+--   EmptyR :: Record '[]
+--   ConsR  :: LabelSet ( '(l, v) ': xs) =>
+--    Tagged l v -> Record xs -> Record ( '(l,v) ': xs)
+
+
+type Record = REC Tagged
 
 -- ** Exported
 -- | Pretty constructors
@@ -61,11 +65,11 @@ emptyRecord = EmptyR
 
 
 -- | A pretty constructor for ConsR
-infixr 2 .*.
+-- infixr 2 .*.
 
-(.*.) :: LabelSet ('(att, val) : atts) =>
-    Tagged att val -> Record atts -> Record ('(att, val) : atts)
-(.*.) = ConsR
+-- (.*.) :: LabelSet ('(att, val) : atts) =>
+--     Tagged att val -> Record atts -> Record ('(att, val) : atts)
+-- (.*.) = ConsR
 
 
 
@@ -92,7 +96,7 @@ class HasFieldRec' (b::Bool) (l::k) (r :: [(k,Type)]) where
      Proxy b -> Label l -> Record r -> LookupByLabelRec' b l r
 
 -- | Pretty lookup
-infixl 2 .#.
+infixl 3 .#.
 (.#.)  :: (HasFieldRec l r)
    => Record r -> Label l -> (LookupByLabelRec l r)
 c .#. l = lookupByLabelRec l c

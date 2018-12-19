@@ -35,26 +35,29 @@ import Language.Grammars.AspectAG.Utils.Attribute
 import Language.Grammars.AspectAG.Utils.TPrelude
 import Language.Grammars.AspectAG.Utils.TagUtils
 import Language.Grammars.AspectAG.Utils.Attribution
+import Language.Grammars.AspectAG.Utils.GenRecord
 
 -- | * Constructors
 
 
 -- | The record of attribution fot the children, strongly kinded
-data ChAttsRec :: forall k k' . [(k , [(k',Type)])] -> Type where
-  EmptyCh :: ChAttsRec '[]
-  ConsCh  :: LabelSet ( '(l, v) ': xs) =>
-   TaggedChAttr l v -> ChAttsRec xs -> ChAttsRec ( '(l,v) ': xs)
+-- data ChAttsRec :: forall k k' . [(k , [(k',Type)])] -> Type where
+--   EmptyCh :: ChAttsRec '[]
+--   ConsCh  :: LabelSet ( '(l, v) ': xs) =>
+--    TaggedChAttr l v -> ChAttsRec xs -> ChAttsRec ( '(l,v) ': xs)
+
+type ChAttsRec = REC TaggedChAttr
 
 -- | Pretty constructors
 infixr 2 .*
 (.*) :: LabelSet ('(ch, attrib) : attribs) =>
   TaggedChAttr ch attrib -> ChAttsRec attribs
     -> ChAttsRec ('(ch, attrib) : attribs)
-(.*) = ConsCh
+(.*) = ConsR
 
 -- | no child
-emptyChild :: ChAttsRec '[]
-emptyChild = EmptyCh
+emptyCh :: ChAttsRec '[]
+emptyCh = EmptyR
 
 -- |** This are the tag utils for tag attributions of the childred
 
@@ -94,9 +97,9 @@ class HasChild' (b::Bool) (l :: k) (r::[(k,[(k,Type)])]) v | b l r -> v where
     lookupByChild':: Proxy b -> Label l -> ChAttsRec r -> Attribution v
 
 instance HasChild' True l ( '(l,v) ': r) v where
-   lookupByChild' _ _ (ConsCh lv _) = unTaggedChAttr lv
+   lookupByChild' _ _ (ConsR lv _) = unTaggedChAttr lv
 instance HasChild l r v => HasChild' False l ( '(l2,v2) ': r) v where
-   lookupByChild' _ l (ConsCh _ r) = lookupByChild l r
+   lookupByChild' _ l (ConsR _ r) = lookupByChild l r
 
 
 -- | HaschildF is the type family version of HasChild
@@ -120,16 +123,16 @@ instance (HasChildF' (l==l1) l ( '(l1,v) ': r)) =>
 instance
   HasChildF' 'True l ( '(l,v) ': r) where
   type LookupByChildFR' 'True l ( '(l,v) ': r) = v
-  lookupByChildF' _ _ (ConsCh lv _) = unTaggedChAttr lv
+  lookupByChildF' _ _ (ConsR lv _) = unTaggedChAttr lv
 
 instance (HasChildF l r) => 
   HasChildF' 'False l ( '(l1,v) ': r) where
   type LookupByChildFR' 'False l ( '(l1,v) ': r) = LookupByChildFR l r
-  lookupByChildF' _ l (ConsCh _ r) = lookupByChildF l r
+  lookupByChildF' _ l (ConsR _ r) = lookupByChildF l r
 
 
 -- | Pretty lookup
-infixl 2 .#
+infixl 3 .#
 (.#)  :: (HasChild l r v) => ChAttsRec r -> Label l ->  Attribution v
 c .# l = lookupByChild l c
 
@@ -159,16 +162,16 @@ instance (HEqK l l' b, UpdateAtChild' b l v ( '(l',v')': r) r')
 
 instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r) ) =>
          UpdateAtChild' 'True l v ( '(l,v') ': r) ( '(l,v) ': r) where
-  updateAtChild' _ (l :: Label l) newattrib (attrib `ConsCh` attribs)
-    = (TaggedChAttr l newattrib) `ConsCh` attribs
+  updateAtChild' _ (l :: Label l) newattrib (attrib `ConsR` attribs)
+    = (TaggedChAttr l newattrib) .*. attribs
 
 
 instance ( UpdateAtChild l v r r', LabelSet  ( a ': r' ) ) =>
          UpdateAtChild' False l v (a ': r) (a ': r') where
   updateAtChild' (b :: Proxy False) (l :: Label l) v
-    (ConsCh attrib xs :: ChAttsRec ( a ': r))
+    (ConsR attrib xs :: ChAttsRec ( a ': r))
     = case (updateAtChild l v xs) of
-        xs' -> ConsCh attrib xs' :: ChAttsRec (a ': r')
+        xs' -> attrib .*. xs' :: ChAttsRec (a ': r')
 
 
 -- TODO: Type errors
@@ -193,13 +196,13 @@ class UpdateAtChildF' (b :: Bool)
 instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r)) =>
   UpdateAtChildF' 'True l v ( '(l,v') ': r) where
   type UpdateAtChildFR' 'True l v ( '(l,v') ': r) = ( '(l,v) ': r)
-  updateAtChildF' Proxy l natbtn (oatbtn `ConsCh` atbtns)
+  updateAtChildF' Proxy l natbtn (oatbtn `ConsR` atbtns)
     = l .= natbtn .* atbtns
 
 instance (UpdateAtChildF l v r, LabelSet (a ': (UpdateAtChildFR l v r))) => 
   UpdateAtChildF' 'False l v (a ': r) where
   type UpdateAtChildFR' 'False l v (a ': r) = a ': (UpdateAtChildFR l v r)
-  updateAtChildF' b l v (ConsCh atbtn atbtns)
+  updateAtChildF' b l v (ConsR atbtn atbtns)
     = case (updateAtChildF l v atbtns) of
         atbtns' -> atbtn .* atbtns'
 
@@ -241,6 +244,6 @@ instance Show (ChAttsRec '[]) where
 
 instance (Show (Attribution v), Show (ChAttsRec xs)) =>
          Show (ChAttsRec ( '(l,v) ': xs ) ) where
-  show (ConsCh lv xs) = let tail = show xs
-                            in "{" ++ show (unTaggedChAttr lv) ++
-                               "," ++ drop 1 tail 
+  show (ConsR lv xs) = let tail = show xs
+                       in "{" ++ show (unTaggedChAttr lv) ++
+                          "," ++ drop 1 tail 

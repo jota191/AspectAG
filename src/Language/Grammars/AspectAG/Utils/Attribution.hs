@@ -88,7 +88,7 @@ instance HasFieldAtt l r v => HasFieldAtt' False l ( '(l2,v2) ': r) v where
 
 -- | Pretty lookup
 -- | Pretty lookup
-infixl 2 #.
+infixl 3 #.
 (#.)  :: (HasFieldAtt l r v)
    => Attribution r -> Label l -> v
 c #. l = lookupByLabelAtt l c

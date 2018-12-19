@@ -42,7 +42,8 @@ module Language.Grammars.AspectAG (
               module Language.Grammars.AspectAG.Utils.Record,
               module Language.Grammars.AspectAG.Utils.TagUtils,
               module Language.Grammars.AspectAG.Utils.HList,
-              module Language.Grammars.AspectAG.Utils.Notation
+             -- module Language.Grammars.AspectAG.Utils.Notation
+              module Language.Grammars.AspectAG.Utils.GenRecord
             ) where
 
 
@@ -56,7 +57,8 @@ import Language.Grammars.AspectAG.Utils.TPrelude
 import Data.Proxy
 import Language.Grammars.AspectAG.Utils.ChildAtts
 import Language.Grammars.AspectAG.Utils.TagUtils
-import Language.Grammars.AspectAG.Utils.Notation
+--import Language.Grammars.AspectAG.Utils.Notation
+import Language.Grammars.AspectAG.Utils.GenRecord
 import GHC.TypeLits
 
 -- | In each node of the grammar, the "Fam" contains a single attribution
@@ -65,12 +67,12 @@ data Fam (c::[(k',[(k,Type)])]) (p :: [(k,Type)]) :: Type where
   Fam :: ChAttsRec c  -> Attribution p -> Fam c p
 
 
--- |Rules, aka definition of attribution computations
+-- | Rules, aka definition of attribution computations
 --Rules are defined as a mapping from an input family to an output family,
 --the added arity is for make them composable
 
-type Rule (sc  :: [(k',  [(k,  Type)])])
-          (ip  :: [(k,        Type)])
+type Rule (sc  :: [(k', [(k, Type)])])
+          (ip  :: [(k,       Type)])
           (ic  :: [(k', [(k, Type)])])
           (sp  :: [(k,       Type)])
           (ic' :: [(k', [(k, Type)])])
@@ -287,7 +289,7 @@ class Empties (fc :: [(k,Type)]) where
 
 instance Empties '[] where
   type EmptiesR '[] = '[]
-  empties EmptyR = EmptyCh
+  empties EmptyR = emptyCh
 
 
 instance ( Empties fcr
@@ -309,7 +311,7 @@ class Kn (fcr :: [(k, Type)]) where
 instance Kn '[] where
   type ICh '[] = '[]
   type SCh '[] = '[] 
-  kn _ _ = EmptyCh
+  kn _ _ = emptyCh
 
 instance ( Kn fc
          , LabelSet ('(lch, sch) : SCh fc)
@@ -319,12 +321,12 @@ instance ( Kn fc
     = '(lch , ich) ': ICh fc
   type SCh ( '(lch , Attribution ich -> Attribution sch) ': fc)
     = '(lch , sch) ': SCh fc
-  kn (ConsR pfch fcr) (ConsCh pich icr)
+  kn (ConsR pfch fcr) (ConsR pich icr)
    = let scr = kn fcr icr
          lch = labelTChAtt pfch
          fch = unTagged pfch
          ich = unTaggedChAttr pich
-     in ConsCh (TaggedChAttr lch (fch ich)) scr
+     in ConsR (TaggedChAttr lch (fch ich)) scr
 
 
 -- | The function 'knit' takes the combined rules for a node and the 
