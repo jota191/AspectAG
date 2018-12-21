@@ -7,6 +7,7 @@
 \usepackage{epigraph}
 \usepackage{color}   
 \usepackage{hyperref}
+\usepackage[utf8]{inputenc}
 
 \hypersetup{
     colorlinks=true,
@@ -55,14 +56,14 @@ tipos y funciones en la manipulación a nivel de tipos).
 
 Desde el momento de la implementaci\'on original de AspectAG hasta
 la actualidad
-la programación a nivel de tipos en Haskell ha tenido una evoluci\'on
+la programaci\'on a nivel de tipos en Haskell ha tenido una evoluci\'on
 importante, habi\'endose incorporado nuevas extensiones como
 \emph{data promotion} o polimorfismo de kinds, entre otras,
 las cuales constituyen elementos fundamentales debido
 a que permiten programar de forma ``fuertemente tipado'' a nivel de
 tipos de la misma forma que cuando se programa a nivel de
 valores (algo que originalmente era imposible
-o muy difícil de lograr). El uso de estas extensiones da
+o muy dif\'icil de lograr). El uso de estas extensiones da
 como resultado una programaci\'on a nivel de tipos m\'as robusta y segura.
 Sobre la base de estas extensiones, implementamos un subconjunto
 de la biblioteca original.
@@ -73,7 +74,7 @@ Estructura del documento:
 
 En la secci\'on \ref{typelevel} se presenta una breve rese\~na de las
 t\'ecnicas de programaci\'on a nivel de tipos 
-y las extensiones de haskell que provee el compilador GHC
+y las extensiones a Haskell que provee el compilador GHC
 que las hacen posibles.
 Se presentan
 las estructuras de listas heterogeneas (\ref{hlist})
@@ -110,7 +111,7 @@ como un EDSL provee un buen ejemplo del uso de la
 programaci\'on a nivel de tipos en Haskell.
 La implementaci\'on utiliza fuertemente los registros extensibles que provee
 la biblioteca HList. Ambas bibliotecas se basan en la combinaci\'on
-de las extensi\'ones {\tt MultiParamTypeClasses}
+de las extensiones {\tt MultiParamTypeClasses}
 (hace posible la implementaci\'on de relaciones a nivel de tipos) con
 {\tt FunctionalDependencies}~\cite{DBLP:conf/esop/Jones00}
 (que permite expresar en particular
@@ -145,7 +146,7 @@ de t\'erminos\footnote{no es posible, por ejemplo la aplicaci\'on parcial}.
 La extensi\'on {\tt GADTs} combinada con las anteriores nos permite escribir
 familias indizadas, como en los lenguajes dependientes.
 {\tt TypeOperators}
-habilita el uso de simbolos operadores como constructores de tipos.
+habilita el uso de operadores como constructores de tipos.
 El m\'odulo {\tt Data.Kind} exporta la notaci\'on {\tt Type} para
 el kind {\tt *}. Esto fu\'e implementado originalmente con la extensi\'on
 {\tt TypeInType}, que en las \'ultimas versiones del compilador es
@@ -155,7 +156,7 @@ equivalente a {\tt PolyKinds + DataKinds + KindSignatures}
 \subsection{Programando con tipos dependientes en Haskell}
 
 
-Con todas extensiones combinadas, una declaraci\'on como
+Con todas estas extensiones combinadas, una declaraci\'on como
 
 > data Nat = Zero | Succ Nat
 
@@ -170,7 +171,7 @@ Luego es posible declarar, por ejemplo ({\tt GADTs}, {\tt KindSignatures})
 >   VZ :: Vec Zero a
 >   VS :: a -> Vec n a -> Vec (Succ n) a
 
-Y funciones seguras como
+y funciones seguras como
 
 > vTail :: Vec (Succ n) a -> Vec n a
 > vTail (VS _ as) = as
@@ -193,7 +194,7 @@ Es posible definir funciones puramene a nivel de tipos mediante familias
 
 > type family (m :: Nat) + (n :: Nat) :: Nat
 > type instance Zero + n = n
-> type instance Succ m  + n = Succ (m :+ n) 
+> type instance Succ m  + n = Succ (m + n) 
 
 o mediante la notaci\'on alternativa, cerrada
 
@@ -210,7 +211,7 @@ contin\'uan habitando mundos separados.
 La correspondencia entre nuestra definici\'on de vectores
 y las familias inductivas en los lenguajes de tipos dependientes no es tal.
 
-Las ocurrencias de {\tt n} los tipos de las funciones anteriores son
+Las ocurrencias de {\tt n} en los tipos de las funciones anteriores son
 est\'aticas, y borradas en tiempo de
 ejecuci\'on, mientras que en un lenguaje de tipos dependientes estos
 par\'ametros son esencialmente
@@ -221,10 +222,10 @@ extiende el algoritmo de normalizaci\'on, de forma tal que el
 compilador decidir\'a la igualdad de tipos seg\'un las formas
 normales. Si dos tipos tienen la misma forma normal entonces los mismos
 t\'erminos les habitar\'an.
-Por ejemplo, los tipos  {\tt Vec (S (S Z) :+ n) a} y {\tt Vec (S (S n)) a}
+Por ejemplo, los tipos  {\tt Vec (S (S Z) + n) a} y {\tt Vec (S (S n)) a}
 tendr\'an los mismos habitantes.
 Esto no va a ser cierto para tipos como
-{\tt Vec (n :+ S (S Z)) a} y {\tt Vec (S (S n)) a}, aunque que los tipos
+{\tt Vec (n + S (S Z)) a} y {\tt Vec (S (S n)) a}, aunque que los tipos
 coincidan para todas las instancias concretas de {\tt n}.
 Para expresar propiedades como la conmutatividad
 se utilizan evidencias de las ecuaciones utilizando
@@ -233,7 +234,7 @@ se utilizan evidencias de las ecuaciones utilizando
 
 En el sistema de tipos de Haskell, sin embargo la igualdad de tipos
 es puramente sint\'actica.
-{\tt Vec (n :+ S (S Z)) a} y {\tt Vec (S (S n)) a} {\bf no} son el mismo
+{\tt Vec (n + S (S Z)) a} y {\tt Vec (S (S n)) a} {\bf no} son el mismo
 tipo, y no poseen los mismos habitantes.
 La definici\'on de una familia de tipos axiomatiza {\tt (+)} para la igualdad
 proposicional de Haskell. Cada ocurrencia de {\tt (+)} debe estar soportada
@@ -281,7 +282,7 @@ podemos escribir m\'as expl\'icitamente como
 
 necesitamos hacer
 referencia expl\'icita a {\tt m} para decidir donde cortar el vector.
-Como en Haskell el cuantificador $\forall$ dependiente solo habla
+Como en Haskell el cuantificador $\forall$ solo habla
 de objetos est\'aticos (los lenguajes de tipos y t\'erminos est\'an
 separados), esto no es posible directamente.
 Un tipo \emph{singleton}\cite{Eisenberg:2012:DTP:2430532.2364522}
@@ -300,7 +301,7 @@ t\'ermino de tipo {\tt SNat n}.
 
 Estamos en condiciones de implementar {\tt vChop}:
 
-> vChop :: SNat m -> Vec (m :+ n) x -> (Vec m x, Vec n x)
+> vChop :: SNat m -> Vec (m + n) x -> (Vec m x, Vec n x)
 > vChop SZ xs            = (VZ, xs)
 > vChop (SS m) (VS x xs) = let (ys, zs) = vChop m xs
 >                          in (VS x ys, zs)
@@ -317,7 +318,7 @@ An\'alogamente para definir {\tt vTake} es necesario el valor de
 de ejecuci\'on para conocer
 cuantos elementos extraer, pero una funci\'on de tipo
 
-> vTake :: SNat m -> Vec (m :+ n) x -> Vec m x
+> vTake :: SNat m -> Vec (m + n) x -> Vec m x
 
 no ser\'a implementable. Necesitamos informaci\'on tambi\'en
 de {\tt n}, pero de hecho no es necesaria una representaci\'on de {\tt n}
@@ -338,11 +339,11 @@ simplemente que la ocurrencia del proxy tiene la informaci\'on del tipo
 
 La siguiente implementaci\'on de vTake compila y funciona correctamente:
 
-> vTake :: SNat m -> Proxy n -> Vec (m :+ n) x -> Vec m x
+> vTake :: SNat m -> Proxy n -> Vec (m + n) x -> Vec m x
 > vTake SZ _ xs            = VZ
 > vTake (SS m) n (VS x xs) = VS x (vTake m n xs)
 
-durante la implementaci\'on de AspectAG y sus dependencias haremos uso
+Durante la implementaci\'on de AspectAG y sus dependencias haremos uso
 intensivo de estas t\'ecnicas.
 
 

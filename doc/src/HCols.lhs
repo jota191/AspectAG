@@ -21,19 +21,20 @@
 
 %endif
 
-\subsubsection{Listas Heterogeneas}
+% \subsubsection{Listas Heterogeneas}
 
-En la biblioteca HList\cite{Kiselyov:2004:STH:1017472.1017488}
-se presenta un buen ejemplo
-de aplicaci\'on de las t\'ecnicas de programaci\'on a nivel de tipos, usando
+La biblioteca HList\cite{Kiselyov:2004:STH:1017472.1017488} implementa
+colecciones heterogeneas fuertemente tipadas.
+HList es un buen ejemplo
+de aplicaci\'on de las t\'ecnicas de programaci\'on a nivel de tipos usando
 las t\'ecnicas antiguas.
 La implementaci\'on original de AspectAG hace uso intensivo de estas
 versiones de la biblioteca.
-HList sigue desarrollandose a medida de que nuevas caracter\'isticas se
-a\~naden al lenguaje.
-En lugar de reimplementar AspectAG dependiendo de nuevas versiones de HList,
+HList sigue desarroll\'andose a medida de que nuevas extensiones se
+a\~naden al lenguaje Haskell. % de hecho a GHC...
+En lugar de reimplementar AspectAG dependiendo de nuevas versiones de HList
 decidimos reescribir desde cero todas las funcionalidades necesarias,
-por distintos motivos:
+por los siguientes:
 
 \begin{itemize}
 \item
@@ -79,19 +80,20 @@ por distintos motivos:
 Una lista (o m\'as en general una colecci\'on)
 heterogenea es tal si contiene valores de distintos tipos.
 Existen varios enfoques para construir colecciones heterogeneas en
-Haskell\cite{HColsWiki}
-Nos interesan en particular las que son fuertemente tipadas, donde se conoce
+Haskell\cite{HColsWiki}.
+Nos interesan en particular las implementaciones que son fuertemente tipadas,
+donde se conoce
 est\'aticamente el tipo de cada miembro.
 
-Existen variantes para definir HList
-Las versiones m\'as antiguas (y sobre estas se implement\'o originalmente
+Existen variantes para definir HList.
+Las versiones m\'as antiguas (sobre las que se implement\'o originalmente
 AspectAG) utilizan la siguiente representaci\'on, isomorfa a pares anidados:
 
 < data HCons a b = HCons a b
 < data HNil = HNil
 
 El inconveniente de esta
-representaci\'on es que podemos
+implementaci\'on es que es posible
 construir tipos sin sentido como {\tt HCons Bool Char}, lo cual puede
 solucionarse mediante el uso de clases, como es usual en
 el enfoque antig\"uo de la programaci\'on a nivel de tipos.
@@ -108,7 +110,17 @@ preferimos el GADT por ser la soluci\'on m\'as clara.
 >   HNil  :: HList '[]
 >   HCons :: x -> HList xs -> HList (x ': xs)
 
-Es intuitivo definir funciones en este contexto, por ejemplo
+{\tt DataKinds} promueve las listas con una notaci\'on conveniente, similar
+a la utilizada a nivel de valores. En la definici\'on anterior se utiliza
+la versi\'on promovida de listas como \'indice del tipo de datos {\tt HList}.
+
+A modo de ejemplo, un habitante posible del kind {\tt [Type]} es
+{\tt [Bool, Char]}. Luego {\tt HList [Bool, Char]} es un tipo
+(de kind {\tt Type}) habitado por ejemplo por {HCons True (HCons 'c' HNil)}.
+
+
+Es intuitivo definir, por ejemplo las versiones seguras
+de {\tt head} o {\tt tail}
 
 > hHead :: HList (x ': xs) -> x
 > hHead (HCons x _) = x
@@ -145,12 +157,12 @@ Una alternativa es usar la familia cerrada:
 >   chAppend (HCons x xs) ys = HCons x (chAppend xs ys)
 
 
-Si intentemos a modo de ejemplo
+Si intentamos a modo de ejemplo
 programar una funci\'on que actualiza la $n$-\'esima entrada en
 una lista heterogenea
 (eventualmente cambiando el tipo del dato en esa posici\'on),
 estamos claramente ante una funci\'on de tipos dependientes (el tipo
-de salida depende de $n$). \'Este es el escenario donde ser\'an
+del resultado depende de $n$). \'Este es el escenario donde ser\'an
 necesarios {\tt Proxies} y/o {\tt Singletons}.
 
 < type family UpdateAtNat (n :: Nat)(x :: Type)(xs :: [Type]) :: [Type]
