@@ -4,7 +4,7 @@
 %include lhs2TeX.sty
 
 \usepackage{cite}
-\usepackage{epigraph}
+%\usepackage{epigraph}
 \usepackage{color}   
 \usepackage{hyperref}
 \usepackage[utf8]{inputenc}
@@ -365,6 +365,9 @@ intensivo de estas t\'ecnicas.
 \newpage
 \section{Reimplementaci\'on de AspectAG}
 \label{impl}
+
+A continuaci\'on presentamos algunos de los aspectos m\'as importantes
+de la implementaci\'on.
 
 %include ./src/AAG.lhs
 
