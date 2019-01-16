@@ -164,3 +164,39 @@ publicar.
 Continua abierta la cuesti\'on planteada
 en~\cite{Viera:2009:AGF:1596550.1596586} sobre la implementaci\'on de
 un sistema an\'alogo en un lenguaje de tipos dependientes.
+
+
+
+%% \label{labels}
+%% Es necesario definir m\'ultiples tipos de \emph{Etiqueta}
+%% \footnote{La biblioteca provee
+%% funciones en TemplateHaskell para ahorrarnos el trabajo}.
+%% Hay etiquetas para los s\'imbolos no terminales,
+%% para los atributos, y para nombrar a los
+%% hijos en cada producci\'on. Por ejemplo, para los atributos definimos:
+
+%% > data Att_smin; smin = Label :: Label Att_smin
+%% > data Att_ival; ival = Label :: Label Att_ival
+%% > data Att_sres; sres = Label :: Label Att_sres
+
+
+%% Las etiquetas tienen informaci\'on solo a nivel de tipos,
+%% {\tt Label} es una implementaci\'on especializada de {\tt Proxy}.
+  
+%% > data Label (l :: k) = Label
+
+%% N\'otese que en el ejemplo los tipos definidos para cada etiqueta son vac\'ios
+%% (no tienen habitantes), su \'unica funci\'on es ser usados como par\'ametro en
+%% {\tt Label}.
+
+%% En nuestra implementaci\'on todos
+%% los registros extensibles son polim\'orficos en el kind de los \'indices, al
+%% igual que los constructores de etiquetas
+%% por lo que tambi\'en ser\'ia posible definir un tipo de datos para las etiquetas
+%% y utilizar el kind promovido, de la siguiente manera:
+
+%% > data AttLabel = Att_smin | Att_ival | Att_sres
+
+%% Esto tambi\'en permite diferenciar los kinds de las etiquetas
+%% (al utilizar el kinf {\tt *}),
+%% y dar 
