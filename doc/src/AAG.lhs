@@ -1,5 +1,5 @@
 \subsection{Estructuras de Datos}
-
+\label{reimpl}
 Como se defini\'o antes,
 una atribuci\'on (\emph{attribution}) es un mapeo de nombres de atributos
 a sus valores, que representamos como un registro heterogeneo.
