@@ -1,26 +1,27 @@
-Reimplemetamos un subconjunto de la biblioteca AspectAG original utilizando
-las t\'ecnicas modernas de programaci\'on a nivel de tipos.
-Con ello hicimos fuertemente tipadas las dos capas de programaci\'on,
+En este documento mostramos las principales caracter\'istica de la
+reimplementaci\'on de un subconjunto de la biblioteca AspectAG utilizando
+t\'ecnicas modernas de programaci\'on a nivel de tipos.
+Como resultado de la reimplementaci\'on
+hicimos fuertemente tipadas las dos capas de programaci\'on,
 a diferencia de la biblioteca original, que a nivel de tipos era
 esencialmente no tipada.
 
 A modo de ejemplo, el constructor de tipos {\tt Fam} en las versiones previas de
-\emph{AspectAG} tiene \emph{kind}
+AspectAG tiene \emph{kind}
 
 > Fam :: * -> * -> *
 
-Notar que {\tt Fam Bool Char} es un tipo v\'alido 
+Notar que {\tt Fam Bool Char} es un tipo v\'alido.
 Peor a\'un, el constructor (de valores) {\tt Fam} tiene tipo
 
 > Fam :: c -> p -> Fam c p
 
-por lo que el tipo patol\'ogico {Fam Bool Char} est\'a habitado.
-
-En la nueva implementaci\'on {\tt Fam} tiene \emph{kind}
+por lo que el tipo patol\'ogico {\tt Fam Bool Char} est\'a habitado.
+En la nueva implementaci\'on {\tt Fam} tiene \emph{kind}:
 
 > Fam :: [(k', [(k, Type)])] -> [(k, Type)] -> Type
 
-Y el tipo del constructor {\tt Fam} est\'a dado por
+Y el tipo del constructor {\tt Fam} est\'a dado por:
 
 > Fam :: forall k' k (c :: [(k', [(k, Type)])]) (p :: [(k, Type)]).
 >        ChAttsRec c -> Attribution p -> Fam c p
@@ -33,7 +34,8 @@ de tipos verdaderamente dependientes): en ninguna parte se declara
 que las listas de pares son en realidad mapeos donde las primeras
 componentes (las etiquetas) no se repiten.
 Sin embargo esto est\'a garantizado porque los constructores de
-{\tt Attribution} y {\tt ChAttsRec} tienen restricciones.
+{\tt Attribution} y {\tt ChAttsRec} tienen restricciones
+(la constraint {\tt LabelSet}).
 
 Notar por ejemplo el constructor {\tt ConsAtt}:
 
@@ -55,7 +57,8 @@ necesario.}
 
 La implementaci\'on de estructuras especializadas provee nombres mnem\'onicos
 para las estructuras, comparemos el tipo de {\tt asp\_sres}
-en la implementaci\'on antig\"ua, y en la nueva:
+(definido en la secci\'on \ref{aspsres})
+en la implementaci\'on antigua, y en la nueva:
 
 > asp_sres
 >   :: (HExtend (Att (Proxy Att_sres) val) sp1 sp'1,
@@ -91,12 +94,13 @@ en la implementaci\'on antig\"ua, y en la nueva:
 >     '(P_Leaf, Fam c r3 -> Fam ic3 sp3 -> Fam ic3 ('(Att_sres, Tree) : sp3))]
 
 Por otra parte, los mensajes de error han sido mejorados. Por ejemplo,
-consideramos en el ejemplo {\tt repmin} [REF] que omitimos en la definici\'on
+supongamos que en el ejemplo {\tt repmin} (secci\'on \ref{repmin})
+qomitimos en la definici\'on
 de {\tt asp\_smin} la regla {\tt p\_Node .=. node\_smin}.
 La gram\'atica estar\'a mal formada y la funci\'on
-{\tt repmin}, o {\tt getmin} no compilar\'an.
+{\tt repmin}, no compilar\'a.
 
-En las versiones antig\"uas obtenemos el cr\'iptico error:
+En las versiones antig\"uas obtenemos el siguiente error cr\'iptico:
 
 >   . No instance for
 > (HasField (Proxy P_Node) HNil
@@ -125,8 +129,9 @@ En la reimplementaci\'on:
 
 
 Adem\'as de tipar fuertemente, sustituimos parte de la programaci\'on
-a nivel de tipos al estilo l\'ogico utilizado con las t\'ecnicas antig\"uas
-por un estilo funcional gracias a las type families, m\'as idiom\'atico
+a nivel de tipos al estilo fuertemente basado en resoluci\'on de typeclasses
+utilizado con las t\'ecnicas antiguas
+por un estilo funcional gracias al uso de type families, m\'as idiom\'atico
 para una biblioteca implementada en Haskell.
 Por ejemplo, en las distintas versiones de la biblioteca original
 la funci\'on {\tt empties} viene dada por una relaci\'on entre tipos
@@ -140,17 +145,17 @@ es expl\'icitamente una funci\'on a nivel de tipos de kind
 
 > EmptiesR :: [(k, *)] -> [(k, [(k, *)])]
 
-Y {\tt empties} una funci\'on a nivel de valores, de tipo
+y {\tt empties} una funci\'on a nivel de valores, de tipo
 
 > empties :: Record fc -> ChAttsRec (EmptiesR fc)
 
 
-\'Esta cuesti\'on era planteada
+Esta cuesti\'on era planteada
 como trabajo futuro en la publicaci\'on
-original~\cite{Viera:2009:AGF:1596550.1596586} de la biblioteca.
-A\'un puede ser mejorado en ciertas porciones de c\'odigo.
+original de la biblioteca~\cite{Viera:2009:AGF:1596550.1596586}.
 
-Adem\'as de las caracter\'isticas que tiene el sistema, se provee una
+
+Adem\'as de se provee una
 demostraci\'on del uso de la programaci\'on a nivel de tipos en Haskell
 enriquecido por el conjunto de extensiones que implementa el compilador GHC.
 

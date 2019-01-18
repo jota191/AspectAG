@@ -87,6 +87,7 @@ computaciones circulares.
 
 
 \subsection{Ejemplo: {\tt repmin}}
+\label{repmin}
 
 Como ejemplo consideramos la cl\'asica funci\'on
 {\tt repmin}~\cite{birdRepmin} que dado un \'arbol contenedor de enteros
@@ -350,6 +351,7 @@ Los aspectos se definen como un registro con las reglas para
 cada producci\'on (aqu\'i es donde efectivamente asociamos a qu\'e
 producci\'on se asocia cada regla).
 
+\label{aspsres}
 
 > asp_ival =  p_Root .=. root_ival
 >         .*. p_Node .=. node_ival
