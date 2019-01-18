@@ -367,11 +367,11 @@ intensivo de estas t\'ecnicas.
 \label{impl}
 
 A continuaci\'on presentamos algunos de los aspectos m\'as importantes
-de la implementaci\'on.
+de la implementaci\'on de la biblioteca.
 
 %include ./src/AAG.lhs
 
-
+\newpage
 \section{Conclusi\'on}
 %include ./src/Conc.lhs
 
