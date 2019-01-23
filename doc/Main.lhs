@@ -25,10 +25,15 @@
 \geometry{margin=1in}
 \usepackage{graphicx}
 
+\date{}
+\renewcommand{\contentsname}{\'Indice}
+
+
+
 \begin{document}
 
 \maketitle
-\date
+
 
 \newpage
 \tableofcontents{}
@@ -39,16 +44,16 @@
 \section{Introducci\'on}
 
 AspectAG~\cite{Viera:2009:AGF:1596550.1596586}
-es un EDSL (lenguaje de dominio espec\'ifico, embebido)
+es un lenguaje de dominio espec\'ifico embebido (EDSL)
 desarrollado en Haskell que permite
-la construcción modular de Gram\'aticas de Atributos. En AspectAG,
+la construcción modular de Gram\'aticas de Atributos. En AspectAG
 los fragmentos de una Gram\'atica de Atributos son definidos en forma
 independiente y luego combinados a trav\'es del uso de operadores de
 composici\'on que el propio EDSL provee. AspectAG se basa fuertemente en el
 uso de registros extensibles, los cuales son implementados en t\'erminos
-de HList~\cite{Kiselyov:2004:STH:1017472.1017488},
-una biblioteca de Haskell para la manipulaci\'on
-de listas heterog\'eneas de forma fuertemente tipada.
+de HList\cite{Kiselyov:2004:STH:1017472.1017488},
+una biblioteca de Haskell que implementa la manipulaci\'on
+de colecciones heterog\'eneas de forma fuertemente tipada.
 HList est\'a implementada utilizando t\'ecnicas de programaci\'on a nivel
 de tipos (los tipos son usados para representar valores
 a nivel de tipos y las clases de tipos son usadas para representar
@@ -60,11 +65,11 @@ la programaci\'on a nivel de tipos en Haskell ha tenido una evoluci\'on
 importante, habi\'endose incorporado nuevas extensiones como
 \emph{data promotion} o polimorfismo de kinds, entre otras,
 las cuales constituyen elementos fundamentales debido
-a que permiten programar de forma ``fuertemente tipado'' a nivel de
+a que permiten programar de forma ``fuertemente tipada'' a nivel de
 tipos de la misma forma que cuando se programa a nivel de
 valores (algo que originalmente era imposible
-o muy dif\'icil de lograr). El uso de estas extensiones da
-como resultado una programaci\'on a nivel de tipos m\'as robusta y segura.
+o muy dif\'icil de lograr). El uso de estas extensiones permite
+una programaci\'on a nivel de tipos m\'as robusta y segura.
 Sobre la base de estas extensiones, implementamos un subconjunto
 de la biblioteca original.
 
@@ -95,7 +100,7 @@ disponible en
 
 \url{http://https://gitlab.fing.edu.uy/jpgarcia/AspectAG/}.
 
-En la secci\'on de tests se implementan ejemplos de utilizaci\'on de
+En el directorio {\tt /test} se implementan ejemplos de utilizaci\'on de
 la biblioteca.
 
 \newpage
@@ -127,9 +132,7 @@ se han implementado m\'ultiples extensiones
 en el compilador GHC que proveen herramientas para hacer la programaci\'on
 a nivel de tipos m\'as expresiva. Las familias de tipos implementadas
 en la extensi\'on
-{\tt TypeFamilies}~\cite{Chakravarty:2005:ATC:1047659.1040306}
-~\cite{Chakravarty:2005:ATS:1090189.1086397}
-~\cite{Sulzmann:2007:SFT:1190315.1190324}
+{\tt TypeFamilies}\cite{Chakravarty:2005:ATC:1047659.1040306, Chakravarty:2005:ATS:1090189.1086397, Sulzmann:2007:SFT:1190315.1190324}
 nos permiten definir funciones a nivel
 de tipos de una forma m\'as idiom\'atica que el estilo l\'ogico de la
 programaci\'on orientada a relaciones por medio de clases y dependencias
@@ -150,7 +153,7 @@ habilita el uso de operadores como constructores de tipos.
 El m\'odulo {\tt Data.Kind} exporta la notaci\'on {\tt Type} para
 el kind {\tt *}. Esto fu\'e implementado originalmente con la extensi\'on
 {\tt TypeInType}, que en las \'ultimas versiones del compilador es
-equivalente a {\tt PolyKinds + DataKinds + KindSignatures}
+equivalente a {\tt PolyKinds + DataKinds + KindSignatures}.
 
 
 \subsection{Programando con tipos dependientes en Haskell}
@@ -171,7 +174,7 @@ Luego es posible declarar, por ejemplo ({\tt GADTs}, {\tt KindSignatures})
 >   VZ :: Vec Zero a
 >   VS :: a -> Vec n a -> Vec (Succ n) a
 
-y funciones seguras como
+y funciones seguras como:
 
 > vTail :: Vec (Succ n) a -> Vec n a
 > vTail (VS _ as) = as
@@ -181,7 +184,8 @@ y funciones seguras como
 > vZipWith f (VS x xs) (VS y ys)
 >   = VS (f x y)(vZipWith f xs ys)
 
-o incluso
+\newpage
+o incluso:
 
 
 > vAppend :: Vec n a -> Vec m a -> Vec (n + m) a
@@ -196,7 +200,7 @@ Es posible definir funciones puramene a nivel de tipos mediante familias
 > type instance Zero + n = n
 > type instance Succ m  + n = Succ (m + n) 
 
-o mediante la notaci\'on alternativa, cerrada
+o mediante la notaci\'on alternativa, cerrada:
 
 > type family (m :: Nat) + (n :: Nat) :: Nat where
 >   (+) Zero     a = a
@@ -233,7 +237,7 @@ se utilizan evidencias de las ecuaciones utilizando
 (\emph{Propositional Types})~\cite{Lindley:2013:HPP:2578854.2503786}. 
 
 En el sistema de tipos de Haskell, sin embargo la igualdad de tipos
-es puramente sint\'actica.
+es puramente sint\'actica. Los tipos \break
 {\tt Vec (n + S (S Z)) a} y {\tt Vec (S (S n)) a} {\bf no} son el mismo
 tipo, y no poseen los mismos habitantes.
 La definici\'on de una familia de tipos axiomatiza {\tt (+)} para la igualdad
@@ -267,6 +271,8 @@ sin la informaci\'on de que {\tt (+)} es una funci\'on inyectiva, lo cual
 el verificador es incapaz de deducir.
 
 
+\newpage
+
 \subsection{Singletons y Proxies}
 \label{sec:sings}
 
@@ -282,8 +288,8 @@ podemos escribir m\'as expl\'icitamente como
 
 necesitamos hacer
 referencia expl\'icita a {\tt m} para decidir donde cortar el vector.
-Como en Haskell el cuantificador $\forall$ solo habla
-de objetos est\'aticos (los lenguajes de tipos y t\'erminos est\'an
+Como en Haskell el cuantificador universal solo se refiere
+a objetos est\'aticos (los lenguajes de tipos y t\'erminos est\'an
 separados), esto no es posible directamente.
 Un tipo \emph{singleton}\cite{Eisenberg:2012:DTP:2430532.2364522}
 en el contexto de Haskell, es un {\tt GADT}
@@ -297,7 +303,9 @@ Existe por cada tipo {\tt n} de kind {\tt Nat}, un \'unico
 \footnote{Formalmente esto no es cierto, si consideramos las posibles
 ocurrecias de $\bot$, la unicidad es cierta
 para t\'erminos totalmente definidos}
-t\'ermino de tipo {\tt SNat n}.
+t\'ermino de tipo {\tt SNat n}. Sobre estos t\'erminos podemos
+hacer \emph{pattern matching}, e impl\'icitamente decidimos seg\'un
+la informaci\'on del tipo.
 
 Estamos en condiciones de implementar {\tt vChop}:
 
@@ -307,8 +315,9 @@ Estamos en condiciones de implementar {\tt vChop}:
 >                          in (VS x ys, zs)
 
 
-Existe una biblioteca que implementa la generaci\'on autom\'atica
-de instancias y otras utilidades\cite{libsingleton}. 
+La biblioteca {\tt singleton}\cite{libsingleton}
+provee la generaci\'on autom\'atica
+de instancias de tipos singleton y otras utilidades.
 
 
 \subsubsection{Proxies}
@@ -320,10 +329,12 @@ cuantos elementos extraer, pero una funci\'on de tipo
 
 > vTake :: SNat m -> Vec (m + n) x -> Vec m x
 
-no ser\'a implementable. Necesitamos informaci\'on tambi\'en
-de {\tt n}, pero de hecho no es necesaria una representaci\'on de {\tt n}
-en tiempo de ejecuci\'on. {\tt n} es est\'atico pero estamos obligados a
-que sea un testigo expl\'icito para asistir al verificador de tipos que es
+no ser\'a implementable. Es necesaria la informaci\'on tambi\'en
+de {\tt n} en tienpo de compilaci\'on,
+pero no as\'i una representaci\'on de {\tt n}
+en tiempo de ejecuci\'on. El natural
+{\tt n} es est\'atico pero estamos obligados a proveer
+un valor testigo expl\'icito para asistir al verificador de tipos que es
 incapaz de deducir la inyectividad de la suma.
 
 Consideramos la definici\'on:
