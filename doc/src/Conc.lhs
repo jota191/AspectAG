@@ -161,14 +161,24 @@ enriquecido por el conjunto de extensiones que implementa el compilador GHC.
 
 
 \section{Trabajo Futuro}
-En este proyecto, se reimplement\'o un subconjunto de la biblioteca
-original; es natural fijarnos como objetivo a futuro, tener una versi\'on
-completa de la biblioteca implementada con las t\'ecnicas modernas para
-publicar.
 
-Continua abierta la cuesti\'on planteada
+En este proyecto, se reimplement\'o un subconjunto de la biblioteca
+original; es natural fijarnos como objetivo a futuro tener una versi\'on
+completa de la biblioteca implementada para publicar.
+Entre las caracter\'isticas faltantes se encuentra
+la derivaci\'on autom\'atica de las funciones sem\'anticas,
+y la implementaci\'on de algunas primitivas que permiten
+definir atributos en un mayor nivel de abstracci\'on.
+
+En la nueva implementaci\'on fuertemente tipada surgen tambi\'en nuevas
+caracter\'isticas deseables, como un mejor manejo de
+los registros heterogeneos (evitar las m\'ultiples
+implementaciones an\'alogas entre s\'i), o explorar la posibilidad
+de utilizar distintos kinds para las distintas categor\'ias de etiqueta.
+
+Contin\'ua abierto el tema planteado
 en~\cite{Viera:2009:AGF:1596550.1596586} sobre la implementaci\'on de
-un sistema an\'alogo en un lenguaje de tipos dependientes.
+un sistema an\'alogo a AspectAG en un lenguaje de tipos dependientes.
 
 
 

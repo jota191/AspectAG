@@ -44,7 +44,8 @@ de sintaxis abstracta de un lenguaje de programaci\'on complejo),
 surgen ciertas dificultades~\cite{Dijkstra:2009:AUH:1596638.1596650}.
 Por ejemplo ante un cambio en la estructura
 es necesario hacer cambios en la implementaci\'on del catamorfismo
-y de todas las \'algebras.
+y de todas las \'algebras. Las AGs permiten definir las \'algebras
+de forma modular.
 
 M\'as en general la programaci\'on mediante gram\'aticas de atributos
 significa una soluci\'on a un
@@ -52,6 +53,9 @@ conocido t\'opico de discusi\'on en la comunidad
 llamado ``El problema de la expresi\'on''
 (``The expression problem'', t\'ermino acu\~nado por
 P. Wadler~\cite{ExpressionProblem}).
+%% \footnote{
+%% ``The expression problem is a new name for an old problem.The goal is to define a datatype by cases, where one can add new cases to the datatype and new functions over the datatype, without recompiling existing code, and while retaining static type safety (e.g., no casts).'' P. Wadler.
+%% }
 Cuando el software se construye de forma incremental es deseable que sea
 sencillo introducir nuevos tipos de datos
 o enriquecer los existentes con nuevos constructores,
@@ -67,7 +71,7 @@ y por tanto recompilar)
 es agregar un m\'etodo en una estructura de clases amplia,
 o cuantas funciones hay que modificar en los lenguajes funcionales
 si en un tipo algebraico se agrega un constructor (y nuevamente,
-cu\'antos m\'odulos se deben recompilar).
+cu\'antos m\'odulos potencialmente se requieren recompilar).
 
 La \emph{Programaci\'on orientada a aspectos} mediante
 gram\'aticas de atributos es una propuesta de soluci\'on a este
@@ -153,7 +157,7 @@ siguiente manera:
 \includegraphics[width=8cm]{./src/img/ag-repmin.png}
 \end{center}
 
-Utilizamos la sintaxis de Utrecht[TODO:REF]
+Utilizamos la sintaxis de Utrecht\cite{libuuagc}.
 Las palabras clave {\tt DATA} introducen tipos de datos,
 el ejemplo traducido a haskell corresponde a:
 
@@ -165,8 +169,8 @@ el ejemplo traducido a haskell corresponde a:
 
 En lugar de utilizar el tipo {\tt Tree}
 tanto para nodos internos como para la ra\'iz, como es usual,
-utilizamos el tipo de datos {\tt Root} para `marcar` la ra\'iz del \'arbol
-\'Esto es \'util para
+utilizamos el tipo de datos {\tt Root} para ``marcar'' la ra\'iz del \'arbol.
+Esto es \'util para
 tener un s\'imbolo de inicio expl\'icito de la gram\'atica, que a nivel
 operacional nos va a permitir saber cuando encadenar atributos
 sintetizados con heredados.
@@ -179,7 +183,9 @@ La palabra clave {\tt SYN} introduce un atributo sintetizado.
 {\tt smin} y {\tt sres} son atributos sintetizados de tipo
 {\tt Int} y {\tt Tree} respectivamente.
 La sem\'antica de cada uno se define mediante de la sentencia
-{\tt SEM}. {\tt smin} representa en el
+{\tt SEM}.
+
+El atributo {\tt smin} representa el
 m\'inimo valor de las hojas contenidas en el sub\'arbol correspondiente,
 comput\'andose en las hojas como el valor que ellas contienen
 (que, formalmente puede considerarse un nuevo atributo, impl\'icito),
@@ -188,7 +194,7 @@ mismo atributo {\tt smin} en los sub\'arboles.
 
 El atributo {\tt sres} vale un \'arbol con la misma forma
 que el sub\'arbol original pero con el m\'inimo global en cada hoja.
-En la ra\'iz se copia el sub\'arbol, y en cada nodo iterno se construye
+En la ra\'iz se copia el sub\'arbol, y en cada nodo interno se construye
 un nodo con los sub\'arboles que contiene el atributo {\tt sres}
 en los sub\'arboles. En las hojas se calcula en funci\'on del
 atributo heredado {\tt ival}.
