@@ -178,15 +178,15 @@ instance Defs att nts '[] ic where
 
 instance ( Defs att nts vs ic
          , ic' ~ DefsR att nts vs ic
-         , HMember t nts
-         , HMemberRes t nts ~ mnts
+         , HMember' t nts
+         , HMemberRes' t nts ~ mnts
          , HasLabelChildAttsRes (lch,t) ic' ~ mch
          , HasLabelChildAtts (lch,t) ic'
          , SingleDef mch mnts att (Tagged (lch,t) vch) ic') => 
   Defs att nts ( '((lch,t), vch) ': vs) ic where
   type DefsR att nts ( '((lch,t), vch) ': vs) ic
     = SingleDefR (HasLabelChildAttsRes (lch,t) (DefsR att nts vs ic))
-                 (HMemberRes t nts)
+                 (HMemberRes' t nts)
                  att
                  (Tagged (lch,t) vch)
                  (DefsR att nts vs ic)
@@ -194,7 +194,7 @@ instance ( Defs att nts vs ic
       where ic'  = defs att nts vs ic
             lch  = labelLVPair pch
             mch  = hasLabelChildAtts lch ic'
-            mnts = hMember (sndLabel lch) nts
+            mnts = hMember' (sndLabel lch) nts
 
 -- * Aspects: Aspects are record that have a rule for each production:
 

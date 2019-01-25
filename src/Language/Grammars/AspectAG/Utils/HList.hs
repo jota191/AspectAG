@@ -53,6 +53,20 @@ instance HMember t (t' ': ts) where
   type HMemberRes t (t' ': ts) = Or (t == t') (HMemberRes t ts)
   hMember _ _ = Proxy
 
+-- | HMember' is a test membership function.
+-- But looking up in a list of Labels
+class HMember' (t :: Type) (l :: [Type]) where
+  type HMemberRes' t l :: Bool
+  hMember' :: Label t -> HList l -> Proxy (HMemberRes' t l)
+
+instance HMember' t '[] where
+  type HMemberRes' t '[] = 'False
+  hMember' _ _ = Proxy
+
+instance HMember' t (t' ': ts) where
+  type HMemberRes' t (t' ': ts) = Or ((Label t) == t') (HMemberRes' t ts)
+  hMember' _ _ = Proxy
+
 
 -- | No other functionality is needed for AAG
 
