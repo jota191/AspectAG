@@ -42,7 +42,7 @@ module Language.Grammars.AspectAG (
               module Language.Grammars.AspectAG.Utils.Record,
               module Language.Grammars.AspectAG.Utils.TagUtils,
               module Language.Grammars.AspectAG.Utils.HList,
-             -- module Language.Grammars.AspectAG.Utils.Notation
+              module Language.Grammars.AspectAG.Utils.Notation,
               module Language.Grammars.AspectAG.Utils.GenRecord
             ) where
 
@@ -57,7 +57,7 @@ import Language.Grammars.AspectAG.Utils.TPrelude
 import Data.Proxy
 import Language.Grammars.AspectAG.Utils.ChildAtts
 import Language.Grammars.AspectAG.Utils.TagUtils
---import Language.Grammars.AspectAG.Utils.Notation
+import Language.Grammars.AspectAG.Utils.Notation
 import Language.Grammars.AspectAG.Utils.GenRecord
 import GHC.TypeLits
 
@@ -278,6 +278,25 @@ instance ( Com (ComSingleR (HasLabelRecRes prd r) prd rule r)  r'
 
 
 
+-- | The function 'knit' takes the combined rules for a node and the 
+--   semantic functions of the children, and builds a
+--   function from the inherited attributes of the parent to its
+--   synthesized attributes.
+knit :: ( Empties fc
+        , Kn fc ) =>
+  Rule (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp
+     -> Record fc -> Attribution ip -> Attribution sp
+knit rule fc ip
+  = let ec          = empties fc
+        (Fam ic sp) = rule (Fam sc ip) (Fam ec emptyAtt)
+        sc          = kn fc ic
+    in  sp
+
+
+
+
+
+
 ------------------------------------------------------------------------------
 
 
@@ -327,19 +346,4 @@ instance ( Kn fc
          fch = unTagged pfch
          ich = unTaggedChAttr pich
      in ConsR (TaggedChAttr lch (fch ich)) scr
-
-
--- | The function 'knit' takes the combined rules for a node and the 
---   semantic functions of the children, and builds a
---   function from the inherited attributes of the parent to its
---   synthesized attributes.
-knit :: ( Empties fc
-        , Kn fc ) =>
-  Rule (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp
-     -> Record fc -> Attribution ip -> Attribution sp
-knit rule fc ip
-  = let ec          = empties fc
-        (Fam ic sp) = rule (Fam sc ip) (Fam ec emptyAtt)
-        sc          = kn fc ic
-    in  sp
 

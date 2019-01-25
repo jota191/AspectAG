@@ -85,4 +85,4 @@ infixl #
 
 data Lbl = L1 | L2
 
-r1 = (Label :: Label L1) .=. True .*. emptyRecord
+-- r1 = (Label :: Label L1) .=. True .*. emptyRecord
