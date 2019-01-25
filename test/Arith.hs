@@ -44,7 +44,7 @@ data P_Inc; p_Inc = Label :: Label P_Inc
 data P_Var; p_Var = Label :: Label P_Var 
 data P_Let; p_Let = Label :: Label P_Let
 
-nt_Exp = undefined :: Exp
+nt_Exp = undefined :: Label Exp
 
 
 

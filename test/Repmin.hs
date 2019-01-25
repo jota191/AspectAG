@@ -44,8 +44,8 @@ leafVal = Label :: Label ( Val, Int)
 
 
 ----non terminals
-nt_Root = undefined :: Root
-nt_Tree = undefined :: Tree
+nt_Root = undefined :: Label Root
+nt_Tree = undefined :: Label Tree
 
 data P_Root; p_Root = Label :: Label (P_Root)
 data P_Node; p_Node = Label :: Label (P_Node)
