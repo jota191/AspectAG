@@ -28,8 +28,8 @@ declareLabel ndata nlabel t = do
 
 declareFnLabel ::  Name -> TypeQ -> Q [Dec]
 declareFnLabel nlabel t = 
-             do sgn <- sigD nlabel (appT (conT $ mkName "Proxy") t)  
-                let pxy = normalB [| proxy |]
+             do sgn <- sigD nlabel (appT (conT $ mkName "Label") t)  
+                let pxy = normalB [| Label |]
                 lbl <- funD nlabel [clause [] pxy []]
                 return [sgn,lbl]
 
@@ -123,7 +123,7 @@ deriveCons ((stn,decl),fc) c =
       let (cht,chn,cn) = getCtx c
       (stn',decl') <- foldM (\td t -> deriveList (typeNames t) td) (stn,decl) cht
       conargs <- newNames cht
-      body <- [| knit ($(aspV) # $(attVar cn)) $(childs cht chn conargs) |]
+      body <- [| knit ($(aspV) .#. $(attVar cn)) $(childs cht chn conargs) |]
       bodyP <- [| knit $(aspV) $(childsP chn conargs) |] 
       let semF = Clause (pat cn conargs) (NormalB body) []
       let semFCons = FunD (semPName cn) 
@@ -177,8 +177,8 @@ chFun tn n =
              i <- reify (tn)
              if isNT i
               then [| $(varE (semName tn)) $(aspV) $(varE n) |]
-              else [| ( \(EmptyR) -> $(varE n) ) |]
-      
+              -- else [| ( \(EmptyR) -> $(varE n) ) |]
+              else [| ( sem_Lit $(varE n)  ) |]
 
 
 
