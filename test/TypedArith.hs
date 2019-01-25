@@ -169,7 +169,7 @@ asp_sval
   .*. p_IsZ  .=. isZ_sval
   .*. emptyRecord 
 
-eval e = sem_Expr asp_sval e EmptyAtt # sval
+eval e = sem_Expr asp_sval e emptyAtt # sval
 
 
 -- | expressions for testing
