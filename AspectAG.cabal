@@ -61,7 +61,7 @@ library
                        Language.Grammars.AspectAG.Utils.HList,
                        Language.Grammars.AspectAG.Utils.InternalTest,
                        Language.Grammars.AspectAG.Utils.Attribute,
---                       Language.Grammars.AspectAG.Utils.Notation,
+                       Language.Grammars.AspectAG.Utils.Notation,
                        Language.Grammars.AspectAG.Utils.ChildAtts,
                        Language.Grammars.AspectAG.Utils.Record,
                        Language.Grammars.AspectAG.Utils.TagUtils,
@@ -109,7 +109,7 @@ Test-Suite test-Repmin
     main-is:          test/Repmin.hs
     build-depends:    base >=4.11 && <4.12,
                       tagged >=0.8 && <0.9,
-  --                  AspectAG >= 0.4,
+                      AspectAG >= 0.4,
                       QuickCheck
     default-language: Haskell2010
 
@@ -119,7 +119,7 @@ Test-Suite test-Arith
     build-depends:    base >=4.11 && <4.12,
                       containers >= 0.5,
                       tagged >=0.8 && <0.9,
-  --                  AspectAG >= 0.4,
+                      AspectAG >= 0.4,
                       QuickCheck
     default-language: Haskell2010
 
@@ -128,7 +128,7 @@ Test-Suite test-Graphs
     main-is:          test/Graphs.hs
     build-depends:    base >=4.11 && <4.12,
                       tagged >=0.8 && <0.9,
-  --                  AspectAG >= 0.4,
+                      AspectAG >= 0.4,
                       containers >= 0.5,
                       QuickCheck
     default-language: Haskell2010
