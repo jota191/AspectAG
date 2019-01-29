@@ -28,7 +28,7 @@ license:             LGPL-3
 license-file:        LICENSE
 
 -- The package author(s).
-author:              Juan García Garland
+author:              Juan García Garland, Marcos Viera
 
 -- An email address to which users can send suggestions, bug reports, and
 -- patches.
@@ -67,7 +67,7 @@ library
                        Language.Grammars.AspectAG.Utils.TagUtils,
                        Language.Grammars.AspectAG.Utils.Attribution,
                        Language.Grammars.AspectAG.Utils.TPrelude
-
+                       Language.Grammars.AspectAG.Derive
   -- Modules included in this library but not exported.
   -- other-modules:
                        Language.Grammars.AspectAG.Utils.GenRecord
@@ -96,7 +96,11 @@ library
                        InstanceSigs
 
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.11 && <4.12, tagged >=0.8 && <0.9
+  build-depends:       base >=4.11 && <4.12,
+                       tagged >=0.8 && <0.9,
+                       containers >= 0.5,
+                       template-haskell >= 2.13,
+                       th-strict-compat >= 0.1
 
   -- Directories containing source files.
   hs-source-dirs:      src, test
@@ -113,6 +117,15 @@ Test-Suite test-Repmin
                       QuickCheck
     default-language: Haskell2010
 
+Test-Suite test-Repmin-TH
+    type:             exitcode-stdio-1.0
+    main-is:          test/RepminTH.hs
+    build-depends:    base >=4.11 && <4.12,
+                      tagged >=0.8 && <0.9,
+                      AspectAG >= 0.4,
+                      QuickCheck
+    default-language: Haskell2010
+    
 Test-Suite test-Arith
     type:             exitcode-stdio-1.0
     main-is:          test/Arith.hs
