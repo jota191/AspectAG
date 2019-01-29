@@ -74,7 +74,7 @@ instance (HasFieldAtt l r v)
   => RecLookup l r Label Attribution v where
   (#) = (#.)
 
-instance (HasChild l r v)
+instance (HasChildF l r, LookupByChildFR l r ~ v)
   => RecLookup l r Label ChAttsRec (Attribution v) where
   (#) = (.#)
 

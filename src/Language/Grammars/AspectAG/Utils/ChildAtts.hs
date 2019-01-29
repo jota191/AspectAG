@@ -36,6 +36,7 @@ import Language.Grammars.AspectAG.Utils.TPrelude
 import Language.Grammars.AspectAG.Utils.TagUtils
 import Language.Grammars.AspectAG.Utils.Attribution
 import Language.Grammars.AspectAG.Utils.GenRecord
+import GHC.TypeLits
 
 -- | * Constructors
 
@@ -130,11 +131,24 @@ instance (HasChildF l r) =>
   type LookupByChildFR' 'False l ( '(l1,v) ': r) = LookupByChildFR l r
   lookupByChildF' _ l (ConsR _ r) = lookupByChildF l r
 
+-- | TypeError
+
+instance TypeError ( Text "Type Error : No Child Found on Production:" :$$:
+    Text "(Possibly, in some production there is a reference to a child " :<>:
+    Text "that does not exist, or the attribute is not defined there)" :$$:
+    Text "No Child of type " :<>: ShowType l
+    :<>: Text " on Attribution" )
+  => HasChildF l '[] where
+   type LookupByChildFR l '[] = TypeError (Text "Look at the previous error")
+   lookupByChildF = undefined
+
+
 
 -- | Pretty lookup
 infixl 3 .#
-(.#)  :: (HasChild l r v) => ChAttsRec r -> Label l ->  Attribution v
-c .# l = lookupByChild l c
+(.#)  :: (HasChildF l r, LookupByChildFR l r ~ v) =>
+         ChAttsRec r -> Label l ->  Attribution v
+c .# l = lookupByChildF l c
 
 -- |* Update
 
