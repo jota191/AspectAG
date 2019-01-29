@@ -5,6 +5,7 @@ module Language.Grammars.AspectAG.Derive (deriveAG, extendAG, deriveLang, addNT,
 
 import Language.Haskell.TH
 
+import Data.List
 import Data.Set (Set)
 import Data.List (isPrefixOf, isSuffixOf, sort)
 import qualified Data.Set as S
@@ -236,12 +237,16 @@ fst' :: (a, b, c) -> a
 fst' (a, _, _) = a
 
 
-
+-- | isNT decides if a Type is a Terminal. Types defined by the programmer
+-- starting with "T_" are considered terminals
 isNT ::  Info -> Bool
 isNT (PrimTyConI _ _ _)          =  False
-isNT (TyConI (DataD _ n _ _ _ _))  =  not $ isPrefixOf "GHC" (show n)         -- GHC types can't be non-terminals
-isNT (TyConI (TySynD n _ _))     =  (not $ isPrefixOf "GHC" (show n)) &&    -- GHC types can't be non-terminals
-                                    (not $ isPrefixOf "GHC" (nameBase n))   -- type synonyms starting with GHC to escape (example: GHC_MyType)
+isNT (TyConI (DataD _ n _ _ _ _))  =  not (isPrefixOf "GHC" (show n)
+                                           || (isSubsequenceOf "T_" (show n)))       -- GHC types can't be non-terminals
+isNT (TyConI (TySynD n _ _))     =  ((not (isPrefixOf "GHC" (show n))) &&    -- GHC types can't be non-terminals
+                                    (not (isPrefixOf "GHC" (nameBase n))))   -- type synonyms starting with GHC to escape (example: GHC_MyType)
+                                 
+-- otherwise theew is a terminal
 isNT  _                          =  True
 
 
