@@ -1,10 +1,17 @@
 {-# LANGUAGE FlexibleContexts,
-  DataKinds, GADTs, TypeFamilies, NoMonomorphismRestriction #-}
+             FlexibleInstances,
+             DataKinds,
+             GADTs,
+             TypeFamilies,
+             NoMonomorphismRestriction,
+             TypeApplications #-}
+
 module TypedArith where
 
 import Language.Grammars.AspectAG
 import Data.Maybe
 import Control.Monad.Except
+import Data.Typeable
 
 type Name = String
 
@@ -44,25 +51,35 @@ data Ch_Let_E;  ch_Let_E  = Label :: Label (Ch_Let_E,  Expr)
 data Ch_Let_B;  ch_Let_B  = Label :: Label (Ch_Let_B,  Expr)
 
 -- | Labels for terminals
-data BVal; bval = Label :: Label (BVal, Bool)
-data NVal; nval = Label :: Label (NVal, Int)
-data VVal; vval = Label :: Label (VVal, Name)
+--data BVal; bval = Label :: Label (Bool, Bool)
+--data NVal; nval = Label :: Label (Int, Int)
+--data VVal; vval = Label :: Label (Name, Name)
 
 
+class SemLit a where
+  sem_Lit :: a -> Attribution p -> Attribution '[ '((a, a), a)]
+  lit     :: Label (a,a) 
+
+-- instance SemLit Int where
+--   sem_Lit = sem_Nat
+
+instance SemLit a where
+  sem_Lit a _ = (Label =. a) *. emptyAtt
+  lit         = Label
 
 -- | semantic functions
-sem_Nat :: Int -> Attribution p -> Attribution '[ '((NVal, Int), Int) ]
-sem_Nat  n _ = (nval =. n) *. emptyAtt
-sem_Bool :: Bool -> Attribution p -> Attribution '[ '((BVal, Bool), Bool) ]
-sem_Bool b _ = (bval =. b) *. emptyAtt
-sem_Var :: Name -> Attribution p -> Attribution '[ '((VVal, Name), Name) ]
-sem_Var nam _ = (vval =. nam) *. emptyAtt
+-- sem_Nat :: Int -> Attribution p -> Attribution '[ '((Int, Int), Int) ]
+-- sem_Nat  n _ = (nval =. n) *. emptyAtt
+-- sem_Bool :: Bool -> Attribution p -> Attribution '[ '((Bool, Bool), Bool) ]
+-- sem_Bool b _ = (bval =. b) *. emptyAtt
+-- sem_Var :: Name -> Attribution p -> Attribution '[ '((Name, Name), Name) ]
+-- sem_Var nam _ = (vval =. nam) *. emptyAtt
 
 sem_Expr asp (N n)
-  = knit (asp .#. p_N) $ (ch_N .=. sem_Nat n) .*. emptyRecord
+  = knit (asp .#. p_N) $ (ch_N .=. sem_Lit n) .*. emptyRecord
                   ---- TODO: no esta haciendo nada, testear
 sem_Expr asp (B b)
-  = knit (asp .#. p_B) $ (ch_B .=. sem_Bool b) .*. emptyRecord
+  = knit (asp .#. p_B) $ (ch_B .=. sem_Lit b) .*. emptyRecord
 
 sem_Expr asp (Add l r)
   = knit (asp .#. p_Add) $  ch_Add_L .=. sem_Expr asp l
@@ -143,17 +160,16 @@ typeCheck e = sem_Expr asp_stype e emptyAtt # stype
 -- | An attribute for the evaluation of an expression, the returned
 -- value is an integer, regardless what type the expression has.
 -- This models in some sense a low level representation of values,
--- then piecen together type information and evaluation the
--- proper interpretation is computed
+
 data Att_sval; sval = Label :: Label Att_sval
 
 b_sval (Fam c p)
-  = syndef sval $ b2Int $ c # ch_B # bval
+  = syndef sval $ b2Int $ c # ch_B # lit @Bool
   where b2Int b = if b then 1 else 0
 n_sval (Fam c p)
-  = syndef sval $ c # ch_N # nval
+  = syndef sval $ c # ch_N # lit @Int
 add_sval (Fam c p)
-  = syndef sval $ c # ch_Add_L # sval + c # ch_Add_R # sval  
+  = syndef sval $ c # ch_Add_L # sval + c # ch_Add_R # sval
 cond_sval (Fam c p)
   = syndef sval $ if c # ch_Cond_C # sval /= 0 -- 0 -> F, _ -> T
                   then c # ch_Cond_T # sval

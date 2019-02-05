@@ -1,7 +1,7 @@
-{-# LANGUAGE TemplateHaskell, CPP #-}
+{-# LANGUAGE TemplateHaskell, CPP, DataKinds, FlexibleInstances #-}
 {-# OPTIONS -XEmptyDataDecls #-}
 
-module Language.Grammars.AspectAG.Derive (deriveAG, extendAG, deriveLang, addNT, addProd, attLabel, attLabels, chLabel, chLabels) where
+module Language.Grammars.AspectAG.Derive where
 
 import Language.Haskell.TH
 
@@ -291,3 +291,13 @@ getCs n = undefined
   -- =  do info <- reify n 
   --       (UserD _ _ lc) <- getUserType info
   --       return lc
+
+
+
+
+class SemLit a where
+  sem_Lit :: a -> Attribution p -> Attribution '[ '((a, a), a)]
+  lit     :: Label (a,a)
+instance SemLit a where
+  sem_Lit a _ = (Label =. a) *. emptyAtt
+  lit         = Label 
