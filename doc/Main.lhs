@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass[12pt, a4paper]{article}
 
 %include lhs2TeX.fmt
 %include lhs2TeX.sty
@@ -8,6 +8,8 @@
 \usepackage{color}   
 \usepackage{hyperref}
 \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{ marvosym }
 
 \hypersetup{
     colorlinks=true,
@@ -15,8 +17,8 @@
     linkcolor=blue,
 }
 
-\author{Juan Garc\'ia Garland}
-\title{Reimplementaci\'on de \emph{AspectAG} basada en nuevas
+\author{Juan Pablo Garc\'ia Garland}
+\title{Reimplementaci\'on de \emph{AspectAG} \\ basada en nuevas
        extensiones de Haskell
 }
 
@@ -31,8 +33,14 @@
 
 
 \begin{document}
+\hspace{-0.5cm}
+\includegraphics[height=0.08\textheight]{./src/img/udelar_logo.jpg} \hfill
+\includegraphics[height=0.08\textheight]{./src/img/logo_FING_rgb.png}  \hfil
 
+{\let\newpage\relax\maketitle}
 \maketitle
+
+
 
 
 \newpage
@@ -44,19 +52,24 @@
 \section{Introducci\'on}
 
 AspectAG~\cite{Viera:2009:AGF:1596550.1596586}
-es un lenguaje de dominio espec\'ifico embebido (EDSL)
+es un lenguaje de dominio espec\'ifico embebido\footnote{
+  del t\'ermino en ingl\'es \emph{embedded},
+  literalmente ``empotrado'' o ``incrustado'',
+  pero usualmente traducido con este anglicismo
+} (EDSL)
 desarrollado en Haskell que permite
 la construcción modular de Gram\'aticas de Atributos. En AspectAG
 los fragmentos de una Gram\'atica de Atributos son definidos en forma
 independiente y luego combinados a trav\'es del uso de operadores de
 composici\'on que el propio EDSL provee. AspectAG se basa fuertemente en el
 uso de registros extensibles, los cuales son implementados en t\'erminos
-de HList\cite{Kiselyov:2004:STH:1017472.1017488},
+de {\tt HList}\cite{Kiselyov:2004:STH:1017472.1017488},
 una biblioteca de Haskell que implementa la manipulaci\'on
 de colecciones heterog\'eneas de forma fuertemente tipada.
-HList est\'a implementada utilizando t\'ecnicas de programaci\'on a nivel
+{\tt HList} est\'a implementada utilizando t\'ecnicas de programaci\'on a nivel
 de tipos (los tipos son usados para representar valores
-a nivel de tipos y las clases de tipos son usadas para representar
+a nivel de tipos y las clases de tipos (\emph{typeclasses})
+son usadas para representar
 tipos y funciones en la manipulación a nivel de tipos).
 
 Desde el momento de la implementaci\'on original de AspectAG hasta
@@ -66,9 +79,9 @@ importante, habi\'endose incorporado nuevas extensiones como
 \emph{data promotion} o polimorfismo de kinds, entre otras,
 las cuales constituyen elementos fundamentales debido
 a que permiten programar de forma ``fuertemente tipada'' a nivel de
-tipos de la misma forma que cuando se programa a nivel de
-valores (algo que originalmente era imposible
-o muy dif\'icil de lograr). El uso de estas extensiones permite
+tipos de forma similar a cuando se programa a nivel de
+valores, algo que originalmente era imposible
+o muy dif\'icil de lograr. El uso de estas extensiones permite
 una programaci\'on a nivel de tipos m\'as robusta y segura.
 Sobre la base de estas extensiones, implementamos un subconjunto
 de la biblioteca original.
@@ -92,16 +105,20 @@ y en particular la implementaci\'on (nueva) de AspectAG mediante un
 ejemplo que introduce las primitivas importantes de la biblioteca.
 
 En la secci\'on \ref{impl} se presentan los detalles de la
-implementaci\'on, que se basan en las t\'ecnicas de programaci\'on a
-nivel de tipos modernas.
+implementaci\'on, que se basan en las t\'ecnicas  modernas de programaci\'on a
+nivel de tipos.
 
-El c\'odigo fuente de la biblioteca y la documentaci\'on se encuentra
-disponible en
+El c\'odigo fuente de la biblioteca y la documentaci\'on
+-incluido este documento- se encuentra disponible en el repositorio:
 
 \url{http://https://gitlab.fing.edu.uy/jpgarcia/AspectAG/}.
 
-En el directorio {\tt /test} se implementan ejemplos de utilizaci\'on de
-la biblioteca.
+En particular, en el directorio {\tt /test} se implementan ejemplos
+de utilizaci\'on de la biblioteca.
+La versi\'on compilada de la documentaci\'on de los fuentes en la web:
+
+\url{https://www.fing.edu.uy/~jpgarcia/AspectAG/}
+
 
 \newpage
 
@@ -115,13 +132,15 @@ en 2009, adem\'as de implementar un sistema de gram\'aticas de atributos
 como un EDSL provee un buen ejemplo del uso de la
 programaci\'on a nivel de tipos en Haskell.
 La implementaci\'on utiliza fuertemente los registros extensibles que provee
-la biblioteca HList. Ambas bibliotecas se basan en la combinaci\'on
-de las extensiones {\tt MultiParamTypeClasses}
+la biblioteca {\tt HList}. Ambas bibliotecas se basan en la combinaci\'on
+de las extensiones {\tt MultiParamTypeClasses}\cite{type-classes-an-exploration-of-the-design-space}
 (hace posible la implementaci\'on de relaciones a nivel de tipos) con
-{\tt FunctionalDependencies}~\cite{DBLP:conf/esop/Jones00}
-(que permite expresar en particular
-relaciones funcionales).\footnote{Adem\'as de otras relaciones de uso
-extendido como {\tt FlexibleContexts}, {\tt FlexibleInstances}, etc}
+{\tt FunctionalDependencies}~\cite{DBLP:conf/esop/Jones00},
+que hace posible expresar en particular
+relaciones funcionales. Adem\'as se utilizan otras relaciones
+que ya eran de uso
+extendido como {\tt FlexibleContexts}, {\tt FlexibleInstances},
+{\tt UndecidableInstances} etc.
 
 \subsubsection{T\'ecnicas modernas}
 Durante la d\'ecada pasada~\footnote{Algunas extensiones como
@@ -130,7 +149,9 @@ de la publicaci\'on original de AspectAG, pero eran experimentales,
 y de uso poco extendido.}
 se han implementado m\'ultiples extensiones
 en el compilador GHC que proveen herramientas para hacer la programaci\'on
-a nivel de tipos m\'as expresiva. Las familias de tipos implementadas
+a nivel de tipos m\'as expresiva. A continuaci\'on se enumeran algunas de
+estas extensiones, y se proveen referencias a su bibiliograf\'ia.
+Las familias de tipos implementadas
 en la extensi\'on
 {\tt TypeFamilies}\cite{Chakravarty:2005:ATC:1047659.1040306, Chakravarty:2005:ATS:1090189.1086397, Sulzmann:2007:SFT:1190315.1190324}
 nos permiten definir funciones a nivel
@@ -140,35 +161,45 @@ funcionales. La extensi\'on
 {\tt DataKinds}~\cite{Yorgey:2012:GHP:2103786.2103795}
 implementa la \emph{data promotion} que provee la posibilidad de definir
 tipos de datos -tipados- a nivel de tipos, introduciendo nuevos kinds.
-Bajo el mismo trabajo Yorgey et al implementan la
+Bajo el mismo trabajo Yorgey et al. implementan la
 extensi\'on {\tt PolyKinds} proveyendo polimorfismo a nivel de kinds.
-Adem\'as la extensi\'on {\tt KindSignatures} permite anotar kinds a los
-t\'erminos en el nivel de tipos. Con toda esta maquinaria Haskell cuenta
+Adem\'as la extensi\'on {\tt KindSignatures}\cite{ghcman}
+permite realizar anotaciones de kinds a las construcciones
+en el nivel de tipos. Con toda esta maquinaria Haskell cuenta
 con un lenguaje a nivel de tipos casi tan expresivo como a nivel
-de t\'erminos\footnote{no es posible, por ejemplo la aplicaci\'on parcial}.
-La extensi\'on {\tt GADTs} combinada con las anteriores nos permite escribir
+de t\'erminos\footnote{no es posible, por ejemplo, la aplicaci\'on parcial.}.
+La extensi\'on {\tt GADTs}\cite{Cheney2003FirstClassPT,Xi:2003:GRD:604131.604150}
+permite definir tipos de datos algebraicos
+generalizados\cite{gadts} y combinada con las anteriores nos permite escribir
 familias indizadas, como en los lenguajes dependientes.
-{\tt TypeOperators}
+La extensi\'on {\tt TypeOperators}\cite{ghcman}
 habilita el uso de operadores como constructores de tipos.
-El m\'odulo {\tt Data.Kind} exporta la notaci\'on {\tt Type} para
-el kind {\tt *}. Esto fu\'e implementado originalmente con la extensi\'on
+El m\'odulo {\tt Data.Kind} de la biblioteca {\tt base}
+exporta la notaci\'on {\tt Type} para
+el kind {\tt *}. Esto fue implementado originalmente con la extensi\'on
 {\tt TypeInType}, que en las \'ultimas versiones del compilador es
-equivalente a {\tt PolyKinds + DataKinds + KindSignatures}.
+equivalente a {\tt PolyKinds + DataKinds + KindSignatures}\cite{ghcman}.
 
 
 \subsection{Programando con tipos dependientes en Haskell}
 
 
-Con todas estas extensiones combinadas, una declaraci\'on como
+Con todas estas extensiones combinadas, una declaraci\'on como:
 
 > data Nat = Zero | Succ Nat
 
 se ``duplica'' a nivel de kinds ({\tt DataKinds}). Esto es, que
 adem\'as de introducir los t\'erminos {\tt Zero} y {\tt Succ} de tipo
 {\tt Nat}, y al propio tipo {\tt Nat} de kind {\tt *} la declaraci\'on
-introduce los \emph{tipos}
+introduce los {\bf tipos}
 {\tt Zero} y {\tt Succ} de kind {\tt Nat} (y al propio kind {\tt Nat}).
-Luego es posible declarar, por ejemplo ({\tt GADTs}, {\tt KindSignatures})
+Para evitar la ambig\"uedad\footnote{
+  depende de la construcci\'on sint\'actica si es necesario desambiguar o no,
+  esto se detalla en el manual de GHC\cite{ghcman}.
+}, los constructores a nivel de tipos
+son accesibles por sus nombres precedidos por un ap\'ostrofo, para
+este caso, {\tt 'Zero} y {\tt 'Succ}.
+Luego es posible declarar, por ejemplo ({\tt GADTs}, {\tt KindSignatures}):
 
 > data Vec :: Nat -> Type -> Type where
 >   VZ :: Vec Zero a
@@ -184,14 +215,6 @@ y funciones seguras como:
 > vZipWith f (VS x xs) (VS y ys)
 >   = VS (f x y)(vZipWith f xs ys)
 
-\newpage
-o incluso:
-
-
-> vAppend :: Vec n a -> Vec m a -> Vec (n + m) a
-> vAppend (VZ) bs      = bs
-> vAppend (VS a as) bs = VS a (vAppend as bs)
-
 Es posible definir funciones puramene a nivel de tipos mediante familias
 ({\tt TypeFamilies}, {\tt TypeOperators}, {\tt DataKinds},
 {\tt KindSignatures}) como la suma:
@@ -206,6 +229,19 @@ o mediante la notaci\'on alternativa, cerrada:
 >   (+) Zero     a = a
 >   (+) (Succ a) b = Succ (a + b)
 
+Con la notaci\'on abierta las familias son extensibles.
+Las definiciones cerradas son una inclusi\'on m\'as reciente
+y permiten ecuaciones que se superpongan\cite{Eisenberg:2014:CTF:2578855.2535856}
+del mismo modo que cuando se hace \emph{pattern matching} a nivel de valores.
+En este caso las definiciones son equivalentes. 
+
+
+Podemos combinar las t\'ecnicas para programar, por ejemplo:
+
+> vAppend :: Vec n a -> Vec m a -> Vec (n + m) a
+> vAppend (VZ) bs      = bs
+> vAppend (VS a as) bs = VS a (vAppend as bs)
+
 \subsection{Limitaciones}
 \label{sec:limitaciones}
 
@@ -215,7 +251,7 @@ contin\'uan habitando mundos separados.
 La correspondencia entre nuestra definici\'on de vectores
 y las familias inductivas en los lenguajes de tipos dependientes no es tal.
 
-Las ocurrencias de {\tt n} en los tipos de las funciones anteriores son
+Las ocurrencias de {\tt m} y {\tt n} en los tipos de las funciones anteriores son
 est\'aticas, y borradas en tiempo de
 ejecuci\'on, mientras que en un lenguaje de tipos dependientes estos
 par\'ametros son esencialmente
@@ -229,7 +265,7 @@ t\'erminos les habitar\'an.
 Por ejemplo, los tipos  {\tt Vec (S (S Z) + n) a} y {\tt Vec (S (S n)) a}
 tendr\'an los mismos habitantes.
 Esto no va a ser cierto para tipos como
-{\tt Vec (n + S (S Z)) a} y {\tt Vec (S (S n)) a}, aunque que los tipos
+{\tt Vec (n + S (S Z)) a} y {\tt Vec (S (S n)) a}, aunque los tipos
 coincidan para todas las instancias concretas de {\tt n}.
 Para expresar propiedades como la conmutatividad
 se utilizan evidencias de las ecuaciones utilizando
@@ -237,7 +273,7 @@ se utilizan evidencias de las ecuaciones utilizando
 (\emph{Propositional Types})~\cite{Lindley:2013:HPP:2578854.2503786}. 
 
 En el sistema de tipos de Haskell, sin embargo la igualdad de tipos
-es puramente sint\'actica. Los tipos \break
+es puramente sint\'actica. Los tipos 
 {\tt Vec (n + S (S Z)) a} y {\tt Vec (S (S n)) a} {\bf no} son el mismo
 tipo, y no poseen los mismos habitantes.
 La definici\'on de una familia de tipos axiomatiza {\tt (+)} para la igualdad
@@ -267,16 +303,15 @@ de obtener {\tt m} en tiempo
 de ejecuci\'on, no es posible para el verificador de tipos aceptar
 la definici\'on.
 No hay forma de deducir {\tt n} a partir del tipo del tipo {\tt m + n}
-sin la informaci\'on de que {\tt (+)} es una funci\'on inyectiva, lo cual
+sin la informaci\'on de que {\tt (+)} es una funci\'on inyectiva en el
+segundo argumento, lo cual
 el verificador es incapaz de deducir.
 
-
-\newpage
 
 \subsection{Singletons y Proxies}
 \label{sec:sings}
 
-Existen dos \emph{hacks} para resolver los problemas planteados
+Existen dos formas de atacar los problemas planteados
 anteriormente.
 
 \subsubsection{Singletons}
@@ -322,15 +357,14 @@ de instancias de tipos singleton y otras utilidades.
 
 \subsubsection{Proxies}
 
-An\'alogamente para definir {\tt vTake} es necesario el valor de
-{\tt m} en tiempo
-de ejecuci\'on para conocer
-cuantos elementos extraer, pero una funci\'on de tipo
+Para definir {\tt vTake} tambi\'en es necesario el valor de
+{\tt m} en tiempo de ejecuci\'on para conocer
+cu\'antos elementos extraer, pero una funci\'on de tipo
 
 > vTake :: SNat m -> Vec (m + n) x -> Vec m x
 
-no ser\'a implementable. Es necesaria la informaci\'on tambi\'en
-de {\tt n} en tienpo de compilaci\'on,
+a\'un no ser\'a implementable. Es necesaria tambi\'en la informaci\'on
+de {\tt n} en tiempo de compilaci\'on,
 pero no as\'i una representaci\'on de {\tt n}
 en tiempo de ejecuci\'on. El natural
 {\tt n} es est\'atico pero estamos obligados a proveer
@@ -368,6 +402,10 @@ intensivo de estas t\'ecnicas.
 
 \newpage
 \section{Gram\'aticas de atributos y AspectAG}
+Presentamos una breve introducci\'on a las gram\'aticas de
+atributos, de manera informal por medio de en un ejemplo.
+Implementamos el mismo ejemplo en AspectAG.
+
 \label{ags}
 
 %include ./src/AGs.lhs
@@ -383,7 +421,7 @@ de la implementaci\'on de la biblioteca.
 %include ./src/AAG.lhs
 
 \newpage
-\section{Conclusi\'on}
+\section{Discusi\'on}
 %include ./src/Conc.lhs
 
 \newpage

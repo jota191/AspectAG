@@ -32,11 +32,10 @@ productos y coproductos indizados por tipos, entre otras estructuras.
 HList es un buen ejemplo
 de aplicaci\'on de la programaci\'on a nivel de tipos usando
 las t\'ecnicas antiguas.
-La implementaci\'on original de AspectAG hace uso intensivo de estas
-versiones de la biblioteca.
 HList sigue desarroll\'andose a medida de que nuevas extensiones se
 a\~naden al lenguaje Haskell. % de hecho a GHC...
-En lugar de reimplementar AspectAG dependiendo de nuevas versiones de HList
+En lugar de reimplementar AspectAG dependiendo de nuevas versiones de
+HList
 decidimos reescribir desde cero todas las funcionalidades necesarias,
 por los siguientes motivos:
 
@@ -101,7 +100,7 @@ El inconveniente de esta
 implementaci\'on es que es posible
 construir tipos sin sentido como {\tt HCons Bool Char}, lo cual puede
 solucionarse mediante el uso de clases, como es usual en
-el enfoque antig\"uo de la programaci\'on a nivel de tipos.
+el enfoque antiguo de la programaci\'on a nivel de tipos.
 En versiones posteriores HList utiliz\'o un GADT, y en las
 \'ultimas versiones se utiliza una \emph{data family}\footnote{
   Una \emph{data family} es una construcci\'on
@@ -111,10 +110,9 @@ En versiones posteriores HList utiliz\'o un GADT, y en las
 En la documentaci\'on de la biblioteca HList
 se fundamenta cual es la ventaja de cada representaci\'on. Dado que el GADT y
 la data Family son pr\'acticamente equivalentes
-(de hecho en nuestra implementaci\'on se pueden cambiar una por la otra),
+(de hecho en nuestra implementaci\'on se pueden intercambiar),
 preferimos el GADT por ser la soluci\'on m\'as clara.
 
-\newpage
 El tipo de datos {\tt HList} tiene la siguiente definici\'on: 
 
 > data HList (l :: [Type]) :: Type  where
@@ -122,7 +120,8 @@ El tipo de datos {\tt HList} tiene la siguiente definici\'on:
 >   HCons :: x -> HList xs -> HList (x ': xs)
 
 La extensi\'on {\tt DataKinds} promueve las listas con una notaci\'on
-conveniente similar a la utilizada a nivel de valores.
+conveniente similar a la utilizada a nivel de valores, incluida la notaci\'on
+con ap\'ostrofes.
 En la definici\'on anterior se utiliza
 la versi\'on promovida de listas como \'indice del tipo de datos.
 {\tt HNil} es un valor de tipo {\tt HList '[]}, mientras que {\tt HCons}
@@ -132,7 +131,9 @@ construye un valor de tipo {\tt HList (x ': xs)} a partir de un valor de tipo
 A modo de ejemplo, un habitante posible del kind {\tt [Type]} es
 {\tt '[Bool, Char]}. Luego {\tt HList [Bool, Char]} es un tipo
 (de kind {\tt Type})
-habitado por ejemplo por {\tt HCons True (HCons 'c' HNil)}.
+habitado por ejemplo por
+
+> hl = HCons True (HCons 'c' HNil)
 
 
 Es intuitivo definir, por ejemplo las versiones seguras
@@ -164,7 +165,7 @@ Y luego a nivel de t\'erminos:
 > hAppend (HCons x xs) ys = HCons x (hAppend xs ys)
 
 Una alternativa es definir la familia como un tipo indizado:
-\footnote{\'Esta es una tercer forma de definir familias de tipos,
+\footnote{esta es una tercer forma de definir familias de tipos,
 adem\'as de la notaci\'on abierta o cerrada.
 }
 
@@ -186,12 +187,12 @@ programar una funci\'on que actualiza la $n$-\'esima entrada en
 una lista heterogenea
 (eventualmente cambiando el tipo del dato en esa posici\'on),
 estamos claramente ante una funci\'on de tipos dependientes (el tipo
-del resultado depende de $n$). \'Este es el escenario donde ser\'an
+del resultado depende de $n$). Este es el escenario donde ser\'an
 necesarios {\tt Proxies} y/o {\tt Singletons}.
 
 Una definici\'on posible:
 \footnote{asumamos que el $n$ es menor al largo de la lista,
-lo cual podr\'iamos tambi\'en forzar est\'aticamente}
+lo cual podr\'iamos tambi\'en forzar est\'aticamente.}
 
 < type family UpdateAtNat (n :: Nat)(x :: Type)(xs :: [Type]) :: [Type]
 < type instance UpdateAtNat Zero     x (y ': ys) = x ': ys
@@ -208,8 +209,8 @@ lo cual podr\'iamos tambi\'en forzar est\'aticamente}
 AspectAG requiere de registros heterogeneos extensibles fuertemente
 tipados, esto es,
 colecciones etiqueta-valor, heterogeneas, donde adem\'as las etiquetas
-est\'en dadas por tipos. Adem\'as de
-de HList, existen otros proyectos de implementaciones
+est\'en dadas por tipos. Adem\'as de HList,
+existen otros proyectos de implementaciones
 de registros heterogeneos en Haskell,
 como Vinil\cite{libvinyl}, CTRex\cite{libCTRex}, entre otros \cite{HColsWiki}.
 
@@ -261,7 +262,7 @@ sigue siendo adecuado para codificar predicados.
 Una lista de pares promovida satisface el predicado {\tt LabelSet}
 si las primeras componentes son \'unicas. As\'i, la lista
 de pares representa un mapeo, o registro indizado por las primeras
-componentes. El predicado se implementa a la prolog, aunque usamos
+componentes. El predicado se implementa \emph{a la} prolog, aunque usamos
 el poder de las extensiones modernas para tipar fuertemente los
 functores.
 
@@ -290,8 +291,87 @@ con el valor que queremos ({\tt Labelset l} $\sim$ {\tt True}).
 
 Tambi\'en podr\'ia utilizarse
 una familia de tipos para construir la constraint {\tt LabelSet}
-(haciendo uso de la extensi\'on {\tt ConstraintKinds}).
+haciendo uso de la extensi\'on {\tt ConstraintKinds}\cite{ghcman}.
 
 En general, la programaci\'on mediante
-clases es siempre sustituible por familias de tipos,
+clases es sustituible por familias de tipos,
 pero no parece natural en este caso.
+
+\subsection{Programaci\'on de errores de tipado}
+
+Consideramos las siguientes definiciones:
+
+> data L
+> tlb = Tagged True :: Tagged L Bool
+> tli = Tagged 3    :: Tagged L Int
+> r   =  tli `ConsR` (tlb `ConsR` emptyRecord)
+
+El registro {\tt r} tiene dos campos indizados por la misma etiqueta,
+por lo que c\'odigo no compilar\'a.
+GHC reporta el siguiente error:
+
+<  . No instance for (Language.Grammars.AspectAG.Utils.TPrelude.LabelSet'
+<                       '(L, Int) '(L, Bool) 'True '[])
+<      arising from a use of 'ConsR'
+<  . In the expression: tli `ConsR` (tlb `ConsR` emptyRecord)
+
+El mensaje no es claro, y de hecho este caso resulta ser de los menos confusos.
+Kyselyov et al\cite{Kiselyov:2004:STH:1017472.1017488} ya en el a\~no 2004
+proponen una soluci\'on para mejorar los mensajes de error
+que consiste en definir una clase:
+
+> class Fail e
+
+y luego crear instancias de clases para las combinaciones inv\'alidas
+utilizando {\tt Fail} como superclase, por ejemplo:
+
+< data RepeatedLabel
+< instance Fail RepeatedLabel => LabelSet' l1 l2 True r
+
+
+Cuando el verificador de GHC intente satisfacer la instancia
+{\tt LabelSet' l1 l2 True r} encontrar\'a de hecho una definici\'on
+v\'alida, y buscar\'a resolver {\tt Fail (RepeatedLabel)}. {\tt Fail}
+es una clase sin implementaciones, por lo que el compilador presenta
+finalmente el error:
+
+< No instance for (Fail (RepeatedLabel))
+
+Distintas definiciones de tipos de datos como {\tt RepeatedLabel} proveen
+nuevos mensajes. Esta soluci\'on si bien es muy creativa considerando la
+falta de soporte en la \'epoca por parte del compilador para
+implementar una alternativa
+m\'as adecuada, es muy mejorable.
+Recientemente GHC implementa en el m\'odulo {\tt GHC.TypeLits}
+de la biblioteca {\tt base} un mecanismo para definir mensajes de error
+por parte del usuario. El m\'odulo exporta la definici\'on
+
+> type family TypeError (a :: ErrorMessage) :: b where {}
+
+que es el equivalente a la funci\'on {\tt error} a nivel de tipos. Adem\'as el
+polimorfismo de kinds permite utilizarla como clase dado que el kind {\tt b}
+puede ser instanciado por {\tt Constraint}.
+El kind {\tt ErrorMessage} est\'a habitado por tipos que implementan mensajes
+de error, haciendo uso de habitantes del kind {\tt Symbol} que es
+una promoci\'on de {\tt String}.
+
+Podemos entonces implementar:
+
+> instance TypeError (Text "LabelSet Error:" :$$:
+>              Text "Duplicated Label on Record" :$$:
+>              Text "On fields:" :$$: ShowType l1 :$$:
+>              Text " and " :$$: ShowType l1 )
+>   => LabelSet' l1 l2 True r
+
+Al intentar compilar el c\'odigo con el registro mal formado el mensaje presentado es:
+
+<   . LabelSet Error:
+<     Duplicated Label on Record
+<     On fields:
+<     '(L, Int)
+<      and 
+<     '(L, Int)
+<   . In the expression: tli `ConsR` (tlb `ConsR` emptyRecord)
+
+que es mucho m\'as expresivo. En la reimplementaci\'on de AspectAG se hace
+uso de estos mensajes de error definidos por usuario.

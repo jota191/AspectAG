@@ -1,11 +1,5 @@
-En este documento mostramos las principales caracter\'istica de la
-reimplementaci\'on de un subconjunto de la biblioteca AspectAG utilizando
-t\'ecnicas modernas de programaci\'on a nivel de tipos.
-Como resultado de la reimplementaci\'on
-hicimos fuertemente tipadas las dos capas de programaci\'on,
-a diferencia de la biblioteca original, que a nivel de tipos era
-esencialmente no tipada.
-
+En la nueva implementaci\'on se logra expresar est\'aticamente propiedades
+que antes no eran representables.
 A modo de ejemplo, el constructor de tipos {\tt Fam} en las versiones previas de
 AspectAG tiene \emph{kind}
 
@@ -17,6 +11,7 @@ Peor a\'un, el constructor (de valores) {\tt Fam} tiene tipo
 > Fam :: c -> p -> Fam c p
 
 por lo que el tipo patol\'ogico {\tt Fam Bool Char} est\'a habitado.
+Esencialmente se trata de un tipo {\tt (,)} con otro nombre.
 En la nueva implementaci\'on {\tt Fam} tiene \emph{kind}:
 
 > Fam :: [(k', [(k, Type)])] -> [(k, Type)] -> Type
@@ -36,23 +31,10 @@ componentes (las etiquetas) no se repiten.
 Sin embargo esto est\'a garantizado porque los constructores de
 {\tt Attribution} y {\tt ChAttsRec} tienen restricciones
 (la constraint {\tt LabelSet}).
-
-Notar por ejemplo el constructor {\tt ConsAtt}:
-
-> ConsAtt :: forall k (att :: k) val (atts :: [(k, Type)]).
->    LabelSet ('(att, val) : atts) =>
->    Attribute att val -> Attribution atts -> Attribution ('(att, val) : atts)
-
 Nuestro sistema asegura que todos los valores de tipo {\tt Fam} van a estar
 bien formados.\footnote{O casi: a\'un
 es posible construir valores como {\tt undefined}
-o {\tt Fam undefined undefined} de cualquier tipo construido con {\tt Fam}.
-Estos valores adem\'as de ser patol\'ogicos (a nivel de t\'erminos), como no
-usan los constructores nos permiten saltearnos la restricci\'on de la typeclass
-y repetir etiquetas, y por tanto construir instancias patol\'ogicas a nivel
-de tipos. Esto \'ultimo podr\'ia evitarse agregando las restricciones
-de instancias de {\tt LabelSet} en el constructor {\tt Fam}, no lo consideramos
-necesario.}
+o {\tt Fam undefined undefined} de cualquier tipo construido con {\tt Fam}.}
 
 
 La implementaci\'on de estructuras especializadas provee nombres mnem\'onicos
@@ -95,12 +77,13 @@ en la implementaci\'on antigua, y en la nueva:
 
 Por otra parte, los mensajes de error han sido mejorados. Por ejemplo,
 supongamos que en el ejemplo {\tt repmin} (secci\'on \ref{repmin})
-qomitimos en la definici\'on
-de {\tt asp\_smin} la regla {\tt p\_Node .=. node\_smin}.
-La gram\'atica estar\'a mal formada y la funci\'on
-{\tt repmin}, no compilar\'a.
+omitimos en la definici\'on
+de {\tt asp\_smin} la regla {\tt p\_Node.=.node\_smin}.
+La gram\'atica de atributos estar\'a mal formada a causa de la ausencia de
+reglas para computar {\tt smin} en una producci\'on y la funci\'on
+{\tt repmin} no compilar\'a.
 
-En las versiones antig\"uas obtenemos el siguiente error cr\'iptico:
+En las versiones anteriores obtenemos el siguiente error cr\'iptico:
 
 >   . No instance for
 > (HasField (Proxy P_Node) HNil
@@ -154,26 +137,35 @@ Esta cuesti\'on era planteada
 como trabajo futuro en la publicaci\'on
 original de la biblioteca~\cite{Viera:2009:AGF:1596550.1596586}.
 
-
+La implementaci\'on obtenida resulta utilizable, se programaron m\'ultiples
+ejemplos de uso.
 Adem\'as de se provee una
 demostraci\'on del uso de la programaci\'on a nivel de tipos en Haskell
-enriquecido por el conjunto de extensiones que implementa el compilador GHC.
+enriquecido por el conjunto de extensiones que implementa el compilador GHC
+moderno.
 
 
-\section{Trabajo Futuro}
+\section{Conclusiones y Trabajo Futuro}
+
+En este documento mostramos las principales caracter\'isticas de la
+reimplementaci\'on de un subconjunto de la biblioteca AspectAG utilizando
+t\'ecnicas modernas de programaci\'on a nivel de tipos.
+Como resultado de la reimplementaci\'on
+hicimos fuertemente tipadas las dos capas de programaci\'on,
+a diferencia de la biblioteca original, que a nivel de tipos era
+esencialmente no tipada.
 
 En este proyecto, se reimplement\'o un subconjunto de la biblioteca
 original; es natural fijarnos como objetivo a futuro tener una versi\'on
 completa de la biblioteca implementada para publicar.
-Entre las caracter\'isticas faltantes se encuentra
-la derivaci\'on autom\'atica de las funciones sem\'anticas,
-y la implementaci\'on de algunas primitivas que permiten
+Las caracter\'isticas faltantes actualmente consisten en la
+implementaci\'on de algunas primitivas que permiten
 definir atributos en un mayor nivel de abstracci\'on.
 
 En la nueva implementaci\'on fuertemente tipada surgen tambi\'en nuevas
 caracter\'isticas deseables, como un mejor manejo de
 los registros heterogeneos (evitar las m\'ultiples
-implementaciones an\'alogas entre s\'i), o explorar la posibilidad
+implementaciones an\'alogas entre s\'i) o explorar la posibilidad
 de utilizar distintos kinds para las distintas categor\'ias de etiqueta.
 
 Contin\'ua abierto el tema planteado

@@ -1,9 +1,11 @@
 \subsection{Estructuras de Datos}
 \label{reimpl}
+
 Como se defini\'o antes,
 una atribuci\'on (\emph{attribution}) es un mapeo de nombres de atributos
-a sus valores, que representamos como un registro heterogeneo.
-Para obtener mensajes de error precisos y evitar que se filtre
+a sus valores, que representamos como un registro heterogeneo. A diferencia
+de la implementaci\'on original, para obtener mensajes de error
+precisos y evitar que se filtre
 implementaci\'on en los mismos decidimos tener estructuras especializadas.
 
 Un atributo (etiquetado por su nombre) viene dado por:
@@ -25,23 +27,54 @@ un kind
 polim\'orfico, donde usamos igualdad de kinds ({\tt ConstraintKinds}).
 
 Una familia consiste en la atribuci\'on del padre y una colecci\'on
-de atribuciones para los hijos (etiquetadas por sus nombres).
+de atribuciones para los hijos etiquetadas por sus nombres.
 
 
-> data Fam (c::[(k,[(k,Type)])]) (p :: [(k,Type)]) :: Type where
+> data Fam (c::[(k',[(k,Type)])]) (p :: [(k,Type)]) :: Type where
 >   Fam :: ChAttsRec c  -> Attribution p -> Fam c p
 
 
-La colecci\'on de atribuciones para los hijos son representadas
+La colecci\'on de atribuciones para los hijos se representan
 de la siguiente manera:
 
 > data ChAttsRec :: forall k k' . [(k , [(k',Type)])] -> Type where
 >   EmptyCh :: ChAttsRec '[]
 >   ConsCh  :: LabelSet ( '(l, v) ': xs) =>
->    TaggedChAttr l v -> ChAttsRec xs -> ChAttsRec ( '(l,v) ': xs)
+>    TaggedChAttr chi att -> ChAttsRec chs -> ChAttsRec ( '(chi,att) ': chs)
+
 
 La estructura es an\'aloga a la anterior: es de nuevo una implementaci\'on de
 registro heterogeneo pero especializada.
+
+Notar que en todos los tipos de datos definidos se expresa la estructura
+en el nivel de los kinds. Por ejemplo, el primer par\'ametro
+del constructor de tipos {\tt Fam}
+debe ser un tipo de kind {\tt [(k',[(k,Type)])]}, lo cual modela
+razonablemente un registro de registros (es un mapeo
+con nombres de hijos como dominio, donde cada imagen contiene un nuevo mapeo
+de atributos a valores). Luego a nivel de valores el constructor
+{\tt Fam} requiere un primer argumento de tipo {\tt ChAttsRec c}, donde
+{\tt c} ha de tener efectivamente el kind correcto. El kind no alcanza
+para expresar que las listas de pares no repiten la primer componente,
+para ello requerimos que se satisfaga la \emph{constraint}
+{\tt LabelSet('(chi, att)':chs)}  en el constructor
+de {\tt ChAttsRec}. Por supuesto, tambi\'en debemos asegurar
+en tiempo de compilaci\'on que cada hijo contiene efectivamente una atribuci\'on,
+por lo que {\tt TaggedChAttr} se define:
+
+> data TaggedChAttr (l::k) (v :: [(k',Type)]) :: Type where
+>   TaggedChAttr :: Label l -> Attribution v -> TaggedChAttr l v
+
+
+De la misma forma podemos razonar sobre el segundo
+par\'ametro de {\tt Fam}, a nivel de tipos tiene el kind {\tt [(k,Type)]},
+a nivel de valores requerimos un habitante de {\tt Attribution p}, estructura
+sobre la que chequeamos est\'aticamente que modele un mapeo.
+
+En la implementaci\'on original no se expresaba ninguna informaci\'on a nivel
+de los kinds.
+
+\paragraph{Reglas} \hfill
 
 Una regla es una funci\'on de la familia de entrada a la de salida.
 Se implementa de la siguiente manera:
@@ -52,9 +85,9 @@ Se implementa de la siguiente manera:
 
 El tipo contiene una aridad extra para hacer las reglas
 componibles~\cite{Moor99first-classattribute}. Dada la familia
-de entrada (compuesta por atributos sintetizados de los hijos ({\tt sc})
-y los heredados del padre ({\tt ip}))
-se contruye una funci\'on que toma como entrada
+de entrada compuesta por atributos sintetizados de los hijos ({\tt sc})
+y los heredados del padre ({\tt ip}),
+se construye una funci\'on que toma como entrada
 la familia de salida construida hasta el momento
 (formada por los atributos heredados de los hijos ({\tt ic})
 y los sintetizados por el padre ({\tt sp})), y la extiende (donde los nuevos
@@ -79,12 +112,12 @@ El kind de {\tt Rule} viene dado entonces por:
 %% >           (sp' :: [(k,       Type)])
 %% >   = Fam sc ip -> Fam ic sp -> Fam ic' sp'
 
-Dos reglas se construidas de esta forma se pueden componer:
+Dos reglas construidas de esta forma se pueden componer:
 
 > (f `ext` g) input = f input . g input
 
 
-\subsection{Declaraciones de Reglas}
+\subsection{Declaraci\'on de Reglas}
 
 Se proveen distintas primitivas para declarar reglas.
 En el ejemplo se utilizaron {\tt syndef} e {\tt inhdef}, que son
@@ -127,7 +160,10 @@ definiciones en los hijos a los que corresponda.
 
 Para definir la funci\'on {\tt defs} se hace recursi\'on sobre
 el registro {\tt vals} que contiene las nuevas definiciones. Se utiliza la
-funci\'on auiliar {\tt singledef} que inserta una \'unica definici\'on.
+funci\'on auxiliar {\tt singledef} que inserta una \'unica definici\'on.
+En la versi\'on original de la biblioteca esta funci\'on se
+implementaba con dependencias funcionales en lugar de la familia de
+tipos, y sin expresar informaci\'on en el kind.
 
 > class Defs att (nts :: [Type])
 >             (vals :: [(k,Type)]) (ic :: [(k',[(k,Type)])]) where
@@ -142,15 +178,15 @@ Si el registro est\'a vac\'io no se inserta ninguna definici\'on:
 >   type DefsR att nts '[] ic = ic
 >   defs _ _ _ ic = ic
 
-En el caso recursivo, combinamos la primer componente del registro
-con la llamada recursiva.
+En el caso recursivo, combinamos la primera componente del registro
+con la llamada recursiva:
 
 > instance ( Defs att nts vs ic
 >          , ic' ~ DefsR att nts vs ic
 >          , HMember t nts
->          , HMemberRes t nts ~ mnts
->          , HasLabelChildAttsRes (lch,t) ic' ~ mch
+>          , mnts ~ HMemberRes t nts
 >          , HasLabelChildAtts (lch,t) ic'
+>          , mch ~ HasLabelChildAttsRes (lch,t) ic'
 >          , SingleDef mch mnts att (Tagged (lch,t) vch) ic') => 
 >   Defs att nts ( '((lch,t), vch) ': vs) ic where
 >   type DefsR att nts ( '((lch,t), vch) ': vs) ic
@@ -166,7 +202,34 @@ con la llamada recursiva.
 >             mnts = hMember (sndLabel lch) nts
 
 
-{\tt singledef} implementa la inserci\'on en la atribuci\'on de un hijo:
+Es decir, si la entrada es de la forma {\tt ConsR pch vs}, hacemos la llamada
+recursiva con las dem\'as definiciones, guardando el resultado en {\tt ic'}.
+La nueva definici\'on a insertar ({\tt pch}) ser\'a combinada
+utilizando {\tt singleDef},
+que adem\'as recibe como par\'ametros dos proxies que en su tipado transportan
+la evidencia de la existencia de las etiquetas para el hijo y el no terminal
+sobre el que estamos construyendo. Estos se obtienen mediante las llamadas
+a {\tt hasLabelChilds} y {\tt hMember}, mientras que {\tt labelLVPair} extrae
+la etiqueta de un par etiqueta-valor. Como implementamos las familias de tipos
+como tipos indizados en clases la misma informaci\'on se ve replicada en el
+nivel de los tipos, por lo que son necesarias restricciones como
+{\tt HMember t nts}, {\tt Defs att nts vs ic} o
+{\tt SingleDef mch mnts att (Tagged (lch,t) vch) ic')}.
+Las restricciones que se refieren a tipos indizados como:
+
+> ic'  ~ DefsR att nts vs ic
+> mnts ~ HMemberRes t nts
+> mch  ~ HasLabelChildAttsRes (lch,t) ic'
+
+no son estrictamente necesarias, y podr\'ian en todos los casos eliminarse
+y utilizar el lado derecho en cada ocurrencia del lado izquierdo.\footnote{
+  a modo de ejemplo, cuando se define
+  {\tt SingleDefR}, en su segundo par\'ametro n\'otese que
+  escribimos {\tt HMemberRes t nts}, en lugar de {\tt mnts}.
+}
+
+La funci\'on 
+{\tt singledef} implementa la inserci\'on en la atribuci\'on de un hijo.
 La definici\'on de la clase utilizada para la funci\'on viene dada por:
 
 > class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[(k',[(k,Type)])]) where
@@ -175,12 +238,13 @@ La definici\'on de la clase utilizada para la funci\'on viene dada por:
 >                 -> ChAttsRec (SingleDefR mch mnts att pv ic)
 
 
-Los primeros dos par\'ametros son Proxys de booleanos,
+Los primeros dos par\'ametros son, como vimos antes proxies de booleanos,
 que proveen evidencia de la existencia de las etiquetas del hijo y los
 terminales respectivamente.
-El caso v\'alido, en donde el c\'odigo debe compilar es cuando estos
-valen {\tt True}, y la implementaci\'on es la siguiente:
-
+El caso v\'alido, en donde el c\'odigo debe compilar es cuando ambos
+valen {\tt True}. Las dem\'as combinaciones sirven para definir mensajes de
+error expresivos en cada escenario, utilizando {\tt GHC.TypeLits.TypeError}.
+La implementaci\'on del caso interesante es la siguiente:
 
 > instance ( HasChildF lch ic
 >          , och ~ LookupByChildFR lch ic
@@ -195,10 +259,27 @@ valen {\tt True}, y la implementaci\'on es la siguiente:
 >           vch = unTaggedChAtt pch
 >           och = lookupByChildF lch ic
 
+Se obtiene la atribuci\'on del hijo de nombre adecuado ({\tt och})
+y se inserta el atributo en la misma, lo que corresponde a la expresi\'on
+{\tt att =.vch *.och}. El operador
+{\tt (*.)} es azucar sint\'actica para {\tt ConsAtt}\footnote{
+  En general {\tt (*.)}, {\tt (=.)}, {\tt (\#.)} corresponden a atribuciones,
+  mientras que {\tt (.*)}, {\tt (.=)}, {\tt (.\#)} corresponden a mapeos
+  de hijos. Existen versiones sobrecargadas de los operadores como vimos
+  anteriormente en la secci\'on~\ref{labels} con el uso de {\tt (\#)}.
+  En ciertos escenarios el uso de la sobrecarga puede llevar a requerir
+  anotar tipos y conducir a errores de compilaci\'on confusos. Es recomendable
+  para los nuevos usuarios de la biblioteca, utilizar los constructores
+  especializados.
+}, por lo que
+est\'aticamente se requiere satisfacer la restricci\'on
+{\tt LabelSet ('(att, vch) ':och))}. Finalmente la nueva atribuci\'on 
+es insertada en el registro de atribuciones de los hijos usando
+{\tt updateAtChildF}.
 
-En todos los casos las funciones auxiliares utilizadas en las
+En todas las definiciones anteriores las funciones auxiliares utilizadas en las
 cl\'ausulas {\tt where} son funciones de acceso o predicados relativamente
-simples de definir. Algunos de los valores que se retornan contienen
+simples de definir. Como vimos, algunos de los valores que se retornan contienen
 informaci\'on a nivel de tipos usada en tiempo de compilaci\'on.
 {\tt lch}, {\tt mch}, {\tt mnts} son ejemplos de expresiones que
 no tienen informaci\'on a nivel de valores.
@@ -238,7 +319,7 @@ y la implementamos como familia.
 
 Como ejemplo de una primitiva no usada en {\tt repmin}
 podemos citar {\tt synmod},
-que redefine un atributo sintetizado existente (Tanto el valor, como el tipo).
+que redefine un atributo sintetizado existente (tanto el valor, como el tipo).
 
 > synmod  ::  UpdateAtLabelAtt att val sp sp' =>
 >     Label att -> val -> Fam ic sp -> Fam ic sp'
@@ -248,8 +329,8 @@ que redefine un atributo sintetizado existente (Tanto el valor, como el tipo).
 \subsection{Aspectos}
 
 Un aspecto se implementa
-simplemente como un registro heterogeneo (que contendr\'a reglas
-etiquetadas por nombres de producciones).
+simplemente como un registro heterogeneo que contendr\'a reglas
+etiquetadas por nombres de producciones.
 
 > type Aspect = Record
 > type Prd prd rule = Tagged prd rule
@@ -277,14 +358,14 @@ definida a nivel de tipos como la clase {\tt Com}.
 
 La funci\'on se define por recursi\'on en la segunda componente.
 Si una producci\'on aparece en un solo aspecto par\'ametro aparecer\'a
-en el resultado intacta. Por otro lado las
+en el resultado intacta. Por otro lado, las
 producciones que aparezcan en ambos aspectos deber\'an incluirse
 en el resultado
-con las reglas combinadas (seg\'un la funci\'on {\tt ext} definida
-previamente).
+con las reglas combinadas seg\'un la funci\'on {\tt ext} definida
+anteriormente.
 
 Para el caso base, donde el segundo aspecto es vac\'io
-la funci\'on retorna el primer aspecto.
+la funci\'on retorna el primer aspecto sin modificar.
 
 > instance Com r '[] where
 >   type r .++. '[] = r
@@ -310,8 +391,8 @@ cola del segundo par\'ametro.
 
 La funci\'on {\tt comSingle} es una funci\'on cuyo comportamiento
 es dependiente de los tipos de la producci\'on y el Aspecto par\'ametro.
-Si ya existe una producci\'on con ese nombre de deben combinar las reglas
-en el campo correspondiente del aspecto, sino, el Aspecto debe extenderse.
+Si ya existe una producci\'on con ese nombre se deben combinar las reglas
+en el campo correspondiente del aspecto, sino el Aspecto debe extenderse.
 Implementamos {\tt ComSingle} con un par\'ametro booleano extra que indica
 la pertenencia o no de la etiqueta {\tt prd} al registro {\tt r}.
 La firma viene dada por:
@@ -326,17 +407,13 @@ Nuevamente hacemos uso del proxy para propagar pruebas.
 La funci\'on {\tt hasLabelRec}
 se define an\'alogamente a {\tt hasLabelChildAtts}.
 Luego podemos definir las instancias posibles de {\tt ComSingle}, y adem\'as
-chequeamos ciertas propiedades de buena furmaci\'on.
+chequeamos ciertas propiedades de buena formaci\'on.
 En particular cuando combinamos reglas
 chequeamos que efectivamente estamos combinando reglas.
 
 
 En el caso donde la etiqueta de la producci\'on a insertar no est\'a presente
-en el aspecto par\'ametro simplemente extendemos el aspecto\footnote{
-  Lo colocamos delante, pero podr\'ia ser en cualquier parte, como en todos
-  los casos de uso de registros heterogeneos, el \'orden en el que aparecen los
-  elementos no es relevante.
-}
+en el aspecto par\'ametro simplemente extendemos el aspecto:
 
 > instance ( LabelSet ('(prd, rule) ': r)) => 
 >   ComSingle 'False prd rule r where
@@ -344,21 +421,20 @@ en el aspecto par\'ametro simplemente extendemos el aspecto\footnote{
 >   comSingle _ prd asp = prd .*. asp
 
 
-Si la producci\'on ya exist\'ia en el aspecto par\'ametro, el algoritmo
-(informalmente) consiste en obtener la regla correspondiente,
-combinarla con la nueva ({\tt ext}), e insertar la regla resultante
+Si la producci\'on ya exist\'ia en el aspecto par\'ametro, obtenemos
+la regla correspondiente, la combinamos con la nueva ({\tt ext}),
+e insertamos la regla resultante
 en el aspecto.
 
 > instance ( UpdateAtLabelRecF prd (Rule sc ip ic  sp  ic'' sp'') r
 >          , HasFieldRec prd r
 >          , LookupByLabelRec prd r ~ (Rule sc ip ic' sp' ic'' sp'')
 >          , ic'' ~ (Syn3 (LookupByLabelRec prd r))
->          , sp'' ~ (Inh3  (LookupByLabelRec prd r))
+>          , sp'' ~ (Inh3 (LookupByLabelRec prd r))
 >          ) =>
 >   ComSingle 'True prd (Rule sc ip ic  sp  ic'  sp') r where
 >   type ComSingleR 'True prd (Rule sc ip ic  sp  ic'  sp') r
->     = UpdateAtLabelRecFR prd (Rule sc ip ic sp (Inh3 (LookupByLabelRec prd r))
->                                                (Syn3 (LookupByLabelRec prd r))) r
+>     = UpdateAtLabelRecFR prd (Rule sc ip ic sp ic'' sp'') r
 >   comSingle _ f r = updateAtLabelRecF l (oldR `ext` newR) r 
 >     where l    = labelPrd f
 >           oldR = lookupByLabelRec l r
@@ -366,7 +442,7 @@ en el aspecto.
 
 
 Donde {\tt Syn3} e {\tt Inh3} son funciones de proyecci\'on definidas
-puramente a nivel de tipos.
+puramente a nivel de tipos:
 
 > type family Syn3 (rule :: Type) :: [(k', [(k, Type)])] where
 >   Syn3 (Rule sc ip ic  sp  ic'' sp'') = sp''
@@ -377,13 +453,13 @@ puramente a nivel de tipos.
 
 \subsection{Funciones sem\'anticas}
 
-En cada producci\'on, llamamos \emph{funci\'on sem\'antica} al mapeo de los
+En cada producci\'on, llamamos ``funci\'on sem\'antica'' al mapeo de los
 atributos heredados a los atributos sintetizados. Una
 computaci\'on sobre la gram\'atica
-consiste en exactamente computar las funciones sem\'anticas.
+consiste exactamente en computar las funciones sem\'anticas.
 
 En el ejemplo {\tt repmin}, la funci\'on {\tt sem\_Tree} construye,
-dados un aspecto y un \'arbol una funci\'on sem\'antica.
+dados un aspecto y un \'arbol, una funci\'on sem\'antica.
 El tipo de {\tt sem\_Tree}, si ignoramos los par\'ametros impl\'icitos
 de las restricciones de typeclasses, viene dado por:
 
@@ -414,12 +490,13 @@ El tipo completo de {\tt sem\_Tree} viene dado por:
 >      Aspect r -> Tree -> Attribution ip -> Attribution sp
 
 Se aprecian m\'ultiples predicados que deben chequearse para que las llamadas
-a {\tt sem\_Tree} {\bf compilen}. Una llamada donde el Aspecto {\tt r} no
-contenga definiciones para los nodos o para las hojas no compilar\'a.
-Adem\'as en el valor imagen de cada una de \'estas etiquetas debe haber una
-regla que cumpla ciertas restricciones de forma. Por supuesto, como un aspecto
-es un registro, por lo que
-no van a permitirse instancias donde se dupliquen etiquetas
+a {\tt sem\_Tree} {\bf compilen}. Una llamada donde el aspecto {\tt r} no
+contenga definiciones para los nodos o para las hojas no compilar\'a
+(observar las restricciones, por ejemplo que {\tt LookupByLabelRec P\_Node r}
+debe ser equivalente a una regla que contenga computaciones para
+los hijos {\tt Ch\_l} y {\tt Ch\_r}).
+ Por supuesto, como un aspecto
+es un registro no van a permitirse instancias donde se dupliquen etiquetas
 de producciones. No existe sin embargo ninguna restricci\'on sobre el largo
 de {\tt r} o las etiquetas adicionales que contiene, lo cual tiene sentido
 porque eventualmente la gram\'atica podr\'ia extenderse con nuevas
@@ -430,7 +507,7 @@ producciones.
 
 La funci\'on {\tt knit}~\cite{DBLP:conf/gcse/MoorPW99}
 realiza la verdadera computaci\'on. Toma
-las reglas combinadas para una producci\'on, y las funciones sem\'anticas
+las reglas combinadas para una producci\'on y las funciones sem\'anticas
 de los hijos, y construye la funci\'on sem\'antica del padre.
 
 > knit :: ( Empties fc , EmptiesR fc ~ ec
@@ -443,15 +520,14 @@ de los hijos, y construye la funci\'on sem\'antica del padre.
 >     in  sp
 
 Primero se construye una familia de salida vac\'ia, mediante la funci\'on
-{\tt empties}. \'Esta contiene atribuciones vac\'ias tanto para el padre como
+{\tt empties}. Esta contiene atribuciones vac\'ias tanto para el padre como
 para todos los hijos. A partir de la familia de entrada y nuestra familia
 ``dummy'' construimos la familia de salida. La familia de entrada consta
 de los atributos heredados del padre {\tt ip} que tenemos disponibles como
 par\'ametro, y de los sintetizados de los hijos {\tt sc}. Tenemos disponibles
 los atributos heredados de los hijos y las funciones sem\'anticas, por lo que
 para computar {\tt sc} debemos ejecutar {\tt knit} en cada uno de los hijos,
-trabajo realizado por la funci\'on {\tt kn}, que es una funci\'on {\tt map}
-especializada.
+trabajo realizado por la funci\'on {\tt kn}.
 
 La funci\'on {\tt empties} se define por recursi\'on,
 sin mayores complicaciones:
@@ -479,7 +555,7 @@ La funci\'on {\tt kn} es una porci\'on de c\'odigo bastante t\'ecnica de
 programaci\'on a nivel de tipos.
 Dadas las funciones sem\'anticas de los hijos y sus entradas
 (atributos heredados de los hijos) se construyen los atributos sintetizados
-para los hijos. La funcici\'on deber\'ia tener un tipo similar a:
+para los hijos. La funci\'on deber\'ia tener un tipo similar a:
 
 > kn :: Record fcr -> ChAttsRec ich -> ChAttsRec sch
 
@@ -493,7 +569,8 @@ La clase entonces se implementa con la firma:
 >   kn :: Record fcr -> ChAttsRec (ICh fcr) -> ChAttsRec (SCh fcr)
 
 Y luego la funci\'on {\tt kn} se implementa por recursi\'on en la forma de la
-funci\'on sem\'antica. Se asemeja a {\tt zipWith \$}:
+funci\'on sem\'antica. En alg\'un sentido esta funci\'on se asemeja a
+ {\tt zipWith \$}:
 
 > instance Kn '[] where
 >   type ICh '[] = '[]

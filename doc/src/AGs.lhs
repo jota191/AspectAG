@@ -2,16 +2,16 @@
 
 Las gram\'aticas de atributos (AGs)~\cite{Knuth68semanticsof}
 son un formalismo para describir computaciones
-recursivas sobre tipos de datos\footnote{Tipos de datos algebr\'aicos
+recursivas sobre tipos de datos\footnote{Tipos de datos algebraicos
 o gram\'aticas son formalismos equivalentes}.
-Dada una gram\'atica libre de contexto
+Dada una gram\'atica libre de contexto,
 se le asocia una sem\'antica considerando \emph{atributos}
 en cada producci\'on,
 los cuales toman valores calculados mediante reglas a partir de los valores
 de los atributos de los padres y de los hijos en el
 \'arbol de sintaxis abstracta.
 Los atributos se dividen cl\'asicamente en dos tipos:
-heredados y sintetizados.
+\underline{heredados} y \underline{sintetizados}.
 Los atributos heredados son pasados como contexto desde los padres a los
 hijos. Los atributos sintetizados, por el contrario fluyen ``hacia arriba''
 en la gram\'atica, propag\'andose desde los hijos de una producci\'on.
@@ -34,14 +34,14 @@ son \'utiles en si mismas como un paradigma de
 programaci\'on.
 Buena parte de la programaci\'on funcional consiste en
 componer computaciones sobre \'arboles
-(expresadas mediante \'algebras~\cite{Bird:1996:AP:256095.256116}, aplicadas
+(expresadas mediante \'algebras~\cite{Bird:1996:AP:256095.256116} aplicadas
 a un catamorfismo). Un
 \'algebra en definitiva especifica una sem\'antica para una estructura
 sint\'actica.
 Cuando las estructuras de datos son complejas (por ejemplo, en la
 representaci\'on del \'arbol
 de sintaxis abstracta de un lenguaje de programaci\'on complejo),
-surgen ciertas dificultades~\cite{Dijkstra:2009:AUH:1596638.1596650}.
+surgen ciertas dificultades de escalabilidad y mantenibilidad~\cite{Dijkstra:2009:AUH:1596638.1596650}.
 Por ejemplo ante un cambio en la estructura
 es necesario hacer cambios en la implementaci\'on del catamorfismo
 y de todas las \'algebras. Las AGs permiten definir las \'algebras
@@ -77,7 +77,7 @@ La \emph{Programaci\'on orientada a aspectos} mediante
 gram\'aticas de atributos es una propuesta de soluci\'on a este
 problema, donde es simple agregar nuevas producciones
 (definiendo localmente las reglas de computaci\'on de los atributos
-existentes sobre la nueva producci\'on, as\'i como agregar
+existentes sobre la nueva producci\'on), as\'i como agregar
 nuevas funcionalidades (definiendo localmente
 nuevos atributos con sus reglas, o bien combinando los ya existentes).
 
@@ -86,8 +86,6 @@ en cada producci\'on combinando c\'omo la informaci\'on fluye
 ``de arriba a abajo''
 y de ``abajo a arriba'', una aplicaci\'on \'util de las AGs es la de definir
 computaciones circulares.
-
-\newpage
 
 
 \subsection{Ejemplo: {\tt repmin}}
@@ -157,14 +155,21 @@ siguiente manera:
 \includegraphics[width=8cm]{./src/img/ag-repmin.png}
 \end{center}
 
-Utilizamos la sintaxis de Utrecht\cite{libuuagc}.
-Las palabras clave {\tt DATA} introducen tipos de datos,
-el ejemplo traducido a haskell corresponde a:
+Utilizamos la sintaxis del lenguaje de AGs {\tt uuagc} de
+la Universidad de Utrecht\cite{libuuagc}.
+Las palabras clave {\tt DATA} introducen no terminales.
+Las producciones declaradas se delimitan por el car\'acter ``$\vert$'',
+tanto a las producciones como a los hijos se les designan nombres.
 
-> data Root = Root Tree
+El ejemplo de gram\'atica traducido a Haskell como tipo de datos algebraico
+corresponde a:
 
-> data Tree = Node { l, r :: Tree}
->           | Leaf {    i :: Int}
+> data Root
+>  = Root Tree
+
+> data Tree
+>  = Node { l, r :: Tree}
+>  | Leaf {    i :: Int}
 
 
 En lugar de utilizar el tipo {\tt Tree}
@@ -183,7 +188,10 @@ La palabra clave {\tt SYN} introduce un atributo sintetizado.
 {\tt smin} y {\tt sres} son atributos sintetizados de tipo
 {\tt Int} y {\tt Tree} respectivamente.
 La sem\'antica de cada uno se define mediante de la sentencia
-{\tt SEM}.
+{\tt SEM}. Las computaciones se definen en Haskell, con el agregado de que
+{\bf $\MVAt$lhs} o $\MVAt${\tt <hijo>} (para cualquier nombre de hijo)
+pueden usarse para hacer referencia a los atributos del padre y de los hijos,
+respectivamente.
 
 El atributo {\tt smin} representa el
 m\'inimo valor de las hojas contenidas en el sub\'arbol correspondiente,
@@ -229,7 +237,7 @@ padre y los sintetizados de los hijos, que se llaman en la literatura
 ``familia de entrada'' (\emph{input family}), a
 los sintetizados del padre y heredados de los hijos, la \emph{output family}.
 Una regla sem\'antica consiste en un mapeo de
-una input family a una output family. 
+una familia de entrada a una familia de salida. 
 Se le proveen al programador primitivas para definir atributos y sus reglas
 sem\'anticas, que se agrupar\'an en \emph{aspectos}.
 Se provee tambi\'en una primitiva
@@ -260,6 +268,18 @@ hijos en cada producci\'on. Por ejemplo, para los atributos definimos:
 > data Att_ival; ival = Label :: Label Att_ival
 > data Att_sres; sres = Label :: Label Att_sres
 
+Para los hijos, la etiqueta contiene tanto el nombre como el
+tipo de no terminal, por ejemplo:
+
+> data Ch_tree -- root
+> data Ch_r    -- node
+> data Ch_l    -- node
+> data Ch_i    -- leaf
+
+> ch_tree = Label :: Label ( Ch_tree, Tree)
+> ch_r    = Label :: Label ( Ch_r, Tree)
+> ch_l    = Label :: Label ( Ch_l, Tree)
+> ch_i    = Label :: Label ( Ch_i, Int)
 
 Las etiquetas tienen informaci\'on solo a nivel de tipos,
 {\tt Label} es una implementaci\'on especializada de {\tt Proxy}.
@@ -290,6 +310,7 @@ a la \emph{output family} (sintetizados del padre, heredados a los hijos).
 El par\'ametro sobre el que se hace pattern matching ({\tt Fam chi par})
 es entonces una familia, el campo {\tt chi} contiene el registro de los
 hijos, con sus atribuciones, y el campo {\tt par} la atribuci\'on del padre.
+El operador {\tt (\#)} es el acceso (por etiqueta) y est\'a sobrecargado, 
 Las funciones definidas tienen tipo {\tt Rule}. Los tipos
 {\tt Fam} y {\tt Rule} se detallan en la secci\'on~\ref{reimpl}.
 
@@ -305,10 +326,7 @@ el valor guardado) para el (\'unico) hijo en la producci\'on {\tt ch\_i}.
 Si bien generalmente los terminales van a tener un \'unico hijo con su valor
 -parecen innecesarias dos etiquetas-
 implementar de forma fuertemente tipada nos obliga a respetar esta estructura
-(o complicar mucho la implementaci\'on). Todos los nombres
-({\tt ch\_l}, {\tt ch\_r}, {\tt leafVal}, {\tt ch\_i})
-son etiquetas definidas de forma an\'aloga a las etiquetas para atributos.
-
+(o complicar mucho la implementaci\'on).
 Notar que, adem\'as de los nombres, nada indica (a\'un) que las reglas
 est\'en relacionadas a sus producciones.
 
@@ -326,9 +344,9 @@ el atributo sintetizado {\tt sres}:
 > leaf_sres (Fam chi par)
 >   = syndef sres $ Leaf (par # ival)
 
-En este caso el atributo estaba definido para la ra\'iz,
+En este caso el atributo est\'a definido para la ra\'iz,
 y en la hoja usamos un atributo
-heredado {\tt ival} para computarle (el m\'inimo global).
+heredado {\tt ival} para computar el m\'inimo global.
 
 Por \'ultimo presentamos el atributo heredado:
 
@@ -346,16 +364,13 @@ para cada hijo c\'omo se computar\'a {\tt ival}: desde la ra\'iz se
 propaga el valor
 del atributo sintetizado {\tt smin}, en los nodos del \'arbol se propaga
 el valor de {\tt ival} tomado del padre, incambiado.
-El par\'ametro extra {\tt [nt\_Tree]} es una lista de no terminales utilizada
-para hacer ciertos chequeos est\'aticos, por ahora no le damos
-importancia\footnote{\'este par\'ametro no es relevante para ninguna de las
-funcionalidades que se implementaron en este proyecto, se incluye para
-mantener la interfaz dado que ser\'a \'util cuando \'estas s\'i
-se implementen en el futuro}.
-
+El par\'ametro extra {\tt [nt\_Tree]} es una lista heterogenea
+de no terminales utilizada para chequear -est\'aticamente- que los hijos
+forman parte de los no terminales
+para los que est\'a definido el atributo.
 Los aspectos se definen como un registro con las reglas para
-cada producci\'on (aqu\'i es donde efectivamente asociamos a qu\'e
-producci\'on se asocia cada regla).
+cada producci\'on, aqu\'i es donde efectivamente indicamos a qu\'e
+producci\'on se asocia cada regla.
 
 \label{aspsres}
 
@@ -370,7 +385,7 @@ producci\'on se asocia cada regla).
 >         .*. p_Node .=. node_smin
 >         .*. emptyRecord
 
-El operador {\tt (.*.)} permite construir regitros heterogeneos,
+El operador {\tt (.*.)} permite construir registros heterogeneos,
 {\tt emptyRecord}
 es el registro vac\'io. El operador {\tt (.=.)} construye campos del registro
 dados un valor con el tipo de la etiqueta y su correspondiente regla.
@@ -380,15 +395,14 @@ mediante el operador {\tt (.+.)}:
 
 > asp_repmin = asp_smin .+. asp_sres .+. asp_ival
 
-Finalmente {\tt repmin::Tree->Tree} viene dado por:
+Finalmente {\tt repmin :: Tree -> Tree} viene dado por:
 
 > repmin t = sem_Root asp_repmin (Root t) emptyAtt # sres
 
 En donde {\tt sem\_Root} es la funci\'on sem\'antica,
 una funci\'on definida una sola vez\footnote{La funci\'on sem\'antica
   es derivable a partir del functor de la estructura de datos.
-  Al momento de la escritura de este documento el programador debe
-  proveerla, pero es uno de los objetivos inmediatos de trabajo futuro
-  automatizar la generaci\'on de la misma.}.
+  Se proveen funciones para derivarla autom\'aticamente utilizando
+TemplateHaskell\cite{Sheard:2002:TMH:636517.636528}.}.
 
 
