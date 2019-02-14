@@ -59,8 +59,8 @@ para expresar que las listas de pares no repiten la primer componente,
 para ello requerimos que se satisfaga la \emph{constraint}
 {\tt LabelSet('(chi, att)':chs)}  en el constructor
 de {\tt ChAttsRec}. Por supuesto, tambi\'en debemos asegurar
-en tiempo de compilaci\'on que cada hijo contiene efectivamente una atribuci\'on,
-por lo que {\tt TaggedChAttr} se define:
+en tiempo de compilaci\'on que cada hijo contiene efectivamente una
+atribuci\'on, por lo que {\tt TaggedChAttr} se define:
 
 > data TaggedChAttr (l::k) (v :: [(k',Type)]) :: Type where
 >   TaggedChAttr :: Label l -> Attribution v -> TaggedChAttr l v
@@ -475,7 +475,8 @@ Observemos la definici\'on en uno de los casos:
 Es la funci\'on {\tt knit} la que se encarga de construir la funci\'on
 sem\'antica a partir de las funciones sem\'anticas de los hijos.
 
-El tipo completo de {\tt sem\_Tree} viene dado por:
+El tipo completo de {\tt sem\_Tree} es:
+\newpage
 
 > sem_Tree
 >   :: (HasFieldRec P_Node r, HasFieldRec P_Leaf r,

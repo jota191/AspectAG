@@ -331,7 +331,8 @@ utilizando {\tt Fail} como superclase, por ejemplo:
 
 Cuando el verificador de GHC intente satisfacer la instancia
 {\tt LabelSet' l1 l2 True r} encontrar\'a de hecho una definici\'on
-v\'alida, y buscar\'a resolver {\tt Fail (RepeatedLabel)}. {\tt Fail}
+v\'alida, y buscar\'a resolver \break
+{\tt Fail (RepeatedLabel)}. {\tt Fail}
 es una clase sin implementaciones, por lo que el compilador presenta
 finalmente el error:
 

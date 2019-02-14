@@ -1,4 +1,4 @@
-En la nueva implementaci\'on se logra expresar est\'aticamente propiedades
+En la nueva implementaci\'on logramos expresar est\'aticamente propiedades
 que antes no eran representables.
 A modo de ejemplo, el constructor de tipos {\tt Fam} en las versiones previas de
 AspectAG tiene \emph{kind}
@@ -6,7 +6,7 @@ AspectAG tiene \emph{kind}
 > Fam :: * -> * -> *
 
 Notar que {\tt Fam Bool Char} es un tipo v\'alido.
-Peor a\'un, el constructor (de valores) {\tt Fam} tiene tipo
+M\'as a\'un, el constructor (de valores) {\tt Fam} tiene tipo
 
 > Fam :: c -> p -> Fam c p
 

@@ -1,4 +1,4 @@
-\documentclass[12pt, a4paper]{article}
+\documentclass[11pt, a4paper]{article}
 
 %include lhs2TeX.fmt
 %include lhs2TeX.sty
@@ -10,6 +10,9 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{ marvosym }
+\usepackage{etoolbox}
+\AtBeginEnvironment{tabbing}{\footnotesize}
+
 
 \hypersetup{
     colorlinks=true,
@@ -18,29 +21,41 @@
 }
 
 \author{Juan Pablo Garc\'ia Garland}
-\title{Reimplementaci\'on de \emph{AspectAG} \\ basada en nuevas
+\title{Reimplementaci\'on de {\tt AspectAG} \\ basada en nuevas
        extensiones de Haskell
 }
 
 \setlength\parindent{0pt} % noindent in all file
 \usepackage{geometry}
-\geometry{margin=1in}
+\geometry{margin=1.5in}
 \usepackage{graphicx}
+
+\usepackage[nottoc,notlot,notlof]{tocbibind}
 
 \date{}
 \renewcommand{\contentsname}{\'Indice}
-
-
+\renewcommand{\refname}{Bibliograf\'ia}
 
 \begin{document}
+
+
 \hspace{-0.5cm}
-\includegraphics[height=0.08\textheight]{./src/img/udelar_logo.jpg} \hfill
-\includegraphics[height=0.08\textheight]{./src/img/logo_FING_rgb.png}  \hfil
+\includegraphics[height=0.11\textheight]{./src/img/udelar_logo.jpg} \hfill
+\includegraphics[height=0.10\textheight]{./src/img/logo_FING_rgb.png}  \hfil
 
 {\let\newpage\relax\maketitle}
 \maketitle
 
-
+\begin{center}
+  {\large
+    Trabajo Final\\
+    Licenciatura en Computaci\'on\\
+    Facultad de Ingenier\'ia\\
+    Universidad de la Rep\'ublica\\
+    Orientadores: Alberto Pardo, Marcos Viera\\
+    2019
+  }
+\end{center}
 
 
 \newpage
@@ -134,7 +149,7 @@ programaci\'on a nivel de tipos en Haskell.
 La implementaci\'on utiliza fuertemente los registros extensibles que provee
 la biblioteca {\tt HList}. Ambas bibliotecas se basan en la combinaci\'on
 de las extensiones {\tt MultiParamTypeClasses}\cite{type-classes-an-exploration-of-the-design-space}
-(hace posible la implementaci\'on de relaciones a nivel de tipos) con
+(hace posible la implementaci\'on de relaciones a nivel de tipos) con\break
 {\tt FunctionalDependencies}~\cite{DBLP:conf/esop/Jones00},
 que hace posible expresar en particular
 relaciones funcionales. Adem\'as se utilizan otras relaciones
@@ -215,7 +230,7 @@ y funciones seguras como:
 > vZipWith f (VS x xs) (VS y ys)
 >   = VS (f x y)(vZipWith f xs ys)
 
-Es posible definir funciones puramene a nivel de tipos mediante familias
+Es posible definir funciones puramene a nivel de tipos mediante familias\break
 ({\tt TypeFamilies}, {\tt TypeOperators}, {\tt DataKinds},
 {\tt KindSignatures}) como la suma:
 
