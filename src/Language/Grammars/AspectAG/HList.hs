@@ -1,5 +1,5 @@
 {-|
-Module      : Language.Grammars.AspectAG.Utils.HList
+Module      : Language.Grammars.AspectAG.HList
 Description : Heterogeneous Lists for AAG, inspired on HList
 Copyright   : (c) Juan García Garland, 2018 
 License     : LGPL
@@ -25,9 +25,9 @@ Implementation of strongly typed heterogeneous lists.
              ScopedTypeVariables
 #-}
 
-module Language.Grammars.AspectAG.Utils.HList where
-import Language.Grammars.AspectAG.Utils.TPrelude
-import Language.Grammars.AspectAG.Utils.TagUtils
+module Language.Grammars.AspectAG.HList where
+import Language.Grammars.AspectAG.TPrelude
+import Language.Grammars.AspectAG.TagUtils
 import Data.Proxy
 import Data.Type.Equality
 import Data.Kind

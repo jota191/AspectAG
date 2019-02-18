@@ -1,7 +1,7 @@
 {-|
-Module      : Language.Grammars.AspectAG.Utils.Record
+Module      : Language.Grammars.AspectAG.Record
 Description : Strongly typed heterogeneous records,
-              using (polykinded) phantom labels as index.
+              using polykinded phantom labels as indexes.
 Copyright   : (c) Juan García Garland, 2018 
 License     : LGPL
 Maintainer  : jpgarcia@fing.edu.uy
@@ -28,16 +28,16 @@ Portability : POSIX
              InstanceSigs
 #-}
 
-module Language.Grammars.AspectAG.Utils.Record where
+module Language.Grammars.AspectAG.Record where
 
 import Data.Kind 
 import Data.Type.Equality
 import Data.Proxy
-import Language.Grammars.AspectAG.Utils.TPrelude
+import Language.Grammars.AspectAG.TPrelude
 import Data.Tagged hiding (unTagged)
-import Language.Grammars.AspectAG.Utils.TagUtils
+import Language.Grammars.AspectAG.TagUtils
 import GHC.TypeLits
-import Language.Grammars.AspectAG.Utils.GenRecord
+import Language.Grammars.AspectAG.GenRecord
 
 -- * Constructors
 
@@ -64,14 +64,6 @@ emptyRecord :: Record '[]
 emptyRecord = EmptyR
 
 
--- | A pretty constructor for ConsR
--- infixr 2 .*.
-
--- (.*.) :: LabelSet ('(att, val) : atts) =>
---     Tagged att val -> Record atts -> Record ('(att, val) : atts)
--- (.*.) = ConsR
-
-
 
 -- * Getting
 
@@ -95,7 +87,7 @@ class HasFieldRec' (b::Bool) (l::k) (r :: [(k,Type)]) where
   lookupByLabelRec' ::
      Proxy b -> Label l -> Record r -> LookupByLabelRec' b l r
 
--- | Pretty lookup
+-- | Operator for lookup
 infixl 3 .#.
 (.#.)  :: (HasFieldRec l r)
    => Record r -> Label l -> (LookupByLabelRec l r)
@@ -113,14 +105,18 @@ instance (HasFieldRec l r )=>
   type LookupByLabelRec' 'False l ( '(l2, v) ': r) = LookupByLabelRec l r
   lookupByLabelRec' _ l (ConsR _ r) = lookupByLabelRec l r
 
--- | Error instance, using :
-instance TypeError ( Text "Type Error : No Field found on Record:" :$$:
+
+type NoFieldFound l
+  = Text "Type Error : No Field found on Record:" :$$:
     Text "(Possibly, in some aspect there are productions " :<>:
     Text "where the attribute is undefined)" :$$:
     Text "No Field of type " :<>: ShowType l
-    :<>: Text " on Record" )
+    :<>: Text " on Record"
+
+-- | Error instance:
+instance TypeError (NoFieldFound l)
   => HasFieldRec l '[] where
-  type LookupByLabelRec l '[] = TypeError (Text "unreachable")
+  type LookupByLabelRec l '[] = ()
   lookupByLabelRec = undefined
 
 
@@ -157,7 +153,6 @@ instance ( UpdateAtLabelRec l v r r', LabelSet  ( a ': r' ) ) =>
         xs' -> ConsR att xs' :: Record( a ': r')
 
 -- | Type family version of update
-
 class UpdateAtLabelRecF (l :: k)(v :: Type)(r :: [(k,Type)]) where
   type UpdateAtLabelRecFR l v r :: [(k,Type)]
   updateAtLabelRecF :: Label l -> v -> Record r

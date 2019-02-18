@@ -36,29 +36,29 @@ This was implemented from scratch using the improvements on GHC on the last
 
 module Language.Grammars.AspectAG (
               module Language.Grammars.AspectAG,
-              module Language.Grammars.AspectAG.Utils.Attribute,
-              module Language.Grammars.AspectAG.Utils.Attribution,
-              module Language.Grammars.AspectAG.Utils.ChildAtts,
-              module Language.Grammars.AspectAG.Utils.Record,
-              module Language.Grammars.AspectAG.Utils.TagUtils,
-              module Language.Grammars.AspectAG.Utils.HList,
-              module Language.Grammars.AspectAG.Utils.Notation,
-              module Language.Grammars.AspectAG.Utils.GenRecord
+              module Language.Grammars.AspectAG.Attribute,
+              module Language.Grammars.AspectAG.Attribution,
+              module Language.Grammars.AspectAG.ChildAtts,
+              module Language.Grammars.AspectAG.Record,
+              module Language.Grammars.AspectAG.TagUtils,
+              module Language.Grammars.AspectAG.HList,
+              module Language.Grammars.AspectAG.Notation,
+              module Language.Grammars.AspectAG.GenRecord
             ) where
 
 
-import Language.Grammars.AspectAG.Utils.HList
-import Language.Grammars.AspectAG.Utils.Attribution
-import Language.Grammars.AspectAG.Utils.Record
-import Language.Grammars.AspectAG.Utils.Attribute
+import Language.Grammars.AspectAG.HList
+import Language.Grammars.AspectAG.Attribution
+import Language.Grammars.AspectAG.Record
+import Language.Grammars.AspectAG.Attribute
 import Data.Kind
 import Data.Tagged hiding (unTagged)
-import Language.Grammars.AspectAG.Utils.TPrelude
+import Language.Grammars.AspectAG.TPrelude
 import Data.Proxy
-import Language.Grammars.AspectAG.Utils.ChildAtts
-import Language.Grammars.AspectAG.Utils.TagUtils
-import Language.Grammars.AspectAG.Utils.Notation
-import Language.Grammars.AspectAG.Utils.GenRecord
+import Language.Grammars.AspectAG.ChildAtts
+import Language.Grammars.AspectAG.TagUtils
+import Language.Grammars.AspectAG.Notation
+import Language.Grammars.AspectAG.GenRecord
 import GHC.TypeLits
 
 -- | In each node of the grammar, the "Fam" contains a single attribution

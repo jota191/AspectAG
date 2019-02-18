@@ -17,21 +17,21 @@
              TypeFamilies
 #-}
 
-module Language.Grammars.AspectAG.Utils.InternalTest where
+module Language.Grammars.AspectAG.InternalTest where
 import Data.Kind 
 import Data.Type.Equality
 import Data.Proxy
-import Language.Grammars.AspectAG.Utils.Record
+import Language.Grammars.AspectAG.Record
 import Data.Tagged
 
 
-import Language.Grammars.AspectAG.Utils.Attribute
-import Language.Grammars.AspectAG.Utils.TPrelude
-import Language.Grammars.AspectAG.Utils.Attribution
-import Language.Grammars.AspectAG.Utils.ChildAtts
+import Language.Grammars.AspectAG.Attribute
+import Language.Grammars.AspectAG.TPrelude
+import Language.Grammars.AspectAG.Attribution
+import Language.Grammars.AspectAG.ChildAtts
 import Language.Grammars.AspectAG
-import Language.Grammars.AspectAG.Utils.HList
-import Language.Grammars.AspectAG.Utils.TagUtils
+import Language.Grammars.AspectAG.HList
+import Language.Grammars.AspectAG.TagUtils
 
 
 -- data Lbl = Label1 | Label2 | Label3 | Label4 deriving Show

@@ -1,6 +1,6 @@
 
 {-|
-Module      : Language.Grammars.AspectAG.Utils.ChildAtts
+Module      : Language.Grammars.AspectAG.ChildAtts
 Description : Maps from child names to attributions
 Copyright   : (c) Juan García Garland, 2018 
 License     : LGPL
@@ -26,16 +26,16 @@ Portability : POSIX
              TypeFamilies
 #-}
 
-module Language.Grammars.AspectAG.Utils.ChildAtts where
+module Language.Grammars.AspectAG.ChildAtts where
 
 import Data.Kind 
 import Data.Type.Equality
 import Data.Proxy
-import Language.Grammars.AspectAG.Utils.Attribute
-import Language.Grammars.AspectAG.Utils.TPrelude
-import Language.Grammars.AspectAG.Utils.TagUtils
-import Language.Grammars.AspectAG.Utils.Attribution
-import Language.Grammars.AspectAG.Utils.GenRecord
+import Language.Grammars.AspectAG.Attribute
+import Language.Grammars.AspectAG.TPrelude
+import Language.Grammars.AspectAG.TagUtils
+import Language.Grammars.AspectAG.Attribution
+import Language.Grammars.AspectAG.GenRecord
 import GHC.TypeLits
 
 -- | * Constructors

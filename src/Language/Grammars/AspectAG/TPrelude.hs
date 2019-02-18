@@ -1,5 +1,5 @@
 {-|
-Module      : Language.Grammars.AspectAG.Utils.TPrelude
+Module      : Language.Grammars.AspectAG.TPrelude
 Description : Some type level functions, needed for AspectAG
 Copyright   : (c) Juan García Garland, 2018 
 License     : LGPL
@@ -24,7 +24,7 @@ Portability : POSIX
              ScopedTypeVariables
 #-}
 
-module Language.Grammars.AspectAG.Utils.TPrelude where
+module Language.Grammars.AspectAG.TPrelude where
 import Data.Kind
 import Data.Type.Equality
 import GHC.TypeLits
@@ -103,3 +103,8 @@ instance ((Proxy x == Proxy y) ~ b) => HEq x y b
 
 type family HEqKF (a :: k)(b :: k) :: Bool
 type instance HEqKF a b = a == b
+
+
+-- | heterogeneous equality at type level
+type family (a :: k1) === (b :: k2) where
+  a === b = (Proxy a) == (Proxy b)

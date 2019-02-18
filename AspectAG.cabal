@@ -58,19 +58,19 @@ cabal-version:       >=1.10
 library
   -- Modules exported by the library.
   exposed-modules:     Language.Grammars.AspectAG,
-                       Language.Grammars.AspectAG.Utils.HList,
-                       Language.Grammars.AspectAG.Utils.InternalTest,
-                       Language.Grammars.AspectAG.Utils.Attribute,
-                       Language.Grammars.AspectAG.Utils.Notation,
-                       Language.Grammars.AspectAG.Utils.ChildAtts,
-                       Language.Grammars.AspectAG.Utils.Record,
-                       Language.Grammars.AspectAG.Utils.TagUtils,
-                       Language.Grammars.AspectAG.Utils.Attribution,
-                       Language.Grammars.AspectAG.Utils.TPrelude
+                       Language.Grammars.AspectAG.HList,
+                       Language.Grammars.AspectAG.InternalTest,
+                       Language.Grammars.AspectAG.Attribute,
+                       Language.Grammars.AspectAG.Notation,
+                       Language.Grammars.AspectAG.ChildAtts,
+                       Language.Grammars.AspectAG.Record,
+                       Language.Grammars.AspectAG.TagUtils,
+                       Language.Grammars.AspectAG.Attribution,
+                       Language.Grammars.AspectAG.TPrelude
                        Language.Grammars.AspectAG.Derive
   -- Modules included in this library but not exported.
   -- other-modules:
-                       Language.Grammars.AspectAG.Utils.GenRecord
+                       Language.Grammars.AspectAG.GenRecord
   -- LANGUAGE extensions used by modules in this package.
   other-extensions:    TypeInType,
                        TypeFamilies,

@@ -1,6 +1,6 @@
 
 {-|
-Module      : Language.Grammars.AspectAG.Utils.Notation
+Module      : Language.Grammars.AspectAG.Notation
 Description : some syntactic sugar
 Copyright   : (c) Juan García Garland, 2018 
 License     : LGPL
@@ -30,18 +30,18 @@ Portability : POSIX
 #-}
 
 
-module Language.Grammars.AspectAG.Utils.Notation where
+module Language.Grammars.AspectAG.Notation where
 
-import Language.Grammars.AspectAG.Utils.HList
-import Language.Grammars.AspectAG.Utils.Attribution
-import Language.Grammars.AspectAG.Utils.Record
-import Language.Grammars.AspectAG.Utils.Attribute
+import Language.Grammars.AspectAG.HList
+import Language.Grammars.AspectAG.Attribution
+import Language.Grammars.AspectAG.Record
+import Language.Grammars.AspectAG.Attribute
 import Data.Kind
 import Data.Tagged hiding (unTagged)
-import Language.Grammars.AspectAG.Utils.TPrelude
+import Language.Grammars.AspectAG.TPrelude
 import Data.Proxy
-import Language.Grammars.AspectAG.Utils.ChildAtts
-import Language.Grammars.AspectAG.Utils.TagUtils
+import Language.Grammars.AspectAG.ChildAtts
+import Language.Grammars.AspectAG.TagUtils
 import GHC.TypeLits
 
 
@@ -70,7 +70,7 @@ instance (LookupByLabelRec l r ~ v, HasFieldRec l r)
   => RecLookup l r Label Record v where
   (#) = (.#.)
 
-instance (HasFieldAtt l r v)
+instance (HasFieldAttF l r, LookupByLabelAttFR l r ~ v)
   => RecLookup l r Label Attribution v where
   (#) = (#.)
 

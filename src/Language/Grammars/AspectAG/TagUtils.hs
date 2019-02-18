@@ -1,5 +1,5 @@
 {-|
-Module      : Language.Grammars.AspectAG.Utils.TagUtils
+Module      : Language.Grammars.AspectAG.TagUtils
 Description : utilities for tagging values using a type level tag.
 Copyright   : (c) Juan García Garland, 2018 
 License     : LGPL
@@ -26,7 +26,7 @@ Portability : POSIX
              TypeFamilies
 #-}
 
-module Language.Grammars.AspectAG.Utils.TagUtils where
+module Language.Grammars.AspectAG.TagUtils where
 import Data.Tagged
 
 

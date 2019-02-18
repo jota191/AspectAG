@@ -18,20 +18,20 @@
              AllowAmbiguousTypes
 #-}
 
-module Language.Grammars.AspectAG.Utils.GenRecord where
+module Language.Grammars.AspectAG.GenRecord where
 
 import Data.Kind 
 import Data.Type.Equality
 import Data.Proxy
-import Language.Grammars.AspectAG.Utils.TPrelude
+import Language.Grammars.AspectAG.TPrelude
 import Data.Tagged hiding (unTagged)
-import Language.Grammars.AspectAG.Utils.TagUtils
+import Language.Grammars.AspectAG.TagUtils
 import GHC.TypeLits
 
 
 ----- only for testing
 
-import Language.Grammars.AspectAG.Utils.Attribute
+import Language.Grammars.AspectAG.Attribute
 
 -----
 
