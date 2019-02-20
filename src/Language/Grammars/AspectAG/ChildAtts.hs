@@ -8,6 +8,10 @@ Maintainer  : jpgarcia@fing.edu.uy
 Stability   : experimental
 Portability : POSIX
 
+Yet another specialized record. Mappings from Children to their attributions.
+This module implements dependent functions using functional dependencies
+and using type families. The latter approach is the one we actually use.
+
 -}
 {-# LANGUAGE DataKinds,
              TypeOperators,

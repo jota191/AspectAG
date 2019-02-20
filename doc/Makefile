@@ -17,6 +17,7 @@ pdf : Main.lhs
 	bibtex $(REPORTE)
 	pdflatex $(REPORTE).tex
 	cp Main.pdf ../Doc.pdf
+	cp Main.pdf ../dist/doc/html/AspectAG/AAG-Reporte.pdf
 
 
 .PHONY: clean

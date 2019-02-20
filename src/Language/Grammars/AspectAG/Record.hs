@@ -8,6 +8,11 @@ Maintainer  : jpgarcia@fing.edu.uy
 Stability   : experimental
 Portability : POSIX
 
+Heterogeneous records.
+This module implements dependent functions using functional dependencies
+and using type families. The latter approach is the one we actually use.
+
+
 -}
 
 {-# LANGUAGE DataKinds,

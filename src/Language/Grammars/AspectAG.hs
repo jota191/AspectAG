@@ -115,9 +115,10 @@ syndef latt val (Fam ic sp) = Fam ic (latt =. val *. sp)
 --   It takes a label 'att' representing the name of the attribute, 
 --   a value 'val' to be assigned to this attribute, and it builds a function
 --   which  updates the output constructed thus far.
-synmod  ::  UpdateAtLabelAtt att val sp sp'
+synmod  ::  ( UpdateAtLabelAttF att val sp
+            , UpdateAtLabelAttFR att val sp ~ sp')
   =>  Label att -> val -> Fam ic sp -> Fam ic sp'
-synmod att v (Fam ic sp) = Fam ic (updateAtLabelAtt att v sp)
+synmod att v (Fam ic sp) = Fam ic (updateAtLabelAttF att v sp)
 
 ------------------------------------------------------------------------------
 

@@ -7,7 +7,10 @@ Maintainer  : jpgarcia@fing.edu.uy
 Stability   : experimental
 Portability : POSIX
 
-Used to build attributions, which are mappings from labels to values
+Used to build attributions, which are mappings from labels to values.
+This module implements dependent functions using functional dependencies
+and using type families. The latter approach is the one we actually use.
+
 -}
 
 {-# LANGUAGE DataKinds,
@@ -71,22 +74,22 @@ emptyAtt = EmptyR
 
 -- * operations
 
--- | A getter, also works as a predicate
+-- | A getter, also works as a predicate. 'HasFieldAttF' is actually used.
 class HasFieldAtt (l::k) (r :: [(k,Type)]) v | l r -> v where
    lookupByLabelAtt:: Label l -> Attribution r -> v
 
 instance (HEqK l l1 b, HasFieldAtt' b l ( '(l1,v1) ': r) v)
-    => HasFieldAtt l ( '(l1,v1) ': r) v where
-    lookupByLabelAtt l (r :: Attribution ( '(l1,v1) ': r)) =
-         lookupByLabelAtt' (Proxy::Proxy b) l r
+  => HasFieldAtt l ( '(l1,v1) ': r) v where
+  lookupByLabelAtt l (r :: Attribution ( '(l1,v1) ': r)) =
+       lookupByLabelAtt' (Proxy::Proxy b) l r
 
 class HasFieldAtt' (b::Bool) (l :: k) (r::[(k,Type)]) v | b l r -> v where
-    lookupByLabelAtt':: Proxy b -> Label l -> Attribution r -> v
+  lookupByLabelAtt':: Proxy b -> Label l -> Attribution r -> v
 
 instance HasFieldAtt' True l ( '(l,v) ': r) v where
-   lookupByLabelAtt' _ _ (ConsR (Attribute v) _) = v
+  lookupByLabelAtt' _ _ (ConsR (Attribute v) _) = v
 instance HasFieldAtt l r v => HasFieldAtt' False l ( '(l2,v2) ': r) v where
-   lookupByLabelAtt' _ l (ConsR _ r) = lookupByLabelAtt l r
+  lookupByLabelAtt' _ l (ConsR _ r) = lookupByLabelAtt l r
 
 -- | Error instance
 
@@ -117,8 +120,8 @@ instance HasFieldAttF' True l ( '(l, v) ': r) where
   type LookupByLabelAttFR' 'True l ( '(l, v) ': r) = v
   lookupByLabelAttF' _ _ (ConsR (Attribute a) _) = a
 
-instance (HasFieldAttF l r) => 
-  HasFieldAttF' 'False l ( '(l1,v) ': r) where
+instance (HasFieldAttF l r)
+  => HasFieldAttF' 'False l ( '(l1,v) ': r) where
   type LookupByLabelAttFR' 'False l ( '(l1,v) ': r) = LookupByLabelAttFR l r
   lookupByLabelAttF' _ l (ConsR _ r) = lookupByLabelAttF l r
 
@@ -154,7 +157,6 @@ lookupByLabelAttF' :: Proxy 'True -> Label l -> Attribution ( '(l, v) ': r)
 -}
 
 -- | Pretty lookup
--- | Pretty lookup
 infixl 3 #.
 (#.)  :: (HasFieldAttF l r)
    => Attribution r -> Label l -> LookupByLabelAttFR l r
@@ -163,7 +165,7 @@ c #. l = lookupByLabelAttF l c
 
 -- | Update an attribution at a Label, putting an attribute v.
 --Note that not only the value but also the type at the position could
---be updated
+--be updated. 'UpdateAtLabelAttF' is actually used
 class UpdateAtLabelAtt (l :: k)(v :: Type)(r :: [(k,Type)])(r' :: [(k,Type)])
    | l v r -> r' where
   updateAtLabelAtt :: Label l -> v -> Attribution r -> Attribution r'
@@ -176,12 +178,12 @@ class UpdateAtLabelAtt' (b::Bool)(l::k)(v::Type)(r::[(k,Type)])(r'::[(k,Type)])
 
 instance (HEqK l l' b, UpdateAtLabelAtt' b l v ( '(l',v')': r) r')
  -- note that if pattern over r is not written this does not compile
-       => UpdateAtLabelAtt l v ( '(l',v') ': r) r' where
+  => UpdateAtLabelAtt l v ( '(l',v') ': r) r' where
   updateAtLabelAtt = updateAtLabelAtt' (Proxy :: Proxy b)
 
 
-instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r) ) =>
-         UpdateAtLabelAtt' 'True l v ( '(l,v') ': r) ( '(l,v) ': r) where
+instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r) )
+  => UpdateAtLabelAtt' 'True l v ( '(l,v') ': r) ( '(l,v) ': r) where
   updateAtLabelAtt' _ (l :: Label l) v (att `ConsR` atts)
     = (Attribute v :: Attribute l v) `ConsR` atts
 
@@ -209,3 +211,57 @@ instance ( UpdateAtLabelAtt l v r r', LabelSet  ( a ': r' ) ) =>
 --   show (ConsAtt att atts) = let tail = show atts
 --                             in "«" ++ show (getVal att) ++ "," ++ drop 1 tail 
 
+-- | Type family implementation of update 
+class UpdateAtLabelAttF (l :: k) (v :: Type) (r :: [(k,Type)]) where
+  type UpdateAtLabelAttFR l v r :: [(k,Type)]
+  updateAtLabelAttF :: Label l -> v -> Attribution r
+                    -> Attribution (UpdateAtLabelAttFR l v r)  
+
+-- | Auxiliar function, with equality proof explicit
+class UpdateAtLabelAttF' (b :: Bool) (l :: k) (v :: Type)
+                                       (r :: [(k, Type)]) where
+  type UpdateAtLabelAttFR' b l v r :: [(k,Type)]
+  updateAtLabelAttF' :: Proxy b -> Label l -> v -> Attribution r
+                     -> Attribution (UpdateAtLabelAttFR' b l v r)  
+
+
+-- | Call the auxiliar function making te (in)equality evidence
+-- of head and to-update index explicit 
+instance (UpdateAtLabelAttF' (l==l2) l v ( '(l2, v2) ': r))
+  => UpdateAtLabelAttF l v ( '(l2, v2) ': r) where
+  type UpdateAtLabelAttFR l v ( '(l2, v2) ': r)
+    = UpdateAtLabelAttFR' (l==l2) l v ( '(l2, v2) ': r)
+  updateAtLabelAttF l v r = updateAtLabelAttF' (Proxy @ (l==l2)) l v r
+
+-- | When the first label matches
+instance (LabelSet ('(l, v) : r))
+  => UpdateAtLabelAttF' 'True l v ( '(l2,v2) ': r) where
+  type UpdateAtLabelAttFR' 'True l v ( '(l2,v2) ': r) = ( '(l,v) ': r)
+  updateAtLabelAttF' _ l v (_ `ConsR` r) = l =. v *. r 
+
+-- | When the first label does not match
+instance ( LabelSet ( '(l2,v2) ': UpdateAtLabelAttFR l v r)
+         , UpdateAtLabelAttF l v r)
+  => UpdateAtLabelAttF' 'False l v ( '(l2,v2) ': r) where
+  type UpdateAtLabelAttFR' 'False l v ( '(l2,v2) ': r)
+    = '(l2,v2) ': UpdateAtLabelAttFR l v r
+  updateAtLabelAttF' _ l v (lv `ConsR` r) = lv *. (updateAtLabelAttF l v r) 
+
+-- | Error instance
+type NoAttToUpdate l r
+  = Text "No attribute of name '" :<>: ShowType l :<>: Text "'":$$:
+          Text "to update on Attribution: " :<>: ShowType r
+
+instance UpdateAtLabelAttF l v '[] where
+  type UpdateAtLabelAttFR l v '[] = TypeError (NoAttToUpdate l '[])
+  updateAtLabelAttF = undefined
+
+{-
+
+Here, either conflicting fam decls or a warning, anyways, the error is the
+same than in actual implementation
+instance {-# OVERLAPS #-} TypeError (NoAttToUpdate l r)
+  => UpdateAtLabelAttF l v r where
+  type UpdateAtLabelAttFR l v r = '[] -- TypeError (NoAttToUpdate l r)
+  updateAtLabelAttF = undefined
+-}

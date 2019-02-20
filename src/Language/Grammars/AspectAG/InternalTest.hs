@@ -36,11 +36,15 @@ import Language.Grammars.AspectAG.TagUtils
 
 -- data Lbl = Label1 | Label2 | Label3 | Label4 deriving Show
 
+data Label1
+data Label2
+data Label3
+data Label4
 
--- label1 = Label :: Label 'Label1
--- label2 = Label :: Label 'Label2
--- label3 = Label :: Label 'Label3
--- label4 = Label :: Label 'Label4
+label1 = Label :: Label Label1
+label2 = Label :: Label Label2
+label3 = Label :: Label Label3
+label4 = Label :: Label Label4
 
 
 
@@ -78,21 +82,27 @@ import Language.Grammars.AspectAG.TagUtils
 
 -- ---- Attribution
 
--- -- att1 = Attribute 3   :: Attribute Label1 Int 
--- -- att2 = Attribute '4' :: Attribute Label2 Char
--- -- att3 = Attribute '4' :: Attribute Label3 Char
+att1 = Attribute 3   :: Attribute Label1 Int
+att2 = Attribute '4' :: Attribute Label2 Char
+att3 = Attribute '4' :: Attribute Label3 Char
 
--- -- attrib1 = ConsAtt att2 EmptyAtt
--- -- -- test2 = ConsAtt att2 test1 does not compile because of label duplication
--- -- attrib2 = ConsAtt att1 attrib1
--- -- attrib3 = ConsAtt att3 attrib2
+attrib1 = att2 *. emptyAtt
+-- test2 = ConsAtt att2 test1 does not compile because of label duplication
+attrib2 = att1 *. attrib1
+attrib3 = att3 *. attrib2
 
--- --test_update_1 = updateAtLabelAtt label4 False attrib3 --should fail
--- -- test_update_2 = updateAtLabelAtt label2 False attrib3 
--- -- test_update_3 = updateAtLabelAtt label2 "hola" attrib3
--- -- test_update_4 = updateAtLabelAtt label2 '9' attrib3 
--- -- test_update_5 = updateAtLabelAtt label3 "hola" attrib3 
--- -- test_update_6 = updateAtLabelAtt label3 '9' attrib3 
+-- test_update_1 = updateAtLabelAtt label4 False attrib3 --should fail
+test_update_2 = updateAtLabelAtt label2 False attrib3
+test_update_3 = updateAtLabelAtt label2 "hola" attrib3
+test_update_4 = updateAtLabelAtt label2 '9' attrib3
+test_update_5 = updateAtLabelAtt label3 "hola" attrib3
+test_update_6 = updateAtLabelAtt label3 '9' attrib3
+
+test_update_F2 = updateAtLabelAttF label2 False attrib3
+test_update_F3 = updateAtLabelAttF label2 "hola" attrib3
+test_update_F4 = updateAtLabelAttF label2 '9' attrib3
+test_update_F5 = updateAtLabelAttF label3 "hola" attrib3
+test_update_F6 = updateAtLabelAttF label3 '9' attrib3
 
 
 -- ----ChildAtts

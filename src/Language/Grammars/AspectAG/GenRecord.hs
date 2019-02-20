@@ -28,13 +28,6 @@ import Data.Tagged hiding (unTagged)
 import Language.Grammars.AspectAG.TagUtils
 import GHC.TypeLits
 
-
------ only for testing
-
-import Language.Grammars.AspectAG.Attribute
-
------
-
 -- * Definition 
 
 -- | REC is a generic definition parametrized by the datatype used to build
@@ -43,7 +36,6 @@ data REC :: forall k k'. (k -> k' -> Type) -> [(k,k')] -> Type where
   EmptyR :: REC field '[]
   ConsR  :: LabelSet ( '(l,v) ': r) =>
             field l v -> REC field r -> REC field ( '(l,v) ': r)
-
 
 -- * Pretty constructors
 
@@ -55,7 +47,6 @@ infixr 2 .*.
 -- * destructors
 
 -- | A getter, also a predicate
-
 class HasField (l :: k) (r :: [(k,k')]) field where
   type LookupByLabel field l r :: Type
   (##) :: Label l -> REC field r -> LookupByLabel field l v
