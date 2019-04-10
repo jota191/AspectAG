@@ -69,6 +69,13 @@ data Fam (c::[(k',[(k,Type)])]) (p :: [(k,Type)]) :: Type where
   Fam :: ChAttsRec c  -> Attribution p -> Fam c p
 
 
+-- | desctructors
+chi :: Fam c p -> ChAttsRec c
+chi (Fam chi _) = chi
+
+par :: Fam c p -> Attribution p
+par (Fam _ par) = par
+
 -- | Rules, aka definition of attribution computations
 --Rules are defined as a mapping from an input family to an output family,
 --the added arity is for make them composable
