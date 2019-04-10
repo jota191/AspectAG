@@ -121,7 +121,7 @@ El tipo de datos {\tt HList} tiene la siguiente definici\'on:
 
 La extensi\'on {\tt DataKinds} promueve las listas con una notaci\'on
 conveniente similar a la utilizada a nivel de valores, incluida la notaci\'on
-con ap\'ostrofes.
+con ap\'ostrofos.
 En la definici\'on anterior se utiliza
 la versi\'on promovida de listas como \'indice del tipo de datos.
 {\tt HNil} es un valor de tipo {\tt HList '[]}, mientras que {\tt HCons}
@@ -212,7 +212,7 @@ colecciones etiqueta-valor, heterogeneas, donde adem\'as las etiquetas
 est\'en dadas por tipos. Adem\'as de HList,
 existen otros proyectos de implementaciones
 de registros heterogeneos en Haskell,
-como Vinil\cite{libvinyl}, CTRex\cite{libCTRex}, entre otros \cite{HColsWiki}.
+como Vinyl\cite{libvinyl}, CTRex\cite{libCTRex}, entre otros \cite{HColsWiki}.
 
 El enfoque original de HList para implementar registros
 es utilizar una lista heterogenea,

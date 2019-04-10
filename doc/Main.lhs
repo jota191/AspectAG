@@ -98,13 +98,17 @@ tipos de forma similar a cuando se programa a nivel de
 valores, algo que originalmente era imposible
 o muy dif\'icil de lograr. El uso de estas extensiones permite
 una programaci\'on a nivel de tipos m\'as robusta y segura.
-Sobre la base de estas extensiones, implementamos un subconjunto
-de la biblioteca original.
+
+En este proyecto implementamos un subconjunto
+de la biblioteca original en base a las nuevas extensiones.
+
+\newpage
 
 \paragraph{
 Estructura del documento:
 }
-
+\begin{itemize}
+\item
 En la secci\'on \ref{typelevel} se presenta una breve rese\~na de las
 t\'ecnicas de programaci\'on a nivel de tipos 
 y las extensiones a Haskell que provee el compilador GHC
@@ -114,25 +118,42 @@ las estructuras de listas heterogeneas (\ref{hlist})
 y registros heterogeneos (\ref{hrecord}) que
 normalmente no ser\'ian implementables en un lenguaje fuertemente tipado
 sin tipos dependientes.
-
+\item
 En la secci\'on \ref{ags} se presentan las gram\'aticas de atributos
 y en particular la implementaci\'on (nueva) de AspectAG mediante un
 ejemplo que introduce las primitivas importantes de la biblioteca.
-
+\item
 En la secci\'on \ref{impl} se presentan los detalles de la
 implementaci\'on, que se basan en las t\'ecnicas  modernas de programaci\'on a
 nivel de tipos.
+\item
+  En la secci\'on \ref{discusion} discuten las contribuciones de la nueva         implementación, en comparaci\'on a la original.
+\end{itemize}
 
+
+\paragraph{
+Fuentes y documentaci\'on:
+}
+
+\hfill\break
 El c\'odigo fuente de la biblioteca y la documentaci\'on
--incluido este documento- se encuentra disponible en el repositorio:
+-incluido el presente documento- se encuentra disponible en el repositorio:
+\begin{center}
+\url{https://gitlab.fing.edu.uy/jpgarcia/AspectAG/}.
+\end{center}
 
-\url{http://https://gitlab.fing.edu.uy/jpgarcia/AspectAG/}.
-
-En particular, en el directorio {\tt /test} se implementan ejemplos
+La distribuci\'on consiste en un paquete {\tt cabal},
+y compila con las versiones modernas de {\tt GHC}\footnote{
+  Testeado en {\tt 8.4.4} y {\tt 8.6.3}.
+}.
+En el directorio {\tt /test} se implementan ejemplos
 de utilizaci\'on de la biblioteca.
-La versi\'on compilada de la documentaci\'on de los fuentes en la web:
+La versi\'on compilada de la documentaci\'on de los fuentes
+se encuentra en la web:
 
+\begin{center}
 \url{https://www.fing.edu.uy/~jpgarcia/AspectAG/}
+\end{center}
 
 
 \newpage
@@ -141,7 +162,7 @@ La versi\'on compilada de la documentaci\'on de los fuentes en la web:
 \label{typelevel}
 \subsection{Extensiones utilizadas}
 
-\subsubsection{T\'ecnicas antiguas}
+\paragraph{T\'ecnicas antiguas}\hfill\break
 La biblioteca AspectAG presentada originalmente
 en 2009, adem\'as de implementar un sistema de gram\'aticas de atributos
 como un EDSL provee un buen ejemplo del uso de la
@@ -157,12 +178,11 @@ que ya eran de uso
 extendido como {\tt FlexibleContexts}, {\tt FlexibleInstances},
 {\tt UndecidableInstances} etc.
 
-\subsubsection{T\'ecnicas modernas}
-Durante la d\'ecada pasada~\footnote{Algunas extensiones como
+\paragraph{T\'ecnicas modernas}\hfill\break
+Durante la d\'ecada pasada\footnote{Algunas extensiones como
 {\tt GADTS} o incluso {\tt TypeFamilies} ya exist\'ian en la \'epoca
 de la publicaci\'on original de AspectAG, pero eran experimentales,
-y de uso poco extendido.}
-se han implementado m\'ultiples extensiones
+y de uso poco extendido.} se han implementado m\'ultiples extensiones
 en el compilador GHC que proveen herramientas para hacer la programaci\'on
 a nivel de tipos m\'as expresiva. A continuaci\'on se enumeran algunas de
 estas extensiones, y se proveen referencias a su bibiliograf\'ia.
@@ -284,15 +304,16 @@ Esto no va a ser cierto para tipos como
 coincidan para todas las instancias concretas de {\tt n}.
 Para expresar propiedades como la conmutatividad
 se utilizan evidencias de las ecuaciones utilizando
-\emph{tipos de igualdad proposicional}
-(\emph{Propositional Types})~\cite{Lindley:2013:HPP:2578854.2503786}. 
+\emph{igualdad proposicional}
+~\cite{Lindley:2013:HPP:2578854.2503786}. 
 
 En el sistema de tipos de Haskell, sin embargo la igualdad de tipos
 es puramente sint\'actica. Los tipos 
 {\tt Vec (n + S (S Z)) a} y {\tt Vec (S (S n)) a} {\bf no} son el mismo
 tipo, y no poseen los mismos habitantes.
-La definici\'on de una familia de tipos axiomatiza {\tt (+)} para la igualdad
-proposicional de Haskell. Cada ocurrencia de {\tt (+)} debe estar soportada
+Las ecuaciones que definen una familia de tipos como {\tt (+)} axiomatizan
+nuevas igualdades a nivel de tipos en Haskell.
+Cada ocurrencia de {\tt (+)} debe estar soportada
 con evidencia expl\'icita derivada de estos axiomas.
 Cuando el compilador traduce desde el lenguaje externo al lenguaje del kernel,
 busca generar evidencia mediante heur\'isticas de resoluci\'on de
@@ -329,7 +350,7 @@ el verificador es incapaz de deducir.
 Existen dos formas de atacar los problemas planteados
 anteriormente.
 
-\subsubsection{Singletons}
+\paragraph{Singletons}\hfill\break
 
 Si pretendemos implementar {\tt vChop} cuyo tipo
 podemos escribir m\'as expl\'icitamente como 
@@ -370,7 +391,7 @@ provee la generaci\'on autom\'atica
 de instancias de tipos singleton y otras utilidades.
 
 
-\subsubsection{Proxies}
+\paragraph{Proxies}\hfill\break
 
 Para definir {\tt vTake} tambi\'en es necesario el valor de
 {\tt m} en tiempo de ejecuci\'on para conocer
@@ -437,6 +458,8 @@ de la implementaci\'on de la biblioteca.
 
 \newpage
 \section{Discusi\'on}
+\label{discusion}
+
 %include ./src/Conc.lhs
 
 \newpage
