@@ -43,7 +43,8 @@ module Language.Grammars.AspectAG (
               module Language.Grammars.AspectAG.TagUtils,
               module Language.Grammars.AspectAG.HList,
           --  module Language.Grammars.AspectAG.Notation,
-              module Language.Grammars.AspectAG.GenRecord
+              module Language.Grammars.AspectAG.GenRecord,
+              module Language.Grammars.AspectAG.TypeError
             ) where
 
 
@@ -60,6 +61,7 @@ import Language.Grammars.AspectAG.TagUtils
 --import Language.Grammars.AspectAG.Notation
 import Language.Grammars.AspectAG.GenRecord
 import GHC.TypeLits
+import Language.Grammars.AspectAG.TypeError
 
 -- | In each node of the grammar, the "Fam" contains a single attribution
 --for the parent, and a collection (Record) of attributions for the children:
@@ -160,6 +162,34 @@ instance ( HasChildF lch ic
           vch = unTaggedChAtt pch
           och = lookupByChildF lch ic
 
+-- | Error instance, undefined Non Terminal
+type UndefinedNonTerminal t = () -- TODO
+
+instance (TypeError (Text "TypeError: Undefined non terminal."
+                :$$: Text "In some definition of an INHERITED attribute "
+                :$$: Text "there is a children associated to a non-terminal: "
+                :<>: ShowType t
+                :$$: Text "for which the attribute is not being declared."),
+          pv ~ Tagged (lch, t) vch
+          )
+  => SingleDef 'True 'False att pv ic where
+  type SingleDefR 'True 'False att pv ic = '[]
+  singledef = undefined
+
+
+-- | Error instance, undefined Non Terminal/Child
+type UndefinedNonTerminalCh t = () -- TODO
+instance (TypeError (Text "undefined Non Terminal/Child" :$$:
+                     Text "Non-terminal named: " :<>: ShowType t :$$:
+                     Text "Child named: " :<>: ShowType lch :<>:
+                     Text " related to that terminal")
+         , pv ~ Tagged (lch, t) vch
+         )
+  => SingleDef 'False 'False att pv ic where
+  type SingleDefR 'False 'False att pv ic = '[]
+  singledef = undefined
+
+
 
 -- | The class 'Defs' is defined by induction over the record 'vals' 
 --   containing the new definitions. 
@@ -175,7 +205,6 @@ class Defs att (nts :: [Type])
 instance Defs att nts '[] ic where
   type DefsR att nts '[] ic = ic
   defs _ _ _ ic = ic
-
 
 instance ( Defs att nts vs ic
          , ic' ~ DefsR att nts vs ic
@@ -198,7 +227,6 @@ instance ( Defs att nts vs ic
             mnts = hMember' (sndLabel lch) nts
 
 -- * Aspects: Aspects are record that have a rule for each production:
-
 -- | aspects are actually records
 type Aspect = Record
 
