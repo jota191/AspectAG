@@ -42,7 +42,7 @@ module Language.Grammars.AspectAG (
               module Language.Grammars.AspectAG.Record,
               module Language.Grammars.AspectAG.TagUtils,
               module Language.Grammars.AspectAG.HList,
-              module Language.Grammars.AspectAG.Notation,
+          --  module Language.Grammars.AspectAG.Notation,
               module Language.Grammars.AspectAG.GenRecord
             ) where
 
@@ -57,7 +57,7 @@ import Language.Grammars.AspectAG.TPrelude
 import Data.Proxy
 import Language.Grammars.AspectAG.ChildAtts
 import Language.Grammars.AspectAG.TagUtils
-import Language.Grammars.AspectAG.Notation
+--import Language.Grammars.AspectAG.Notation
 import Language.Grammars.AspectAG.GenRecord
 import GHC.TypeLits
 

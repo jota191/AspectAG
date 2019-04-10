@@ -66,8 +66,8 @@ instance LabelSet '[ '(x,v)]
 
 
 
-instance ( HEqK l1 l2 leq
-         , LabelSet' '(l1,v1) '(l2,v2) leq r)
+instance ( {-HEqK l1 l2 leq
+         ,-} LabelSet' '(l1,v1) '(l2,v2) (l1==l2) r)
         => LabelSet ( '(l1,v1) ': '(l2,v2) ': r)
 
 class LabelSet' l1v1 l2v2 (leq::Bool) r

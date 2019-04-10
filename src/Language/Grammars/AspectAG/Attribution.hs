@@ -27,7 +27,8 @@ and using type families. The latter approach is the one we actually use.
              UndecidableInstances,
              ScopedTypeVariables,
              TypeFamilies,
-             TypeApplications
+             TypeApplications,
+             PatternSynonyms
 #-}
 
 module Language.Grammars.AspectAG.Attribution  where
@@ -58,6 +59,15 @@ import Language.Grammars.AspectAG.TagUtils
 
 -- | An attribution is a record constructed from attributes
 type Attribution = REC Attribute 
+
+
+-- | Pattern Synonyms
+pattern EmptyAtt :: Attribution '[]
+pattern EmptyAtt = EmptyR
+pattern ConsAtt :: LabelSet ( '(att, val) ': atts) =>
+    Attribute att val -> Attribution atts -> Attribution ( '(att,val) ': atts)
+pattern ConsAtt att atts = ConsR att atts
+
 
 -- * Pretty constructors
 
@@ -257,9 +267,8 @@ instance UpdateAtLabelAttF l v '[] where
   updateAtLabelAttF = undefined
 
 {-
-
-Here, either conflicting fam decls or a warning, anyways, the error is the
-same than in actual implementation
+Here, either conflicting fam decls or a warning, anyways,
+same error in actual implementation
 instance {-# OVERLAPS #-} TypeError (NoAttToUpdate l r)
   => UpdateAtLabelAttF l v r where
   type UpdateAtLabelAttFR l v r = '[] -- TypeError (NoAttToUpdate l r)

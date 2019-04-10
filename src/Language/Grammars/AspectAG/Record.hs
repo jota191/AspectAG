@@ -111,18 +111,18 @@ instance (HasFieldRec l r )=>
   lookupByLabelRec' _ l (ConsR _ r) = lookupByLabelRec l r
 
 
-type NoFieldFound l
-  = Text "Type Error : No Field found on Record:" :$$:
-    Text "(Possibly, in some aspect there are productions " :<>:
-    Text "where the attribute is undefined)" :$$:
-    Text "No Field of type " :<>: ShowType l
-    :<>: Text " on Record"
+-- type NoFieldFound l
+--   = Text "Type Error : No Field found on Record:" :$$:
+--     Text "(Possibly, in some aspect there are productions " :<>:
+--     Text "where the attribute is undefined)" :$$:
+--     Text "No Field of type " :<>: ShowType l
+--     :<>: Text " on Record"
 
--- | Error instance:
-instance TypeError (NoFieldFound l)
-  => HasFieldRec l '[] where
-  type LookupByLabelRec l '[] = ()
-  lookupByLabelRec = undefined
+-- -- | Error instance:
+-- instance TypeError (NoFieldFound l)
+--   => HasFieldRec l '[] where
+--   type LookupByLabelRec l '[] = ()
+--   lookupByLabelRec = undefined
 
 
 

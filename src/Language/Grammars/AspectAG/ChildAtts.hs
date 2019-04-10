@@ -27,7 +27,8 @@ and using type families. The latter approach is the one we actually use.
              FunctionalDependencies,
              UndecidableInstances,
              ScopedTypeVariables,
-             TypeFamilies
+             TypeFamilies,
+             PatternSynonyms
 #-}
 
 module Language.Grammars.AspectAG.ChildAtts where
@@ -52,6 +53,15 @@ import GHC.TypeLits
 --    TaggedChAttr l v -> ChAttsRec xs -> ChAttsRec ( '(l,v) ': xs)
 
 type ChAttsRec = REC TaggedChAttr
+
+
+-- | Pattern synonyms, since now we implement ChAttsRec as a generic record,
+-- this allows us to recover pattern matching
+pattern EmptyCh :: ChAttsRec '[]
+pattern EmptyCh = EmptyR
+pattern ConsCh :: LabelSet ( '(l, v) ': xs) =>
+    TaggedChAttr l v -> ChAttsRec xs -> ChAttsRec ( '(l,v) ': xs)
+pattern ConsCh h t = ConsR h t
 
 -- | Pretty constructors
 infixr 2 .*

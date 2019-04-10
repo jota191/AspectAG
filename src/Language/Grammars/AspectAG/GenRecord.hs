@@ -37,6 +37,7 @@ data REC :: forall k k'. (k -> k' -> Type) -> [(k,k')] -> Type where
   ConsR  :: LabelSet ( '(l,v) ': r) =>
             field l v -> REC field r -> REC field ( '(l,v) ': r)
 
+
 -- * Pretty constructors
 
 infixr 2 .*.
@@ -47,6 +48,6 @@ infixr 2 .*.
 -- * destructors
 
 -- | A getter, also a predicate
-class HasField (l :: k) (r :: [(k,k')]) field where
+class HasField (l :: k) (r :: [(k, k')]) field where
   type LookupByLabel field l r :: Type
-  (##) :: Label l -> REC field r -> LookupByLabel field l v
+  (#) :: Label l -> REC field r -> LookupByLabel field l v

@@ -296,8 +296,8 @@ getCs n = undefined
 
 
 class SemLit a where
-  sem_Lit :: a -> Attribution p -> Attribution '[ '((a, a), a)]
-  lit     :: Label (a,a)
+  sem_Lit :: a -> Attribution p -> Attribution '[ '(a, a)]
+  lit     :: Label (a)
 instance SemLit a where
   sem_Lit a _ = (Label =. a) *. emptyAtt
   lit         = Label 
