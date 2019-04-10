@@ -111,20 +111,6 @@ instance (HasFieldRec l r )=>
   lookupByLabelRec' _ l (ConsR _ r) = lookupByLabelRec l r
 
 
--- type NoFieldFound l
---   = Text "Type Error : No Field found on Record:" :$$:
---     Text "(Possibly, in some aspect there are productions " :<>:
---     Text "where the attribute is undefined)" :$$:
---     Text "No Field of type " :<>: ShowType l
---     :<>: Text " on Record"
-
--- -- | Error instance:
--- instance TypeError (NoFieldFound l)
---   => HasFieldRec l '[] where
---   type LookupByLabelRec l '[] = ()
---   lookupByLabelRec = undefined
-
-
 
 -- * Updating
 
@@ -188,18 +174,6 @@ instance ( UpdateAtLabelRecF l v r
   updateAtLabelRecF' _ l v (ConsR x xs)
     = x .*. updateAtLabelRecF l v xs
 
-
-
--- | No field on record, On AAG usually appears when an aspect was not
--- defined in all its required labels
-instance TypeError
-  ( Text "Type Error : No Field found on Record:" :$$:
-    Text "(Possibly, in some aspect there are productions " :<>:
-    Text "where the attribute is undefined)" :$$:
-    Text "No Field of type " :<>: ShowType l
-    :<>: Text " on Record" )
-  => UpdateAtLabelRec l v '[] '[] where
-  updateAtLabelRec _ _ r = r
 
 
 

@@ -257,14 +257,7 @@ instance ( LabelSet ( '(l2,v2) ': UpdateAtLabelAttFR l v r)
     = '(l2,v2) ': UpdateAtLabelAttFR l v r
   updateAtLabelAttF' _ l v (lv `ConsR` r) = lv *. (updateAtLabelAttF l v r) 
 
--- | Error instance
-type NoAttToUpdate l r
-  = Text "No attribute of name '" :<>: ShowType l :<>: Text "'":$$:
-          Text "to update on Attribution: " :<>: ShowType r
 
-instance UpdateAtLabelAttF l v '[] where
-  type UpdateAtLabelAttFR l v '[] = TypeError (NoAttToUpdate l '[])
-  updateAtLabelAttF = undefined
 
 {-
 Here, either conflicting fam decls or a warning, anyways,

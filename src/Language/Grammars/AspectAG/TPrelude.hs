@@ -9,8 +9,7 @@ Portability : POSIX
 
 
 -}
-{-# LANGUAGE TypeInType,
-             GADTs,
+{-# LANGUAGE GADTs,
              KindSignatures,
              TypeOperators,
              TypeFamilies,
@@ -21,7 +20,9 @@ Portability : POSIX
              UndecidableInstances,
              FunctionalDependencies,
              ConstraintKinds,
-             ScopedTypeVariables
+             ScopedTypeVariables,
+             PolyKinds,
+             DataKinds
 #-}
 
 module Language.Grammars.AspectAG.TPrelude where
@@ -74,13 +75,6 @@ class LabelSet' l1v1 l2v2 (leq::Bool) r
 instance ( LabelSet ( '(l2,v2) ': r)
          , LabelSet ( '(l1,v1) ': r)
          ) => LabelSet' '(l1,v1) '(l2,v2) False r
-
-
-instance TypeError (Text "LabelSet Error:" :$$:
-                    Text "Duplicated Label on Record" :$$:
-                    Text "On fields:" :$$: ShowType l1 :$$:
-                    Text " and " :$$: ShowType l1 )
-          => LabelSet' l1 l2 True r
 
 
 
