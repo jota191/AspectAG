@@ -19,20 +19,25 @@ This was implemented from scratch using the improvements on GHC on the last
 
 -}
 
-{-# LANGUAGE TypeFamilies,
-             FlexibleContexts,
-             ScopedTypeVariables,
-             NoMonomorphismRestriction,
-             UnicodeSyntax,
-             DataKinds,
-             TypeOperators,
-             PolyKinds,
-             GADTs,
-             MultiParamTypeClasses,
-             FlexibleContexts,
-             FlexibleInstances,
-             UndecidableInstances
-#-}
+{-# LANGUAGE PolyKinds                 #-}
+{-# LANGUAGE KindSignatures            #-}
+{-# LANGUAGE DataKinds                 #-}
+{-# LANGUAGE ConstraintKinds           #-}
+{-# LANGUAGE RankNTypes                #-}
+{-# LANGUAGE TypeOperators             #-}
+{-# LANGUAGE TypeInType                #-}
+{-# LANGUAGE FlexibleInstances         #-}
+{-# LANGUAGE FlexibleContexts          #-}
+{-# LANGUAGE GADTs                     #-}
+{-# LANGUAGE UndecidableInstances      #-}
+{-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE TypeFamilies              #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE TypeFamilies              #-}
+{-# LANGUAGE TypeApplications          #-}
+
+
 
 module Language.Grammars.AspectAG (
               module Language.Grammars.AspectAG,
@@ -62,6 +67,7 @@ import Language.Grammars.AspectAG.TagUtils
 import Language.Grammars.AspectAG.GenRecord
 import GHC.TypeLits
 import Language.Grammars.AspectAG.TypeError
+import Data.Maybe
 
 -- | In each node of the grammar, the "Fam" contains a single attribution
 --for the parent, and a collection (Record) of attributions for the children:
@@ -273,7 +279,7 @@ instance ( UpdateAtLabelRecF prd (Rule sc ip ic  sp  ic'' sp'') r
          , HasFieldRec prd r
          , LookupByLabelRec prd r ~ (Rule sc ip ic' sp' ic'' sp'')
          , ic'' ~ (Syn3 (LookupByLabelRec prd r))
-         , sp'' ~ (Inh3  (LookupByLabelRec prd r))
+         , sp'' ~ (Inh3 (LookupByLabelRec prd r))
          ) =>
   ComSingle 'True prd (Rule sc ip ic  sp  ic'  sp') r where
   type ComSingleR 'True prd (Rule sc ip ic  sp  ic'  sp') r
@@ -329,13 +335,7 @@ knit rule fc ip
     in  sp
 
 
-
-
-
-
 ------------------------------------------------------------------------------
-
-
 
 class Empties (fc :: [(k,Type)]) where
   type EmptiesR fc :: [(k, [(k, Type)])] -- KnownBug, k = k' from here
@@ -384,4 +384,129 @@ instance ( Kn fc
      in ConsR (TaggedChAttr lch (fch ich)) scr
 
 
+-----------------------------------------------------------------------------
 
+-- | A /use/ rule declares a synthesized attribute that collects information
+--   from some of the children.
+--   The function 'use' takes the following arguments:
+--   - att:  the attribute to be defined, 
+--   - nts:  the list of non-terminals for which the attribute is defined,
+--   - op :  a monoidal operator which combines the attribute values, 
+--   - unit: and a unit value to be used in those cases where none of 
+--           the children has such an attribute. 
+
+use :: (Use att nts a sc, LabelSet ( '(att, a) ': sp)) =>
+    Label att -> HList nts -> (a -> a -> a) -> a 
+           -> Rule sc ip ic sp ic ( '(att, a) ': sp)
+use att nts op unit (Fam sc _)
+  = let res = usechi att nts op sc
+    in  syndef att $ maybe unit id res
+
+-- | The class to implement the dependent function /usechi/
+
+class Use (att :: k) (nts :: [Type]) (a :: Type) sc -- TODO: research sign.
+ where
+  usechi :: Label att -> HList nts -> (a -> a -> a) -> ChAttsRec sc
+         -> Maybe a
+
+
+instance Use att nts a '[] where
+  usechi _ _ _ _ = Nothing
+
+instance ( HMember' t nts
+         , HMemberRes' t nts ~ mnts
+         , Use' mnts att nts a ( '((lch, t ), attr) ': scr))
+  => Use att nts a ( '((lch, t ), attr) ': scr) where
+  usechi att nts op (ConsR lattr scr)
+    = let k = ()
+         --  mnts = hMember' (sndLabel (labelChAttr lattr)) nts
+      in  usechi' (Proxy @ mnts) att nts op (ConsR lattr scr)
+    
+-- | /usechi'/ to pattern match on /mnts/
+class Use' (mnts :: Bool) (att :: k) (nts :: [Type]) (a :: Type) sc
+ where
+  usechi' :: Proxy mnts -> Label att -> HList nts -> (a -> a -> a)
+          -> ChAttsRec sc -> Maybe a
+
+-- instance ( LabelSet ( '(lch, b) ': scr) -- FIXME: needed since we use ConsR 
+--          , Use att nts a scr )
+--   => Use' False att nts a ( '(lch, b) ': scr) where
+--   usechi' _ att nts a (ConsCh _ scr) = usechi att nts a scr
+
+instance Use att nts a scr
+  => Use' False att nts a ( '(lch, attr) ': scr) where
+  usechi' _ att nts op scr = usechi att nts op $ tailRec scr
+
+instance ( HasFieldAttF att attr
+         , LookupByLabelAttFR att attr ~ a
+         , Use att nts a scr
+         , LabelSet ( '(lch, attr) ': scr)) -- FIXME: pattern syn
+  => Use' True att nts a ( '(lch, attr) ': scr) where
+  usechi' _ att nts op (ConsCh lattr scr)
+    = let attr = unTaggedChAttr lattr
+          val  = attr #. att
+      in  Just $ maybe val (op val) $ usechi att nts op scr
+
+
+--------------------------------------------------------------------------------
+
+-- -- | A /copy/ rule copies an inherited attribute from the parent to all its
+-- -- children.
+-- -- The function 'copy' takes
+-- -- - 'att' : the name of an attribute 
+-- -- - 'nts' : an heterogeneous list of non-terminals for which the attribute
+-- --           has to be defined,
+-- -- and generates a copy rule for this.
+
+
+-- copy  :: ( Copy att nts (LookupByLabelAttFR att ip) ic
+--          , HasFieldAttF att ip) 
+--   =>   Label att -> HList nts
+--   -> Rule sc ip ic sp (CopyR att nts (LookupByLabelAttFR att ip) ic) sp
+-- copy att nts (Fam _ ip) = defcp att nts (ip #. att)
+
+-- defcp  ::  Copy att nts vp ic
+--        =>  Label att -> HList nts -> vp
+--        -> Fam ic sp -> Fam (CopyR att nts vp ic) sp
+-- defcp att nts vp (Fam ic sp)
+--   = Fam (cpychi att nts vp ic) sp
+
+-- class Copy att (nts :: [Type]) vp ic where
+--   type CopyR att nts vp ic :: [(Type, [(k',Type)])]
+--   cpychi :: Label att -> HList nts -> vp -> ChAttsRec ic
+--          -> ChAttsRec (CopyR att nts vp ic)
+
+-- instance Copy att nts vp '[] where
+--   type CopyR att nts vp '[] = '[]
+--   cpychi _ _ _ _ = EmptyCh
+
+-- instance ( Copy att nts vp ics
+--          , Copy' mnts mvch att vp (lch,t) vch
+--          , mnts ~ HMemberRes' t nts
+--          , HMember' t nts
+--          , HasFieldAttF att vch
+--          , mvch ~ LookupByLabelAttFR att vch 
+--          )
+--   => Copy att nts vp ( '( (lch,t), vch) ': ics) where
+--   type CopyR att nts vp ( '((lch,t), vch) ': ics)
+--     =  (CopyR' (HMemberRes' t nts)
+--                (LookupByLabelAttFR att vch) att vp (lch,t) vch)
+--        ': CopyR att nts vp ics
+
+-- class Copy' mnts mvch att vp (lcht :: Type) vch where
+--   type CopyR' mnts mvch att vp lcht vch :: (Type, [(k', Type)])
+--   cpychi' :: Proxy mnts -> Proxy mvch -> Label att -> vp
+--           -> TaggedChAttr lcht vch
+--           -> TaggedChAttr lcht
+--                       (GetAttrChAttr (CopyR' mnts mvch att vp lcht vch))
+
+-- -- | Some Aux Type families
+-- type family GetLabelChAttr (pch :: (Type ,[(k', Type)])) :: k where
+--   GetLabelChAttr '( (lbl,t), attr) = (lbl,t)
+-- type family GetAttrChAttr (pch :: (Type ,[(k', Type)])) :: [(k',Type)] where
+--   GetAttrChAttr '( (lbl,t), attr) = attr
+
+
+-- instance Copy' False mvch att vp (lcht :: Type) pch where
+--   type CopyR' False mvch att vp lcht pch = '(lcht, pch)
+--   cpychi' _ _ _ _ pch = pch
