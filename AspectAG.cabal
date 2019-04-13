@@ -61,7 +61,6 @@ library
                        Language.Grammars.AspectAG.HList,
                        Language.Grammars.AspectAG.InternalTest,
                        Language.Grammars.AspectAG.Attribute,
-                       Language.Grammars.AspectAG.Notation,
                        Language.Grammars.AspectAG.ChildAtts,
                        Language.Grammars.AspectAG.Record,
                        Language.Grammars.AspectAG.TagUtils,
@@ -100,7 +99,9 @@ library
                        tagged >=0.8 && <0.9,
                        containers >= 0.5,
                        template-haskell >= 2.13,
-                       th-strict-compat >= 0.1
+                       th-strict-compat >= 0.1,
+                       mtl >= 2.0
+                       
 
   -- Directories containing source files.
   hs-source-dirs:      src, test

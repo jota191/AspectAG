@@ -33,3 +33,15 @@ copy rules
 -- arreglar las Exportaciones
 
 -- Pragmas
+
+-- precedencia de .=. y .*. para definir aspectos inline
+
+-- test error instances for SingleDef
+
+-- export Record patterns
+
+-- Children labels are pairs constructed with (,), since we use
+TH to generate them. So they are not polykinded. Moreover,
+we implement Use, Use', Defs, etc in terms of this implementation.
+
+-- overloaded (#) etc
