@@ -167,7 +167,7 @@ lookupByLabelAttF' :: Proxy 'True -> Label l -> Attribution ( '(l, v) ': r)
 -}
 
 -- | Pretty lookup
-infixl 3 #.
+infixl 7 #.
 (#.)  :: (HasFieldAttF l r)
    => Attribution r -> Label l -> LookupByLabelAttFR l r
 c #. l = lookupByLabelAttF l c

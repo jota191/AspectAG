@@ -59,8 +59,8 @@ type ChAttsRec = REC TaggedChAttr
 -- this allows us to recover pattern matching
 pattern EmptyCh :: ChAttsRec '[]
 pattern EmptyCh = EmptyR
-pattern ConsCh :: LabelSet ( '(l, v) ': xs) =>
-    TaggedChAttr l v -> ChAttsRec xs -> ChAttsRec ( '(l,v) ': xs)
+pattern ConsCh :: (LabelSet ( '(l, v) ': xs)) =>
+  TaggedChAttr l v -> ChAttsRec xs -> ChAttsRec ( '(l,v) ': xs)
 pattern ConsCh h t = ConsR h t
 
 -- | Pretty constructors
@@ -148,7 +148,7 @@ instance (HasChildF l r) =>
 
 
 -- | Pretty lookup
-infixl 3 .#
+infixl 8 .#
 (.#)  :: (HasChildF l r, LookupByChildFR l r ~ v) =>
          ChAttsRec r -> Label l ->  Attribution v
 c .# l = lookupByChildF l c
