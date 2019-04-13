@@ -50,4 +50,8 @@ infixr 2 .*.
 -- | A getter, also a predicate
 class HasField (l :: k) (r :: [(k, k')]) field where
   type LookupByLabel field l r :: Type
-  (#) :: Label l -> REC field r -> LookupByLabel field l v
+  (#) :: REC field r -> Label l -> LookupByLabel field l v
+
+
+tailRec :: REC field ( '(l,v) ': r) -> REC field r
+tailRec (ConsR _ t) = t
