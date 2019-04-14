@@ -1,5 +1,5 @@
-{-# LANGUAGE TemplateHaskell, CPP, DataKinds, FlexibleInstances #-}
-{-# OPTIONS -XEmptyDataDecls #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, CPP, DataKinds, KindSignatures, FlexibleInstances #-}
 
 module Language.Grammars.AspectAG.Derive where
 
@@ -57,7 +57,7 @@ chLabels2 ::  [Name] -> [Type] -> Q [Dec]
 chLabels2 ns ts = (liftM concat) $ zipWithM label ns ts
   where
       label n t = declareLabel (chTName n) (chName n) (tyLabel (chTName n) t) 
-      tyLabel n t = appT (appT (conT $ mkName "(,)") (conT n)) (return t) 
+      tyLabel n t = appT (appT (conT $ mkName "TPair") (conT n)) (return t) 
 
 chName,chTName,ntName,prdName,prdTName ::  Name -> Name
 chName   cn = mkName $ "ch_" ++ nameBase cn 
@@ -301,3 +301,4 @@ class SemLit a where
 instance SemLit a where
   sem_Lit a _ = (Label =. a) *. emptyAtt
   lit         = Label 
+

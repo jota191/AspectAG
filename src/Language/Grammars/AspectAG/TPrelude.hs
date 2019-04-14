@@ -102,3 +102,7 @@ type instance HEqKF a b = a == b
 -- | heterogeneous equality at type level
 type family (a :: k1) === (b :: k2) where
   a === b = (Proxy a) == (Proxy b)
+
+
+type family TPair (a :: k) b where
+  TPair a b = '(a, b)

@@ -48,7 +48,8 @@ module Language.Grammars.AspectAG (
               module Language.Grammars.AspectAG.HList,
           --  module Language.Grammars.AspectAG.Notation,
               module Language.Grammars.AspectAG.GenRecord,
-              module Language.Grammars.AspectAG.TypeError
+              module Language.Grammars.AspectAG.TypeError,
+              module Language.Grammars.AspectAG.TPrelude
             ) where
 
 
