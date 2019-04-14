@@ -38,7 +38,6 @@ This was implemented from scratch using the improvements on GHC on the last
 {-# LANGUAGE TypeApplications          #-}
 
 
-
 module Language.Grammars.AspectAG (
               module Language.Grammars.AspectAG,
               module Language.Grammars.AspectAG.Attribute,
@@ -71,8 +70,8 @@ import Data.Maybe
 
 -- | In each node of the grammar, the "Fam" contains a single attribution
 --for the parent, and a collection (Record) of attributions for the children:
-data Fam (c::[(k',[(k,Type)])]) (p :: [(k,Type)]) :: Type where
-  Fam :: ChAttsRec c  -> Attribution p -> Fam c p
+data Fam (c::[((k, Type),[(k,Type)])]) (p :: [(k,Type)]) :: Type where
+  Fam :: ChAttsRec c -> Attribution p -> Fam c p
 
 
 -- | desctructors
@@ -86,11 +85,11 @@ par (Fam _ par) = par
 --Rules are defined as a mapping from an input family to an output family,
 --the added arity is for make them composable
 
-type Rule (sc  :: [(k', [(k, Type)])])
+type Rule (sc  :: [((k,Type), [(k, Type)])])
           (ip  :: [(k,       Type)])
-          (ic  :: [(k', [(k, Type)])])
+          (ic  :: [((k,Type), [(k, Type)])])
           (sp  :: [(k,       Type)])
-          (ic' :: [(k', [(k, Type)])])
+          (ic' :: [((k,Type), [(k, Type)])])
           (sp' :: [(k,       Type)])
   = Fam sc ip -> Fam ic sp -> Fam ic' sp'
 
@@ -102,15 +101,15 @@ ext :: Rule sc ip ic sp ic' sp'
 
 
 -- | Type level getters for Rules
-type family Syn1 (rule :: Type) :: [(k', [(k, Type)])] where
+type family Syn1 (rule :: Type) :: [((k,Type), [(k, Type)])] where
   Syn1 (Rule sc ip ic  sp  ic'' sp'') = sc
 type family Inh1 (rule :: Type) :: [(k, Type)] where
   Inh1 (Rule sc ip ic  sp  ic'' sp'') = ip
-type family Syn2 (rule :: Type) :: [(k', [(k, Type)])] where
+type family Syn2 (rule :: Type) :: [((k,Type), [(k, Type)])] where
   Syn2 (Rule sc ip ic  sp  ic'' sp'') = ic
 type family Inh2 (rule :: Type) :: [(k, Type)] where
   Inh2 (Rule sc ip ic  sp  ic'' sp'') = sp
-type family Syn3 (rule :: Type) :: [(k', [(k, Type)])] where
+type family Syn3 (rule :: Type) :: [((k,Type), [(k, Type)])] where
   Syn3 (Rule sc ip ic  sp  ic'' sp'') = ic''
 type family Inh3 (rule :: Type) :: [(k, Type)] where
   Inh3 (Rule sc ip ic  sp  ic'' sp'') = sp''
@@ -157,8 +156,8 @@ inhdef att nts vals (Fam ic sp) = Fam (defs att nts vals ic) sp
 -- mch  ~ memnership of chld
 -- mnts ~ membership of nonterminals
 
-class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[(k',[(k,Type)])]) where
-  type SingleDefR mch mnts att pv ic :: [(k',[(k,Type)])]
+class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[((k,Type),[(k,Type)])]) where
+  type SingleDefR mch mnts att pv ic :: [((k,Type),[(k,Type)])]
   singledef :: Proxy mch -> Proxy mnts -> Label att -> pv -> ChAttsRec ic
                 -> ChAttsRec (SingleDefR mch mnts att pv ic)
 
@@ -210,8 +209,8 @@ instance (TypeError (Text "undefined Non Terminal/Child" :$$:
 --   of the corresponding child.
 
 class Defs att (nts :: [Type])
-            (vals :: [(k,Type)]) (ic :: [(k',[(k,Type)])]) where
-  type DefsR att nts vals ic :: [(k',[(k,Type)])]
+            (vals :: [((k,Type),Type)]) (ic :: [((k,Type),[(k,Type)])]) where
+  type DefsR att nts vals ic :: [((k,Type),[(k,Type)])]
   defs :: Label att -> HList nts -> Record vals -> ChAttsRec ic
        -> ChAttsRec (DefsR att nts vals ic)
 
@@ -223,15 +222,15 @@ instance ( Defs att nts vs ic
          , ic' ~ DefsR att nts vs ic
          , HMember' t nts
          , HMemberRes' t nts ~ mnts
-         , HasLabelChildAttsRes (lch,t) ic' ~ mch
-         , HasLabelChildAtts (lch,t) ic'
-         , SingleDef mch mnts att (Tagged (lch,t) vch) ic') => 
-  Defs att nts ( '((lch,t), vch) ': vs) ic where
-  type DefsR att nts ( '((lch,t), vch) ': vs) ic
-    = SingleDefR (HasLabelChildAttsRes (lch,t) (DefsR att nts vs ic))
+         , HasLabelChildAttsRes '(lch,t) ic' ~ mch
+         , HasLabelChildAtts '(lch,t) ic'
+         , SingleDef mch mnts att (Tagged '(lch,t) vch) ic') => 
+  Defs att nts ( '( '(lch,t), vch) ': vs) ic where
+  type DefsR att nts ( '( '(lch,t), vch) ': vs) ic
+    = SingleDefR (HasLabelChildAttsRes '(lch,t) (DefsR att nts vs ic))
                  (HMemberRes' t nts)
                  att
-                 (Tagged (lch,t) vch)
+                 (Tagged '(lch,t) vch)
                  (DefsR att nts vs ic)
   defs att nts (ConsR pch vs) ic = singledef mch mnts att pch ic' 
       where ic'  = defs att nts vs ic
@@ -324,6 +323,7 @@ instance ( Com (ComSingleR (HasLabelRecRes prd r) prd rule r)  r'
 --   semantic functions of the children, and builds a
 --   function from the inherited attributes of the parent to its
 --   synthesized attributes.
+
 knit :: ( Empties fc
         , Kn fc ) =>
   Rule (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp
@@ -335,32 +335,40 @@ knit rule fc ip
     in  sp
 
 
-------------------------------------------------------------------------------
+-- ------------------------------------------------------------------------------
 
-class Empties (fc :: [(k,Type)]) where
-  type EmptiesR fc :: [(k, [(k, Type)])] -- KnownBug, k = k' from here
+class Empties (fc :: [((k, Type),Type)]) where
+  type EmptiesR fc :: [((k, Type), [(k, Type)])] -- KnownBug, k = k' from here
   empties :: Record fc -> ChAttsRec (EmptiesR fc)
-
 
 instance Empties '[] where
   type EmptiesR '[] = '[]
   empties EmptyR = emptyCh
 
 
-instance ( Empties fcr
-         , LabelSet ( '(lch, '[]) ': EmptiesR fcr)) =>
-  Empties ( '(lch, fch) ': fcr) where
-  type EmptiesR ( '(lch, fch) ': fcr) = '(lch, '[]) ': EmptiesR fcr
+-- instance (( Empties fcr
+--          , LabelSet ( '( '(lch, t), '[]) ': EmptiesR fcr)) )
+--   => Empties ( '( '(lch, t), Type) ': fcr) where
+--   type EmptiesR ( '( '(lch, t), Type) ': fcr)
+--      = '( '(lch, t), '[]) ': EmptiesR fcr
+--   empties (ConsR pch fcr)
+--     = let lch = labelTChAtt pch
+--       in  (lch .= emptyAtt) .* (empties fcr)
+
+instance (( Empties fcr
+         , LabelSet ( '( '(lch, t), '[]) ': EmptiesR fcr)) )
+  => Empties ( '( '(lch, t), Attribution e -> Attribution a) ': fcr) where
+  type EmptiesR ( '( '(lch, t), Attribution e -> Attribution a) ': fcr)
+     = '( '(lch, t), '[]) ': EmptiesR fcr
   empties (ConsR pch fcr)
     = let lch = labelTChAtt pch
       in  (lch .= emptyAtt) .* (empties fcr)
 
-
 -- the Kn class
 
-class Kn (fcr :: [(k, Type)]) where
-  type ICh fcr :: [(k, [(k, Type)])]
-  type SCh fcr :: [(k, [(k, Type)])]
+class Kn (fcr :: [((k, Type), Type)]) where
+  type ICh fcr :: [((k, Type), [(k, Type)])]
+  type SCh fcr :: [((k, Type), [(k, Type)])]
   kn :: Record fcr -> ChAttsRec (ICh fcr) -> ChAttsRec (SCh fcr)
 
 instance Kn '[] where
@@ -415,8 +423,8 @@ instance Use att nts a '[] where
 
 instance ( HMember' t nts
          , HMemberRes' t nts ~ mnts
-         , Use' mnts att nts a ( '((lch, t ), attr) ': scr))
-  => Use att nts a ( '((lch, t ), attr) ': scr) where
+         , Use' mnts att nts a ( '( '(lch, t ), attr) ': scr))
+  => Use att nts a ( '( '(lch, t ), attr) ': scr) where
   usechi att nts op (ConsR lattr scr)
     = let k = ()
          --  mnts = hMember' (sndLabel (labelChAttr lattr)) nts
@@ -440,8 +448,8 @@ instance Use att nts a scr
 instance ( HasFieldAttF att attr
          , LookupByLabelAttFR att attr ~ a
          , Use att nts a scr
-         , LabelSet ( '(lch, attr) ': scr)) -- FIXME: pattern syn
-  => Use' True att nts a ( '(lch, attr) ': scr) where
+         , LabelSet ( '( '(lch,t), attr) ': scr)) -- FIXME: pattern syn
+  => Use' True att nts a ( '( '(lch,t), attr) ': scr) where
   usechi' _ att nts op (ConsCh lattr scr)
     = let attr = unTaggedChAttr lattr
           val  = attr #. att

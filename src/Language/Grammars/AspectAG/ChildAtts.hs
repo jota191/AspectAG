@@ -59,15 +59,15 @@ type ChAttsRec = REC TaggedChAttr
 -- this allows us to recover pattern matching
 pattern EmptyCh :: ChAttsRec '[]
 pattern EmptyCh = EmptyR
-pattern ConsCh :: (LabelSet ( '(l, v) ': xs)) =>
-  TaggedChAttr l v -> ChAttsRec xs -> ChAttsRec ( '(l,v) ': xs)
+pattern ConsCh :: (LabelSet ( '( '(l, t), v) ': xs)) =>
+  TaggedChAttr '(l,t) v -> ChAttsRec xs -> ChAttsRec ( '( '(l,t),v) ': xs)
 pattern ConsCh h t = ConsR h t
 
 -- | Pretty constructors
 infixr 2 .*
-(.*) :: LabelSet ('(ch, attrib) : attribs) =>
+(.*) :: LabelSet ('(ch, attrib) ': attribs) =>
   TaggedChAttr ch attrib -> ChAttsRec attribs
-    -> ChAttsRec ('(ch, attrib) : attribs)
+    -> ChAttsRec ('(ch, attrib) ': attribs)
 (.*) = ConsR
 
 -- | no child
@@ -79,7 +79,7 @@ emptyCh = EmptyR
 -- TODO: move this?
 
 -- | Tags a Label (labels of children) to an attribution
-data TaggedChAttr (l::k) (v :: [(k',Type)]) :: Type where
+data TaggedChAttr (l :: (k,Type)) (v :: [(k,Type)]) :: Type where
   TaggedChAttr :: Label l -> Attribution v -> TaggedChAttr l v
 
 
@@ -100,7 +100,7 @@ labelChAttr _ = Label
 -- |* Lookup
 
 -- | Haschild is a predicate that implements a lookup at term level
-class HasChild (l::k) (r :: [(k ,[(k,Type)])]) v | l r -> v where
+class HasChild (l::(k,Type)) (r :: [((k,Type) ,[(k,Type)])]) v | l r -> v where
    lookupByChild :: Label l -> ChAttsRec r -> Attribution v
 
 instance (HEqK l l1 b, HasChild' b l ( '(l1,v1) ': r) v)
@@ -108,7 +108,7 @@ instance (HEqK l l1 b, HasChild' b l ( '(l1,v1) ': r) v)
     lookupByChild l (r :: ChAttsRec ( '(l1,v1) ': r)) =
          lookupByChild' (Proxy::Proxy b) l r
 
-class HasChild' (b::Bool) (l :: k) (r::[(k,[(k,Type)])]) v | b l r -> v where
+class HasChild' (b::Bool) (l :: (k,Type)) (r::[((k,Type),[(k,Type)])]) v | b l r -> v where
     lookupByChild':: Proxy b -> Label l -> ChAttsRec r -> Attribution v
 
 instance HasChild' True l ( '(l,v) ': r) v where
@@ -119,11 +119,11 @@ instance HasChild l r v => HasChild' False l ( '(l2,v2) ': r) v where
 
 -- | HaschildF is the type family version of HasChild
 
-class HasChildF (l::k) (r :: [(k ,[(k,Type)])]) where
+class HasChildF (l::(k,Type)) (r :: [((k,Type) ,[(k,Type)])]) where
   type LookupByChildFR l r :: [(k,Type)]
   lookupByChildF :: Label l -> ChAttsRec r -> Attribution (LookupByChildFR l r)
 
-class HasChildF' (b :: Bool) (l::k) (r :: [(k ,[(k,Type)])]) where
+class HasChildF' (b :: Bool) (l::(k,Type)) (r :: [((k,Type) ,[(k,Type)])]) where
   type LookupByChildFR' b l r :: [(k,Type)]
   lookupByChildF' :: Proxy b -> Label l -> ChAttsRec r
     -> Attribution (LookupByChildFR' b l r)
@@ -157,16 +157,16 @@ c .# l = lookupByChildF l c
 
 -- | updates an attribution at a child, this is the implementation of
 --   UpdateAtLabel for children, using functional dependencies
-class UpdateAtChild (l :: k)(v :: [(k,Type)])
-      (r :: [(k,[(k,Type)])])(r' :: [(k,[(k,Type)])])
+class UpdateAtChild (l :: (k,Type))(v :: [(k,Type)])
+      (r :: [((k,Type),[(k,Type)])])(r' :: [((k,Type),[(k,Type)])])
    | l v r -> r' where
   updateAtChild :: Label l -> Attribution v -> ChAttsRec r -> ChAttsRec r'
 
 --So we need an auxiliary class with an extra parameter to decide if we update
 --on the head of r or not
 
-class UpdateAtChild' (b::Bool)(l::k)(v::[(k,Type)])
-      (r::[(k,[(k,Type)])])(r'::[(k,[(k,Type)])])
+class UpdateAtChild' (b::Bool)(l::(k,Type))(v::[(k,Type)])
+      (r::[((k,Type),[(k,Type)])])(r'::[((k,Type),[(k,Type)])])
     | b l v r -> r'  where
   updateAtChild' :: Proxy b -> Label l -> Attribution v -> ChAttsRec r
                  -> ChAttsRec r'
@@ -198,14 +198,15 @@ instance ( UpdateAtChild l v r r', LabelSet  ( a ': r' ) ) =>
 
 -- | updates an attribution at a child, this is the implementation of
 --   UpdateAtLabel for children, using type families
-class UpdateAtChildF (l :: k)(v :: [(k,Type)])(r :: [(k,[(k,Type)])]) where
-  type UpdateAtChildFR l v r :: [(k,[(k,Type)])]
+class UpdateAtChildF (l :: (k,Type))(v :: [(k,Type)])(r :: [((k,Type),[(k,Type)])]) where
+  type UpdateAtChildFR l v r :: [((k,Type),[(k,Type)])]
   updateAtChildF :: Label l -> Attribution v -> ChAttsRec r
                  -> ChAttsRec (UpdateAtChildFR l v r)
 
 class UpdateAtChildF' (b :: Bool)
-                      (l :: k)(v :: [(k,Type)])(r :: [(k,[(k,Type)])]) where
-  type UpdateAtChildFR' b l v r :: [(k,[(k,Type)])]
+                      (l :: (k,Type))(v :: [(k,Type)])
+                      (r :: [((k,Type),[(k,Type)])]) where
+  type UpdateAtChildFR' b l v r :: [((k,Type),[(k,Type)])]
   updateAtChildF' :: Proxy b -> Label l -> Attribution v -> ChAttsRec r
                  -> ChAttsRec (UpdateAtChildFR' b l v r)
 
@@ -237,8 +238,8 @@ instance (UpdateAtChildF' (l==l') l v ( '(l',v')': r)) =>
 -- |*  Predicates
 
 -- | To decide label membership, returning a certificate
-class HasLabelChildAtts (e :: k)(r :: [(k,[(k,Type)])]) where
-  type HasLabelChildAttsRes (e::k)(r :: [(k,[(k,Type)])]) :: Bool
+class HasLabelChildAtts (e :: (k,Type))(r :: [((k,Type),[(k,Type)])]) where
+  type HasLabelChildAttsRes (e::(k,Type))(r :: [((k,Type),[(k,Type)])]) :: Bool
   hasLabelChildAtts
    :: Label e -> ChAttsRec r -> Proxy (HasLabelChildAttsRes e r)
 

@@ -37,12 +37,12 @@ data Label l = Label
 -- | Get the label of a Tagged value, restricted to the case
 --when labels are a pair, for safety, since this function is used
 --on that context
-labelLVPair :: Tagged (k1,k2) v -> Label (k1,k2)
+labelLVPair :: Tagged '(k1,k2) v -> Label '(k1,k2)
 labelLVPair _ = Label
 
 
 -- |Get the first member of a pair label, as a label 
-sndLabel :: Label (a,b) -> Label b
+sndLabel :: Label '(a,b) -> Label b
 sndLabel _ = undefined
 
 -- |Untag a value 
