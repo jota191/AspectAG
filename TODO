@@ -45,3 +45,6 @@ TH to generate them. So they are not polykinded. Moreover,
 we implement Use, Use', Defs, etc in terms of this implementation.
 
 -- overloaded (#) etc
+
+-- why TPair can't be defined on TH module? moreover, if we enable PolyKinds
+on TH it breaks type inference (ambiguity)
