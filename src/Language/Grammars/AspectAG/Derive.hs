@@ -50,7 +50,7 @@ chLabels ::  [String] -> Name -> Q [Dec]
 chLabels ns ty = (liftM concat) $ mapM (label ty . mkName) ns
   where
       label t n = declareLabel (chTName n) (chName n) (tyLabel (chTName n) t) 
-      tyLabel n t = appT (appT (conT $ mkName "(,)") (conT n)) (conT t) 
+      tyLabel n t = appT (appT (conT $ mkName "TPair") (conT n)) (conT t) 
 
 
 chLabels2 ::  [Name] -> [Type] -> Q [Dec]
