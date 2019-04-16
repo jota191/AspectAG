@@ -267,3 +267,22 @@ instance {-# OVERLAPS #-} TypeError (NoAttToUpdate l r)
   type UpdateAtLabelAttFR l v r = '[] -- TypeError (NoAttToUpdate l r)
   updateAtLabelAttF = undefined
 -}
+
+
+
+
+-- | Predicate To decide label membership, returning a certificate
+class HasLabelAtt (e :: k)  (r :: [(k, Type)]) where
+  type HasLabelAttR (e :: k)(r :: [(k, Type)]) :: Bool
+  hasLabelAtt
+   :: Label e -> Attribution r -> Proxy (HasLabelAttR e r)
+
+instance HasLabelAtt e '[] where
+  type HasLabelAttR e '[] = 'False
+  hasLabelAtt _ _ = Proxy
+
+instance HasLabelAtt k ( '(k' ,v) ': ls) where
+  type HasLabelAttR k ( '(k' ,v) ': ls)
+      = Or (k == k') (HasLabelAttR k ls)
+  hasLabelAtt _ _ = Proxy
+
