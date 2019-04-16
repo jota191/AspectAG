@@ -459,63 +459,97 @@ instance ( HasFieldAttF att attr
 
 --------------------------------------------------------------------------------
 
--- -- | A /copy/ rule copies an inherited attribute from the parent to all its
--- -- children.
--- -- The function 'copy' takes
--- -- - 'att' : the name of an attribute 
--- -- - 'nts' : an heterogeneous list of non-terminals for which the attribute
--- --           has to be defined,
--- -- and generates a copy rule for this.
+-- | A /copy/ rule copies an inherited attribute from the parent to all its
+-- children.
+-- The function 'copy' takes
+-- - 'att' : the name of an attribute 
+-- - 'nts' : an heterogeneous list of non-terminals for which the attribute
+--           has to be defined,
+-- and generates a copy rule for this.
 
 
--- copy  :: ( Copy att nts (LookupByLabelAttFR att ip) ic
---          , HasFieldAttF att ip) 
---   =>   Label att -> HList nts
---   -> Rule sc ip ic sp (CopyR att nts (LookupByLabelAttFR att ip) ic) sp
--- copy att nts (Fam _ ip) = defcp att nts (ip #. att)
+copy  :: ( Copy att nts (LookupByLabelAttFR att ip) ic
+         , HasFieldAttF att ip) 
+  =>   Label att -> HList nts
+  -> Rule sc ip ic sp (CopyR att nts (LookupByLabelAttFR att ip) ic) sp
+copy att nts (Fam _ ip) = defcp att nts (ip #. att)
 
--- defcp  ::  Copy att nts vp ic
---        =>  Label att -> HList nts -> vp
---        -> Fam ic sp -> Fam (CopyR att nts vp ic) sp
--- defcp att nts vp (Fam ic sp)
---   = Fam (cpychi att nts vp ic) sp
-
--- class Copy att (nts :: [Type]) vp ic where
---   type CopyR att nts vp ic :: [(Type, [(k',Type)])]
---   cpychi :: Label att -> HList nts -> vp -> ChAttsRec ic
---          -> ChAttsRec (CopyR att nts vp ic)
-
--- instance Copy att nts vp '[] where
---   type CopyR att nts vp '[] = '[]
---   cpychi _ _ _ _ = EmptyCh
-
--- instance ( Copy att nts vp ics
---          , Copy' mnts mvch att vp (lch,t) vch
---          , mnts ~ HMemberRes' t nts
---          , HMember' t nts
---          , HasFieldAttF att vch
---          , mvch ~ LookupByLabelAttFR att vch 
---          )
---   => Copy att nts vp ( '( (lch,t), vch) ': ics) where
---   type CopyR att nts vp ( '((lch,t), vch) ': ics)
---     =  (CopyR' (HMemberRes' t nts)
---                (LookupByLabelAttFR att vch) att vp (lch,t) vch)
---        ': CopyR att nts vp ics
-
--- class Copy' mnts mvch att vp (lcht :: Type) vch where
---   type CopyR' mnts mvch att vp lcht vch :: (Type, [(k', Type)])
---   cpychi' :: Proxy mnts -> Proxy mvch -> Label att -> vp
---           -> TaggedChAttr lcht vch
---           -> TaggedChAttr lcht
---                       (GetAttrChAttr (CopyR' mnts mvch att vp lcht vch))
-
--- -- | Some Aux Type families
--- type family GetLabelChAttr (pch :: (Type ,[(k', Type)])) :: k where
---   GetLabelChAttr '( (lbl,t), attr) = (lbl,t)
--- type family GetAttrChAttr (pch :: (Type ,[(k', Type)])) :: [(k',Type)] where
---   GetAttrChAttr '( (lbl,t), attr) = attr
+defcp  ::  Copy att nts vp ic
+       =>  Label att -> HList nts -> vp
+       -> Fam ic sp -> Fam (CopyR att nts vp ic) sp
+defcp att nts vp (Fam ic sp)
+  = Fam (cpychi att nts vp ic) sp
 
 
--- instance Copy' False mvch att vp (lcht :: Type) pch where
---   type CopyR' False mvch att vp lcht pch = '(lcht, pch)
---   cpychi' _ _ _ _ pch = pch
+
+-- | inserts the attribute in every children
+class Copy (att :: k)
+           (nts :: [Type])
+           (vp  :: Type)
+           (ic  :: [((k,Type),[(k,Type)])]) where
+  type CopyR att nts vp ic :: [((k,Type), [(k,Type)])]
+  cpychi :: Label att
+         -> HList nts
+         -> vp
+         -> ChAttsRec ic
+         -> ChAttsRec (CopyR att nts vp ic)
+
+instance Copy att nts vp '[] where
+  type CopyR att nts vp '[] = '[]
+  cpychi _ _ _ _ = EmptyCh
+
+instance ( Copy att nts vp ics
+         , Copy' mnts mvch att vp '(lch,t) vch
+         , mnts ~ HMemberRes' t nts
+         , HMember' t nts
+         , HasLabelAtt att vch
+         , mvch ~ HasLabelAttR att vch
+         , LabelSet ( '( '(lch, t), vch) : ics)
+         , (LabelSet( '( '(lch, t), CopyR' mnts mvch att vp '(lch, t) vch)
+                     ': CopyR att nts vp ics))
+         )
+  => Copy att nts vp ( '( '(lch,t), vch) ': ics) where
+  type CopyR att nts vp ( '( '(lch,t), vch) ': ics)
+    =  '( '(lch, t) ,CopyR' (HMemberRes' t nts)
+                (HasLabelAttR att vch) att vp '(lch,t) vch)
+       ': CopyR att nts vp ics
+  cpychi att nts vp (ConsCh tgchatt ics)
+    = let ics'  = cpychi att nts vp ics
+          lcht  = labelChAttr tgchatt
+          vch   = unTaggedChAttr tgchatt
+          mnts  = hMember' (sndLabel lcht) nts
+          mvch  = hasLabelAtt att vch
+          attr  = cpychi' mnts mvch att vp lcht vch
+      in  (lcht .= attr) .* ics'
+
+
+class Copy' (mnts :: Bool)
+            (mvch :: Bool)
+            (att  :: k)
+            (vp   :: Type)
+            (lcht :: (k,Type))
+            (vch  :: [(k, Type)])  where
+  type CopyR' mnts mvch att vp lcht vch :: [(k, Type)]
+  cpychi' :: Proxy mnts
+          -> Proxy mvch
+          -> Label att
+          -> vp
+          -> Label lcht
+          -> Attribution vch
+          -> Attribution (CopyR' mnts mvch att vp lcht vch)
+
+
+
+instance Copy' False mvch att vp lcht pch where
+  type CopyR' False mvch att vp lcht pch = pch
+  cpychi' _ _ _ _ _ pch = pch
+
+instance Copy' True True att vp lcht pch where
+  type CopyR' True True att vp lcht pch = pch
+  cpychi' _ _ _ _ _ pch = pch
+
+instance (LabelSet ('(att, vp) : pch))
+  => Copy' True False att vp lcht pch where
+  type CopyR' True False att vp lcht pch
+      = '(att, vp) ': pch
+  cpychi' _ _ att vp _ pch = (att =. vp .*. pch) 
