@@ -33,18 +33,20 @@ root_ival (Fam chi par) =
   inhdef ival (nt_Tree .: ε) (  ch_tree .=.(chi .# ch_tree #. smin)
                             .*. emptyRecord)
   
-node_ival (Fam chi par) =
-  inhdef ival (nt_Tree .:ε) (   ch_l .=. (par #. ival)
-                            .*. ch_r .=. (par #. ival)
-                            .*. emptyRecord)
+-- node_ival (Fam chi par) =
+--   inhdef ival (nt_Tree .:ε) (   ch_l .=. (par #. ival)
+--                             .*. ch_r .=. (par #. ival)
+--                             .*. emptyRecord)
+node_ival fam = copy ival (nt_Tree .: ε) fam
 
 ch_l' = Label :: Label (Ch_l, Tree)
 
 root_sres (Fam chi par)
   = syndef sres (chi .# ch_tree #. sres)
 
-node_sres (Fam chi par)
-  = syndef sres (Node (chi .# ch_l #. sres)(chi .# ch_r #. sres))
+-- node_sres (Fam chi par)
+--   = syndef sres (Node (chi .# ch_l #. sres)(chi .# ch_r #. sres))
+node_sres = use sres (nt_Tree .:ε) Node (Leaf 0)
 
 leaf_sres (Fam chi par)
   = syndef sres $ Leaf (par #. ival)
@@ -52,7 +54,6 @@ leaf_sres (Fam chi par)
 
 --node_smin (Fam chi par)
 --  = syndef smin $ (chi .# ch_l #. smin) `min` (chi .# ch_r #. smin)
-
 node_smin = use smin (nt_Tree .:ε) min 0
 
 leaf_smin (Fam chi par)
@@ -86,7 +87,6 @@ exampleT 0 = examplet
 exampleT n = Node (exampleT (n-1)) (exampleT (n-1))
 
 repmin t = sem_Root asp_repmin (Root t) emptyAtt #. sres
-
 minimo t = sem_Tree asp_smin t emptyAtt #. smin
 
 
