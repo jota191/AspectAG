@@ -553,3 +553,71 @@ instance (LabelSet ('(att, vp) : pch))
   type CopyR' True False att vp lcht pch
       = '(att, vp) ': pch
   cpychi' _ _ att vp _ pch = (att =. vp .*. pch) 
+
+
+
+--------------------------------------------------------------------------
+
+
+-- data Modes (att :: k) (nts :: [(k,Type)])
+--            (op :: Type) (unit :: Type) where
+--   FnSynT :: Label att -> Modes att nts op unit
+--   -- | FnInhT att nts
+--   -- | FnUseT att nts op unit
+--   -- deriving Show
+
+
+-- data family Demote (t :: Modes att nts op unit) :: Type
+-- data instance Demote (FnSynT att)
+--   = FnSyn att 
+-- --data instance Demote (FnInhT att nts)  = FnInh att nts
+
+
+-- -- class Apply ic f a where
+-- --   type ApplyR ic f a
+
+-- -- instance (Defs att nts vals ic)
+-- --   => Apply ic (FnInhT att nts) (Fam sc ip -> Record vals) where
+-- --   type ApplyR ic (FnInhT att nts) (Fam sc ip -> Record vals)
+-- --     = forall sp. Rule sc ip ic sp (DefsR att nts vals ic) sp
+
+-- data F att nts = F att nts
+
+--app (FnInh att nts) f = inhdef att nts . f
+--app' (FnSyn att) f = syndef att . f
+
+
+
+data DefMode
+  = FnInhMode
+  | FnSynMode
+  deriving Show
+
+data family DemoteMode (mode :: DefMode)
+                       (att  :: k)
+                       (nts  :: [Type])
+                       (m    :: Type)          :: Type
+
+data instance DemoteMode FnInhMode att nts m where
+  FnInh :: Label att -> HList nts -> DemoteMode FnInhMode att nts m
+
+data instance DemoteMode FnSynMode att nts m where
+  FnSyn :: Label att -> DemoteMode FnSynMode att nts m
+
+class Apply mode att nts m vals a ic sp where
+  type ApplyR mode att nts m vals a ic sp
+  apply :: DemoteMode mode att nts m
+        -> (a -> Record vals)
+        -> a
+        -> Fam ic sp
+        -> ApplyR mode att nts m vals a ic sp
+
+instance (Defs att nts vals ic)
+  => Apply FnInhMode att nts m vals a ic sp where
+  type ApplyR FnInhMode att nts m vals a ic sp
+    = Fam (DefsR att nts vals ic) sp
+  apply (FnInh att nts) f = inhdef att nts . f
+
+
+instance Apply FnSynMode att nts m vals a ic sp where
+  type ApplyR FnSynMode att nts m vals a ic sp
