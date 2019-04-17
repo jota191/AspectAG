@@ -583,41 +583,63 @@ instance (LabelSet ('(att, vp) : pch))
 
 -- data F att nts = F att nts
 
---app (FnInh att nts) f = inhdef att nts . f
+app att nts f = inhdef att nts . f
 --app' (FnSyn att) f = syndef att . f
 
 
 
-data DefMode
-  = FnInhMode
-  | FnSynMode
-  deriving Show
+-- data DefMode
+--   = FnInhMode
+--   | FnSynMode
+--   deriving Show
 
-data family DemoteMode (mode :: DefMode)
-                       (att  :: k)
-                       (nts  :: [Type])
-                       (m    :: Type)          :: Type
+-- data family DemoteMode (mode :: DefMode)
+--                        (att  :: k)
+--                        (nts  :: [Type])
+--                        (m    :: Type)          :: Type
 
-data instance DemoteMode FnInhMode att nts m where
-  FnInh :: Label att -> HList nts -> DemoteMode FnInhMode att nts m
+-- data instance DemoteMode FnInhMode att nts m where
+--   FnInh :: Label att -> HList nts -> DemoteMode FnInhMode att nts m
 
-data instance DemoteMode FnSynMode att nts m where
-  FnSyn :: Label att -> DemoteMode FnSynMode att nts m
+-- data instance DemoteMode FnSynMode att nts m where
+--   FnSyn :: Label att -> DemoteMode FnSynMode att nts m
 
-class Apply mode att nts m vals a ic sp where
-  type ApplyR mode att nts m vals a ic sp
-  apply :: DemoteMode mode att nts m
-        -> (a -> Record vals)
-        -> a
-        -> Fam ic sp
-        -> ApplyR mode att nts m vals a ic sp
+-- class Apply mode att nts m vals a ic sp where
+--   type ApplyR mode att nts m vals a ic sp
+--   apply :: DemoteMode mode att nts m
+--         -> (a -> Record vals)
+--         -> a
+--         -> Fam ic sp
+--         -> ApplyR mode att nts m vals a ic sp
 
-instance (Defs att nts vals ic)
-  => Apply FnInhMode att nts m vals a ic sp where
-  type ApplyR FnInhMode att nts m vals a ic sp
-    = Fam (DefsR att nts vals ic) sp
-  apply (FnInh att nts) f = inhdef att nts . f
+-- instance (Defs att nts vals ic)
+--   => Apply FnInhMode att nts m vals a ic sp where
+--   type ApplyR FnInhMode att nts m vals a ic sp
+--     = Fam (DefsR att nts vals ic) sp
+--   apply (FnInh att nts) f = inhdef att nts . f
 
 
-instance Apply FnSynMode att nts m vals a ic sp where
-  type ApplyR FnSynMode att nts m vals a ic sp
+-- -- Instance Apply FnSynMode att nts m vals a ic sp where
+-- --   type ApplyR FnSynMode att nts m vals a ic sp
+
+
+-- class DefAspUse (att  :: k)
+--                 (nts  :: [Type])
+--                 (prds :: [Type]) where
+--   type DefAspUseR att nts prds :: [(k,Type)]
+--   defAspUse :: Label att -> HList nts
+--             -> (a -> a -> a) -> a
+--             -> HList prds
+--             -> Aspect (DefAspUseR att nts prds)
+
+-- instance DefAspUse att nts '[] where
+--   type DefAspUseR att nts '[] = '[]
+--   defAspUse _ _ _ _ _ = EmptyR
+
+
+-- instance ( DefAspUse att nts prds
+--          , Use att nts a sc
+--          )
+--   => DefAspUse att nts (prd ': prds) where
+--   type DefAspUseR att nts (prd ': prds)
+--     = () ': DefAspUseR att nts prds
