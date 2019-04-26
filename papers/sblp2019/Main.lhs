@@ -45,6 +45,8 @@
 %
 % end of the preamble, start of the body of the document source.
 
+\usepackage[utf8]{inputenc}
+
 \usepackage {amssymb}
 
 %include polycode.fmt
