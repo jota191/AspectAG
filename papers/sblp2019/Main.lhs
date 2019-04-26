@@ -107,18 +107,18 @@ Curabitur et nisi eu risus placerat blandit quis eu purus. Sed aliquet, nunc dig
 
 % The abstract is a short summary of the work to be presented in the article.
 \begin{abstract}
-AspectAG is a domain especific language embedded in Haskell to represent modular Attribute Grammars.
+AspectAG is a domain specific language embedded in Haskell to represent modular Attribute Grammars.
 In AspectAG attribute grammar fragments can be defined independently (in separate modules) and
 then combined in a safe way. This flexibility is achieved through the use of extensible records,
 which are implemented as heterogeneous lists by using type-level programming techniques.
 %; i.e. multi-parameter type classes and functional dependencies.
 
-Type-level programming in Haskell has evolved in a very importan way since the first version of AspectAG was designed;
-having incorporated new extensions as data promotion and polymorphism of kinds, among others,
-which allows programming in a ``strongly typed'' way at the level of types in a similar way to when programming at the level of values.
+Type-level programming in Haskell has evolved in a very important way since the first version of AspectAG was designed;
+having incorporated new extensions like data promotion and kind polymorphism, among others,
+which allows to program in a ``strongly typed'' way at the level of types in a similar way as when programming at the level of values.
 
 In this paper we redefine AspectAG applying the new type-level programming techinques.
-As a consequence of this, we obtain a more robust system with better error messages.
+As a consequence, we obtain a more robust system with better error messages.
 
 
 \end{abstract}
