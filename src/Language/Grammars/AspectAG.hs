@@ -36,7 +36,7 @@ This was implemented from scratch using the improvements on GHC on the last
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE TypeApplications          #-}
-
+{-# LANGUAGE FunctionalDependencies    #-}
 
 module Language.Grammars.AspectAG (
               module Language.Grammars.AspectAG,
@@ -68,6 +68,8 @@ import Language.Grammars.AspectAG.GenRecord
 import GHC.TypeLits
 import Language.Grammars.AspectAG.TypeError
 import Data.Maybe
+import GHC.Types
+import Data.Type.Equality
 
 -- | In each node of the grammar, the "Fam" contains a single attribution
 --for the parent, and a collection (Record) of attributions for the children:
@@ -117,12 +119,11 @@ type family Inh3 (rule :: Type) :: [(k, Type)] where
 
 
 
-
 -- |The function 'syndef' adds the definition of a synthesized attribute.
 --It takes a label 'att' representing the name of the new attribute, 
 --a value 'val' to be assigned to this attribute, and it builds a function which 
 --updates the output constructed thus far.
-syndef  :: LabelSet ( '(att,val) ': sp) =>
+syndef  :: (LabelSet ( '(att,val) ': sp), Ctx att) =>
     Label att -> val -> (Fam ic sp -> Fam ic ( '(att,val) ': sp))
 syndef latt val (Fam ic sp) = Fam ic (latt =. val *. sp)
 
@@ -413,7 +414,7 @@ use att nts op unit (Fam sc _)
 
 -- | The class to implement the dependent function /usechi/
 
-class Use (att :: k) (nts :: [Type]) (a :: Type) sc -- TODO: research sign.
+class Use (att :: k) (nts :: [Type]) (a :: Type) sc -- TODO:
  where
   usechi :: Label att -> HList nts -> (a -> a -> a) -> ChAttsRec sc
          -> Maybe a
@@ -625,21 +626,147 @@ app att nts f = inhdef att nts . f
 
 -- class DefAspUse (att  :: k)
 --                 (nts  :: [Type])
+--                 (a    :: Type)
 --                 (prds :: [Type]) where
---   type DefAspUseR att nts prds :: [(k,Type)]
+--   type DefAspUseR att nts a prds :: [(Type, Type)]
 --   defAspUse :: Label att -> HList nts
 --             -> (a -> a -> a) -> a
 --             -> HList prds
---             -> Aspect (DefAspUseR att nts prds)
+--             -> Aspect (DefAspUseR att nts a prds)
 
--- instance DefAspUse att nts '[] where
---   type DefAspUseR att nts '[] = '[]
+-- instance DefAspUse att nts a '[] where
+--   type DefAspUseR att nts a '[] = '[]
 --   defAspUse _ _ _ _ _ = EmptyR
 
 
--- instance ( DefAspUse att nts prds
---          , Use att nts a sc
---          )
---   => DefAspUse att nts (prd ': prds) where
---   type DefAspUseR att nts (prd ': prds)
---     = () ': DefAspUseR att nts prds
+-- instance (DefAspUse att nts a prds)
+--   => DefAspUse att nts a (prd ': prds) where
+--   type DefAspUseR att nts a (prd ': prds)
+--     =( '(prd , Any)
+--        ': DefAspUseR att nts a prds)
+--   defAspUse att nts op unit (HCons prd prds)
+--     = (prd .=. defAspUse1 att nts prd op unit) .*. defAspUse att nts op unit prds
+
+
+-- class DefAspUse1 att nts prd a sc sp where
+--   type DefAspUse1R att nts prd a sc sp :: Type
+--   defAspUse1 :: Label att -> HList nts ->
+--     Label prd -> (a -> a -> a) -> a -> Fam sc ip
+--     -> (Fam ic sp -> Fam ic ( '(att, a) ': sp))
+
+-- instance ( Use att nts a sc
+--          , LabelSet ('(att, a) : sp))
+--   => DefAspUse1 att nts prd a sc sp where
+--   type DefAspUse1R att nts prd a sc sp = () 
+--   defAspUse1 att nts prd op unit (Fam sc _)
+--     = let res = usechi att nts op sc
+--       in (syndef att (maybe unit id res))
+          
+
+data Rec (c :: k) (r :: [(k', k'')]) :: Type where
+  EmptyRec :: Rec c '[]
+  ConsRec  :: LabelSet ( '(l,v) ': r) =>
+              Field c l v -> Rec c r -> Rec c ( '(l,v) ': r)
+
+data Field (cat :: k) (l :: k') (v :: k'') where
+  Field :: Label c -> Label l -> Wrap c v -> Field c l v
+
+untagField :: Field c l v -> Wrap c v
+untagField (Field lc lv v) = v
+
+data ChiRec; data Attrib; data Reco
+
+field1  :: Field Reco L1 Bool
+field1  =  Field Label Label False
+field2  :: Field Reco L2 Char
+field2  =  Field Label Label '4'
+data L1 
+data L2
+type Re = Rec Tagged
+r1 = field1 `ConsRec` (field2 `ConsRec` EmptyRec)
+
+
+type family    Wrap (t :: Type)  (v :: k)
+type instance  Wrap Reco    (v :: Type) = v
+type instance  Wrap Attrib  (l :: [(k, Type)]) = Attribution l
+type instance  Wrap ChiRec  (l :: [((k,Type), [(k, Type)])]) = ChAttsRec l
+
+data OpLookup (c :: Type)
+              (l  :: k)
+              (r  :: [(k, k')]) :: Type where
+  OpLookup :: Label l -> Rec c r -> OpLookup c l r
+
+data OpLookup' (b  :: Bool)
+               (c  :: Type)
+               (l  :: k)
+               (r  :: [(k, k')]) :: Type where
+  OpLookup' :: Proxy b -> Label l -> Rec c r -> OpLookup' b c l r
+
+
+class Require (op   :: Type) --todo: ?
+              (ctx  :: [Symbol])  where
+   type ReqR op
+   req :: Proxy ctx -> op -> ReqR op
+
+instance (Require (OpLookup' (l == l') c l ( '(l', v) ': r)) ctx)
+  => Require (OpLookup c l ( '(l', v) ': r)) ctx where
+  type ReqR (OpLookup c l ( '(l', v) ': r))
+    = ReqR (OpLookup' (l == l') c l ( '(l', v) ': r))
+  req ctx (OpLookup l r) = req ctx (OpLookup' (Proxy @ (l == l')) l r)
+
+instance Require (OpLookup' 'True c l ( '(l, v) ': r)) ctx where
+  type ReqR (OpLookup' 'True c l ( '(l, v) ': r)) = Wrap c v
+  req Proxy (OpLookup' Proxy Label (ConsRec f _)) = untagField f
+
+instance (Require (OpLookup c l r) ctx)
+  => Require (OpLookup' False c l ( '(l', v) ': r)) ctx where
+  type ReqR (OpLookup' False c l ( '(l', v) ': r)) = ReqR (OpLookup c l r)
+  req ctx (OpLookup' Proxy l (ConsRec _ r)) = req ctx (OpLookup l r)
+
+
+
+-- -------------------------------------------------------------------------------
+-- instance ( Require' (l1 == l2) (OpLookup f l1 ( '(l2 , v) ': r)) ctx
+--          , ReqR' (l1 == l2) (OpLookup f l1 ( '(l2 , v) ': r))
+--          ~ (Label l1 -> Rec f r -> Lookup f l1 ('(l2, v) : r)))
+--   => Require (OpLookup f l1 ( '(l2 , v) ': r)) ctx where
+--   type ReqR (OpLookup f l1 ( '(l2 , v) ': r)) = Label l1 -> Rec f r
+--          -> Lookup f l1 ( '(l2 , v) ': r)
+--   req p l r = req' (Proxy @ (l1 == l2)) p l r
+
+-- instance Require (OpLookup' b f l r) ctx where
+--   type ReqR (OpLookup' b f l r) = Proxy b -> Label l -> Rec f r -> Lookup f l r
+--   req p b l r = undefined
+
+-- class Require' (b    :: Bool)
+--                (op   :: Type) --todo: ?
+--                (ctx  :: [Symbol])  where
+--    type ReqR' b op
+--    req' :: Proxy b -> Proxy ctx -> ReqR' b op
+
+
+
+
+class ReqLookup (f   :: k -> k' -> Type)
+                (l   :: k)
+                (r   :: [(k, k')])
+                (ctx :: [Symbol]) where
+  type ReqLR f l r :: Type
+  reqLookup :: Proxy ctx -> Label l -> Rec f r -> ReqLR f l r
+
+class ReqLookup' (b :: Bool)
+                 (f   :: k -> k' -> Type)
+                 (l   :: k)
+                 (r   :: [(k, k')])
+                 (ctx :: [Symbol]) where
+  type ReqLR' b f l r :: Type
+  reqLookup' :: Proxy ctx -> Proxy b -> Label l -> Rec f r -> ReqLR' b f l r
+
+instance ReqLookup' (l == l') f l ( '(l', v) ': r) ctx
+  => ReqLookup f l ( '(l', v) ': r) ctx where
+  type ReqLR f l ( '(l', v) ': r) = ReqLR' (l == l') f l ( '(l', v) ': r)
+  reqLookup ctx l r = reqLookup' ctx (Proxy @ (l == l')) l r 
+
+instance ReqLookup' 'True f l ( '(l,v) ': r) ctx where
+  type ReqLR' 'True f l ( '(l,v) ': r) = ()
+  reqLookup' = undefined 
