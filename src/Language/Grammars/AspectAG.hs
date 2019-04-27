@@ -666,30 +666,30 @@ app att nts f = inhdef att nts . f
 data Rec (c :: k) (r :: [(k', k'')]) :: Type where
   EmptyRec :: Rec c '[]
   ConsRec  :: LabelSet ( '(l,v) ': r) =>
-              Field c l v -> Rec c r -> Rec c ( '(l,v) ': r)
+              TagField c l v -> Rec c r -> Rec c ( '(l,v) ': r)
 
-data Field (cat :: k) (l :: k') (v :: k'') where
-  Field :: Label c -> Label l -> Wrap c v -> Field c l v
+data TagField (cat :: k) (l :: k') (v :: k'') where
+  TagField :: Label c -> Label l -> WrapF c v -> TagField c l v
 
-untagField :: Field c l v -> Wrap c v
-untagField (Field lc lv v) = v
+untagField :: TagField c l v -> WrapF c v
+untagField (TagField lc lv v) = v
 
 data ChiRec; data Attrib; data Reco
 
-field1  :: Field Reco L1 Bool
-field1  =  Field Label Label False
-field2  :: Field Reco L2 Char
-field2  =  Field Label Label '4'
+field1  :: TagField Reco L1 Bool
+field1  =  TagField Label Label False
+field2  :: TagField Reco L2 Char
+field2  =  TagField Label Label '4'
 data L1 
 data L2
 type Re = Rec Tagged
 r1 = field1 `ConsRec` (field2 `ConsRec` EmptyRec)
 
 
-type family    Wrap (t :: Type)  (v :: k)
-type instance  Wrap Reco    (v :: Type) = v
-type instance  Wrap Attrib  (l :: [(k, Type)]) = Attribution l
-type instance  Wrap ChiRec  (l :: [((k,Type), [(k, Type)])]) = ChAttsRec l
+type family    WrapF (t :: Type)  (v :: k) :: Type
+type instance  WrapF Reco    (v :: Type) = v
+type instance  WrapF Attrib  (v :: Type) = v
+type instance  WrapF ChiRec  (v :: [(k, Type)]) = Attribution v
 
 data OpLookup (c :: Type)
               (l  :: k)
@@ -703,7 +703,7 @@ data OpLookup' (b  :: Bool)
   OpLookup' :: Proxy b -> Label l -> Rec c r -> OpLookup' b c l r
 
 
-class Require (op   :: Type) --todo: ?
+class Require (op   :: Type)
               (ctx  :: [Symbol])  where
    type ReqR op
    req :: Proxy ctx -> op -> ReqR op
@@ -715,7 +715,7 @@ instance (Require (OpLookup' (l == l') c l ( '(l', v) ': r)) ctx)
   req ctx (OpLookup l r) = req ctx (OpLookup' (Proxy @ (l == l')) l r)
 
 instance Require (OpLookup' 'True c l ( '(l, v) ': r)) ctx where
-  type ReqR (OpLookup' 'True c l ( '(l, v) ': r)) = Wrap c v
+  type ReqR (OpLookup' 'True c l ( '(l, v) ': r)) = WrapF c v
   req Proxy (OpLookup' Proxy Label (ConsRec f _)) = untagField f
 
 instance (Require (OpLookup c l r) ctx)
@@ -725,48 +725,10 @@ instance (Require (OpLookup c l r) ctx)
 
 
 
--- -------------------------------------------------------------------------------
--- instance ( Require' (l1 == l2) (OpLookup f l1 ( '(l2 , v) ': r)) ctx
---          , ReqR' (l1 == l2) (OpLookup f l1 ( '(l2 , v) ': r))
---          ~ (Label l1 -> Rec f r -> Lookup f l1 ('(l2, v) : r)))
---   => Require (OpLookup f l1 ( '(l2 , v) ': r)) ctx where
---   type ReqR (OpLookup f l1 ( '(l2 , v) ': r)) = Label l1 -> Rec f r
---          -> Lookup f l1 ( '(l2 , v) ': r)
---   req p l r = req' (Proxy @ (l1 == l2)) p l r
 
--- instance Require (OpLookup' b f l r) ctx where
---   type ReqR (OpLookup' b f l r) = Proxy b -> Label l -> Rec f r -> Lookup f l r
---   req p b l r = undefined
+-- el mensaje no tiene sentido, solo para testear:
+instance (TypeError (Text "field not Found on Record, looking up the label: " :<>: ShowType l
+                     :$$: Text "from the use of " :<>: Text ctx))
+  => Require (OpLookup Reco l '[]) '[ctx]
 
--- class Require' (b    :: Bool)
---                (op   :: Type) --todo: ?
---                (ctx  :: [Symbol])  where
---    type ReqR' b op
---    req' :: Proxy b -> Proxy ctx -> ReqR' b op
-
-
-
-
-class ReqLookup (f   :: k -> k' -> Type)
-                (l   :: k)
-                (r   :: [(k, k')])
-                (ctx :: [Symbol]) where
-  type ReqLR f l r :: Type
-  reqLookup :: Proxy ctx -> Label l -> Rec f r -> ReqLR f l r
-
-class ReqLookup' (b :: Bool)
-                 (f   :: k -> k' -> Type)
-                 (l   :: k)
-                 (r   :: [(k, k')])
-                 (ctx :: [Symbol]) where
-  type ReqLR' b f l r :: Type
-  reqLookup' :: Proxy ctx -> Proxy b -> Label l -> Rec f r -> ReqLR' b f l r
-
-instance ReqLookup' (l == l') f l ( '(l', v) ': r) ctx
-  => ReqLookup f l ( '(l', v) ': r) ctx where
-  type ReqLR f l ( '(l', v) ': r) = ReqLR' (l == l') f l ( '(l', v) ': r)
-  reqLookup ctx l r = reqLookup' ctx (Proxy @ (l == l')) l r 
-
-instance ReqLookup' 'True f l ( '(l,v) ': r) ctx where
-  type ReqLR' 'True f l ( '(l,v) ': r) = ()
-  reqLookup' = undefined 
+-- req (Proxy @ '["lolo"]) (OpLookup (Label @ Char) r1)  <<<---- probar esto  :) 
