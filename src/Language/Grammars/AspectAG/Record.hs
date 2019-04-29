@@ -33,13 +33,15 @@ and using type families. The latter approach is the one we actually use.
              InstanceSigs
 #-}
 
+{-# LANGUAGE PatternSynonyms #-}
+
 module Language.Grammars.AspectAG.Record where
 
 import Data.Kind 
 import Data.Type.Equality
 import Data.Proxy
 import Language.Grammars.AspectAG.TPrelude
-import Data.Tagged hiding (unTagged)
+--import Data.Tagged hiding (unTagged)
 import Language.Grammars.AspectAG.TagUtils
 import GHC.TypeLits
 import Language.Grammars.AspectAG.GenRecord
@@ -59,7 +61,15 @@ import Language.Grammars.AspectAG.GenRecord
 --    Tagged l v -> Record xs -> Record ( '(l,v) ': xs)
 
 
-type Record = REC Tagged
+--type Record = REC Tagged
+
+--type Record = Rec Reco
+
+pattern EmptyR :: Rec Reco '[]
+pattern EmptyR = EmptyRec :: Rec Reco '[]
+pattern ConsR :: (LabelSet ( '(l,v ) ': xs))
+  => Tagged l v -> Rec Reco xs -> Rec Reco ( '(l,v ) ': xs) 
+pattern ConsR lv r = ConsRec lv r
 
 -- ** Exported
 -- | Pretty constructors
@@ -101,12 +111,14 @@ c .#. l = lookupByLabelRec l c
 -- | Since the typechecker cannot decide an instance dependent of the context,
 --but on the head, an auxiliary class with an extra parameter to decide
 --if we update on the head of r or not is used
-instance HasFieldRec'    'True l ( '(l, v) ': r) where
+instance LabelSet ( '(l, v) ': r)
+  => HasFieldRec'    'True l ( '(l, v) ': r) where
   type LookupByLabelRec' 'True l ( '(l, v) ': r) = v
   lookupByLabelRec' _ _ (ConsR lv _) = unTagged lv
 
-instance (HasFieldRec l r )=>
-  HasFieldRec' 'False l ( '(l2, v) ': r) where
+instance ( HasFieldRec l r
+         , LabelSet ( '(l2, v) ': r))
+  => HasFieldRec' 'False l ( '(l2, v) ': r) where
   type LookupByLabelRec' 'False l ( '(l2, v) ': r) = LookupByLabelRec l r
   lookupByLabelRec' _ l (ConsR _ r) = lookupByLabelRec l r
 
@@ -136,12 +148,15 @@ instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r) ) =>
   updateAtLabelRec' _ (l :: Label l) v (att `ConsR` atts)
     = (Tagged v :: Tagged l v) `ConsR` atts
 
-instance ( UpdateAtLabelRec l v r r', LabelSet  ( a ': r' ) ) =>
-         UpdateAtLabelRec' False l v ( a ': r) ( a ': r') where
+instance ( UpdateAtLabelRec l v r r'
+         , LabelSet  ( '(l0, v0) ': r' )
+         , LabelSet  ( '(l0, v0) ': r )
+         ) =>
+         UpdateAtLabelRec' False l v ( '(l0, v0) ': r) ( '(l0, v0) ': r') where
   updateAtLabelRec' (b :: Proxy False) (l :: Label l) (v :: v)
-    (ConsR att xs :: Record ( a ': r))
+    (ConsR att xs :: Record ( '(l0, v0) ': r))
     = case (updateAtLabelRec l v xs) of
-        xs' -> ConsR att xs' :: Record( a ': r')
+        xs' -> ConsR att xs' :: Record( '(l0, v0) ': r')
 
 -- | Type family version of update
 class UpdateAtLabelRecF (l :: k)(v :: Type)(r :: [(k,Type)]) where
@@ -160,15 +175,18 @@ instance (UpdateAtLabelRecF' (l == l') l v ( '(l',v') ': r)) =>
     = UpdateAtLabelRecFR' (l == l') l v ( '(l',v') ': r)
   updateAtLabelRecF = updateAtLabelRecF' (Proxy :: Proxy (l == l'))
 
-instance (LabelSet ( '(l, v) ': r)) => 
+instance ( LabelSet ( '(l, v) ': r)
+         , (LabelSet ('(l, v') : r))) => 
   UpdateAtLabelRecF' 'True l v ( '(l, v') ': r) where
   type UpdateAtLabelRecFR' 'True l v ( '(l, v') ': r) = ( '(l, v) ': r)
   updateAtLabelRecF' _ (l :: Label l) v (att `ConsR` atts)
     = (Tagged v :: Tagged l v) .*. atts
 
 instance ( UpdateAtLabelRecF l v r
-         , LabelSet ( '(l', v') ': UpdateAtLabelRecFR l v r)) => 
-  UpdateAtLabelRecF' 'False l v ( '(l', v') ': r) where
+         , LabelSet ( '(l', v') ': UpdateAtLabelRecFR l v r)
+         , LabelSet ( '(l', v') ': r)
+         )
+  => UpdateAtLabelRecF' 'False l v ( '(l', v') ': r) where
   type UpdateAtLabelRecFR' 'False l v ( '(l', v') ': r)
     = '(l', v') ': UpdateAtLabelRecFR l v r
   updateAtLabelRecF' _ l v (ConsR x xs)
@@ -200,7 +218,7 @@ instance HasLabelRec  k ( '(k' ,v) ': ls) where
 instance Show (Record '[]) where
   show _ = "{}"
 
-instance (Show v, Show (Record xs)) =>
+instance (Show v, Show (Record xs), (LabelSet ('(l, v) : xs))) =>
          Show (Record ( '(l,v) ': xs ) ) where
   show (ConsR lv xs) = let tail = show xs
                        in "{" ++ show (unTagged lv)

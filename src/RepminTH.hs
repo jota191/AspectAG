@@ -37,9 +37,7 @@ root_ival (Fam chi par) =
 --   inhdef ival (nt_Tree .:ε) (   ch_l .=. (par #. ival)
 --                             .*. ch_r .=. (par #. ival)
 --                             .*. emptyRecord)
-node_ival fam = copy ival (nt_Tree .: ε) fam
-
-ch_l' = Label :: Label (Ch_l, Tree)
+node_ival = copy ival (nt_Tree .: ε)
 
 root_sres (Fam chi par)
   = syndef sres (chi .# ch_tree #. sres)
@@ -69,7 +67,7 @@ asp_sres =  p_Root .=. root_sres
 asp_smin =   p_Leaf .=. leaf_smin
         .*.  p_Node .=. node_smin
         .*. emptyRecord
-        
+
 
 
 asp_repmin = asp_smin .+. asp_sres .+. asp_ival

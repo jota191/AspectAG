@@ -52,49 +52,50 @@ import GHC.TypeLits
 --   ConsCh  :: LabelSet ( '(l, v) ': xs) =>
 --    TaggedChAttr l v -> ChAttsRec xs -> ChAttsRec ( '(l,v) ': xs)
 
-type ChAttsRec = REC TaggedChAttr
+-- type ChAttsRec = REC TaggedChAttr
 
 
 -- | Pattern synonyms, since now we implement ChAttsRec as a generic record,
 -- this allows us to recover pattern matching
 pattern EmptyCh :: ChAttsRec '[]
-pattern EmptyCh = EmptyR
+pattern EmptyCh = EmptyRec
 pattern ConsCh :: (LabelSet ( '( '(l, t), v) ': xs)) =>
   TaggedChAttr '(l,t) v -> ChAttsRec xs -> ChAttsRec ( '( '(l,t),v) ': xs)
-pattern ConsCh h t = ConsR h t
+pattern ConsCh h t = ConsRec h t
 
 -- | Pretty constructors
 infixr 2 .*
 (.*) :: LabelSet ('(ch, attrib) ': attribs) =>
   TaggedChAttr ch attrib -> ChAttsRec attribs
     -> ChAttsRec ('(ch, attrib) ': attribs)
-(.*) = ConsR
+(.*) = ConsRec
 
 -- | no child
 emptyCh :: ChAttsRec '[]
-emptyCh = EmptyR
+emptyCh = EmptyRec
 
 -- |** This are the tag utils for tag attributions of the childred
 
 -- TODO: move this?
 
 -- | Tags a Label (labels of children) to an attribution
-data TaggedChAttr (l :: (k,Type)) (v :: [(k,Type)]) :: Type where
-  TaggedChAttr :: Label l -> Attribution v -> TaggedChAttr l v
+--data TaggedChAttr (l :: (k,Type)) (v :: [(k,Type)]) :: Type where
+--  TaggedChAttr :: Label l -> Attribution v -> TaggedChAttr l v
 
 
 -- | Pretty constructor for tagging a child
 infixr 4 .=
-(.=) :: Label l -> Attribution v -> TaggedChAttr l v
+(.=) :: Label l -> WrapField ChiReco v -> TaggedChAttr l v
 (.=) = TaggedChAttr
 
 -- | To get the atribution
-unTaggedChAttr :: TaggedChAttr l a -> Attribution a
+unTaggedChAttr :: TaggedChAttr l v -> WrapField ChiReco v
 unTaggedChAttr (TaggedChAttr _ a) = a
 
+
 -- | To get the label
-labelChAttr :: TaggedChAttr l a -> Label l
-labelChAttr _ = Label
+--labelChAttr :: TaggedChAttr l a -> Label l
+--labelChAttr _ = Label
 
                                                  
 -- |* Lookup
@@ -112,9 +113,9 @@ class HasChild' (b::Bool) (l :: (k,Type)) (r::[((k,Type),[(k,Type)])]) v | b l r
     lookupByChild':: Proxy b -> Label l -> ChAttsRec r -> Attribution v
 
 instance HasChild' True l ( '(l,v) ': r) v where
-   lookupByChild' _ _ (ConsR lv _) = unTaggedChAttr lv
+   lookupByChild' _ _ (ConsRec lv _) = unTaggedChAttr lv
 instance HasChild l r v => HasChild' False l ( '(l2,v2) ': r) v where
-   lookupByChild' _ l (ConsR _ r) = lookupByChild l r
+   lookupByChild' _ l (ConsRec _ r) = lookupByChild l r
 
 
 -- | HaschildF is the type family version of HasChild
@@ -134,20 +135,17 @@ instance (HasChildF' (l==l1) l ( '(l1,v) ': r)) =>
     =  LookupByChildFR' (l == l1) l ( '(l1,v) ': r)
   lookupByChildF l r = lookupByChildF' (Proxy :: Proxy (l == l1)) l r
 
-
 instance
   HasChildF' 'True l ( '(l,v) ': r) where
   type LookupByChildFR' 'True l ( '(l,v) ': r) = v
-  lookupByChildF' _ _ (ConsR lv _) = unTaggedChAttr lv
+  lookupByChildF' _ _ (ConsRec lv _) = unTaggedChAttr lv
 
 instance (HasChildF l r) => 
   HasChildF' 'False l ( '(l1,v) ': r) where
   type LookupByChildFR' 'False l ( '(l1,v) ': r) = LookupByChildFR l r
-  lookupByChildF' _ l (ConsR _ r) = lookupByChildF l r
+  lookupByChildF' _ l (ConsRec _ r) = lookupByChildF l r
 
-
-
--- | Pretty lookup
+-- | Pretty lookup,
 infixl 8 .#
 (.#)  :: (HasChildF l r, LookupByChildFR l r ~ v) =>
          ChAttsRec r -> Label l ->  Attribution v
@@ -155,40 +153,40 @@ c .# l = lookupByChildF l c
 
 -- |* Update
 
--- | updates an attribution at a child, this is the implementation of
---   UpdateAtLabel for children, using functional dependencies
-class UpdateAtChild (l :: (k,Type))(v :: [(k,Type)])
-      (r :: [((k,Type),[(k,Type)])])(r' :: [((k,Type),[(k,Type)])])
-   | l v r -> r' where
-  updateAtChild :: Label l -> Attribution v -> ChAttsRec r -> ChAttsRec r'
+-- -- | updates an attribution at a child, this is the implementation of
+-- --   UpdateAtLabel for children, using functional dependencies
+-- class UpdateAtChild (l :: (k,Type))(v :: [(k,Type)])
+--       (r :: [((k,Type),[(k,Type)])])(r' :: [((k,Type),[(k,Type)])])
+--    | l v r -> r' where
+--   updateAtChild :: Label l -> Attribution v -> ChAttsRec r -> ChAttsRec r'
 
---So we need an auxiliary class with an extra parameter to decide if we update
---on the head of r or not
+-- --So we need an auxiliary class with an extra parameter to decide if we update
+-- --on the head of r or not
 
-class UpdateAtChild' (b::Bool)(l::(k,Type))(v::[(k,Type)])
-      (r::[((k,Type),[(k,Type)])])(r'::[((k,Type),[(k,Type)])])
-    | b l v r -> r'  where
-  updateAtChild' :: Proxy b -> Label l -> Attribution v -> ChAttsRec r
-                 -> ChAttsRec r'
+-- class UpdateAtChild' (b::Bool)(l::(k,Type))(v::[(k,Type)])
+--       (r::[((k,Type),[(k,Type)])])(r'::[((k,Type),[(k,Type)])])
+--     | b l v r -> r'  where
+--   updateAtChild' :: Proxy b -> Label l -> Attribution v -> ChAttsRec r
+--                  -> ChAttsRec r'
 
-instance (HEqK l l' b, UpdateAtChild' b l v ( '(l',v')': r) r')
- -- note that if pattern over r is not written this does not compile
-       => UpdateAtChild l v ( '(l',v') ': r) r' where
-  updateAtChild = updateAtChild' (Proxy :: Proxy b)
-
-
-instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r) ) =>
-         UpdateAtChild' 'True l v ( '(l,v') ': r) ( '(l,v) ': r) where
-  updateAtChild' _ (l :: Label l) newattrib (attrib `ConsR` attribs)
-    = (TaggedChAttr l newattrib) .*. attribs
+-- instance (HEqK l l' b, UpdateAtChild' b l v ( '(l',v')': r) r')
+--  -- note that if pattern over r is not written this does not compile
+--        => UpdateAtChild l v ( '(l',v') ': r) r' where
+--   updateAtChild = updateAtChild' (Proxy :: Proxy b)
 
 
-instance ( UpdateAtChild l v r r', LabelSet  ( a ': r' ) ) =>
-         UpdateAtChild' False l v (a ': r) (a ': r') where
-  updateAtChild' (b :: Proxy False) (l :: Label l) v
-    (ConsR attrib xs :: ChAttsRec ( a ': r))
-    = case (updateAtChild l v xs) of
-        xs' -> attrib .*. xs' :: ChAttsRec (a ': r')
+-- instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r) ) =>
+--          UpdateAtChild' 'True l v ( '(l,v') ': r) ( '(l,v) ': r) where
+--   updateAtChild' _ (l :: Label l) newattrib (attrib `ConsRec` attribs)
+--     = (TaggedChAttr l newattrib) .*. attribs
+
+
+-- instance ( UpdateAtChild l v r r', LabelSet  ( a ': r' ) ) =>
+--          UpdateAtChild' False l v (a ': r) (a ': r') where
+--   updateAtChild' (b :: Proxy False) (l :: Label l) v
+--     (ConsRec attrib xs :: ChAttsRec ( a ': r))
+--     = case (updateAtChild l v xs) of
+--         xs' -> attrib .*. xs' :: ChAttsRec (a ': r')
 
 
 -- TODO: Type errors
@@ -214,13 +212,13 @@ class UpdateAtChildF' (b :: Bool)
 instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r)) =>
   UpdateAtChildF' 'True l v ( '(l,v') ': r) where
   type UpdateAtChildFR' 'True l v ( '(l,v') ': r) = ( '(l,v) ': r)
-  updateAtChildF' Proxy l natbtn (oatbtn `ConsR` atbtns)
+  updateAtChildF' Proxy l natbtn (oatbtn `ConsRec` atbtns)
     = l .= natbtn .* atbtns
 
 instance (UpdateAtChildF l v r, LabelSet (a ': (UpdateAtChildFR l v r))) => 
   UpdateAtChildF' 'False l v (a ': r) where
   type UpdateAtChildFR' 'False l v (a ': r) = a ': (UpdateAtChildFR l v r)
-  updateAtChildF' b l v (ConsR atbtn atbtns)
+  updateAtChildF' b l v (ConsRec atbtn atbtns)
     = case (updateAtChildF l v atbtns) of
         atbtns' -> atbtn .* atbtns'
 
@@ -260,8 +258,8 @@ instance HasLabelChildAtts k ( '(k' ,v) ': ls) where
 instance Show (ChAttsRec '[]) where
   show _ = "{}"
 
-instance (Show (Attribution v), Show (ChAttsRec xs)) =>
+instance (Show (WrapField ChiReco v), Show (ChAttsRec xs)) =>
          Show (ChAttsRec ( '(l,v) ': xs ) ) where
-  show (ConsR lv xs) = let tail = show xs
+  show (ConsRec lv xs) = let tail = show xs
                        in "{" ++ show (unTaggedChAttr lv) ++
                           "," ++ drop 1 tail 

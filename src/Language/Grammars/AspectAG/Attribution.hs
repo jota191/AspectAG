@@ -58,15 +58,15 @@ import Language.Grammars.AspectAG.TagUtils
 --    Attribute att val -> Attribution atts -> Attribution ( '(att,val) ': atts)
 
 -- | An attribution is a record constructed from attributes
-type Attribution = REC Attribute 
+--type Attribution = Rec AttrRec
 
 
 -- | Pattern Synonyms
 pattern EmptyAtt :: Attribution '[]
-pattern EmptyAtt = EmptyR
+pattern EmptyAtt = EmptyRec
 pattern ConsAtt :: LabelSet ( '(att, val) ': atts) =>
     Attribute att val -> Attribution atts -> Attribution ( '(att,val) ': atts)
-pattern ConsAtt att atts = ConsR att atts
+pattern ConsAtt att atts = ConsRec att atts
 
 
 -- * Pretty constructors
@@ -76,11 +76,11 @@ infixr 2 *.
 (*.) :: LabelSet ('(att, val) : atts) =>
     Attribute att val -> Attribution atts
       -> Attribution ('(att, val) : atts)
-(*.) = ConsR
+(*.) = ConsRec
 
 -- | Empty
 emptyAtt :: Attribution '[]
-emptyAtt = EmptyR
+emptyAtt = EmptyRec
 
 -- * operations
 
@@ -97,9 +97,9 @@ class HasFieldAtt' (b::Bool) (l :: k) (r::[(k,Type)]) v | b l r -> v where
   lookupByLabelAtt':: Proxy b -> Label l -> Attribution r -> v
 
 instance HasFieldAtt' True l ( '(l,v) ': r) v where
-  lookupByLabelAtt' _ _ (ConsR (Attribute v) _) = v
+  lookupByLabelAtt' _ _ (ConsRec (Attribute v) _) = v
 instance HasFieldAtt l r v => HasFieldAtt' False l ( '(l2,v2) ': r) v where
-  lookupByLabelAtt' _ l (ConsR _ r) = lookupByLabelAtt l r
+  lookupByLabelAtt' _ l (ConsRec _ r) = lookupByLabelAtt l r
 
 -- | Error instance
 
@@ -128,12 +128,12 @@ instance (HasFieldAttF' (l==l1) l ( '(l1,v) ': r))
 
 instance HasFieldAttF' True l ( '(l, v) ': r) where
   type LookupByLabelAttFR' 'True l ( '(l, v) ': r) = v
-  lookupByLabelAttF' _ _ (ConsR (Attribute a) _) = a
+  lookupByLabelAttF' _ _ (ConsRec (Attribute a) _) = a
 
 instance (HasFieldAttF l r)
   => HasFieldAttF' 'False l ( '(l1,v) ': r) where
   type LookupByLabelAttFR' 'False l ( '(l1,v) ': r) = LookupByLabelAttFR l r
-  lookupByLabelAttF' _ l (ConsR _ r) = lookupByLabelAttF l r
+  lookupByLabelAttF' _ l (ConsRec _ r) = lookupByLabelAttF l r
 
 
   
@@ -163,7 +163,7 @@ proxy = Proxy
 
 lookupByLabelAttF' :: Proxy 'True -> Label l -> Attribution ( '(l, v) ': r)
                  -> LookupByLabelAttFR l ( '(l, v) ': r)
--- lookupByLabelAttF' l (ConsR (Attribute v) _) = v
+-- lookupByLabelAttF' l (ConsRec (Attribute v) _) = v
 -}
 
 -- | Pretty lookup
@@ -194,16 +194,16 @@ instance (HEqK l l' b, UpdateAtLabelAtt' b l v ( '(l',v')': r) r')
 
 instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r) )
   => UpdateAtLabelAtt' 'True l v ( '(l,v') ': r) ( '(l,v) ': r) where
-  updateAtLabelAtt' _ (l :: Label l) v (att `ConsR` atts)
-    = (Attribute v :: Attribute l v) `ConsR` atts
+  updateAtLabelAtt' _ (l :: Label l) v (att `ConsRec` atts)
+    = (Attribute v :: Attribute l v) `ConsRec` atts
 
 
 instance ( UpdateAtLabelAtt l v r r', LabelSet  ( a ': r' ) ) =>
          UpdateAtLabelAtt' False l v ( a ': r) ( a ': r') where
   updateAtLabelAtt' (b :: Proxy False) (l :: Label l) (v :: v)
-    (ConsR att xs :: Attribution ( a ': r))
+    (ConsRec att xs :: Attribution ( a ': r))
     = case (updateAtLabelAtt l v xs) of
-        xs' -> ConsR att xs' :: Attribution( a ': r')
+        xs' -> ConsRec att xs' :: Attribution( a ': r')
 
 
 
@@ -247,7 +247,7 @@ instance (UpdateAtLabelAttF' (l==l2) l v ( '(l2, v2) ': r))
 instance (LabelSet ('(l, v) : r))
   => UpdateAtLabelAttF' 'True l v ( '(l2,v2) ': r) where
   type UpdateAtLabelAttFR' 'True l v ( '(l2,v2) ': r) = ( '(l,v) ': r)
-  updateAtLabelAttF' _ l v (_ `ConsR` r) = l =. v *. r 
+  updateAtLabelAttF' _ l v (_ `ConsRec` r) = l =. v *. r 
 
 -- | When the first label does not match
 instance ( LabelSet ( '(l2,v2) ': UpdateAtLabelAttFR l v r)
@@ -255,7 +255,7 @@ instance ( LabelSet ( '(l2,v2) ': UpdateAtLabelAttFR l v r)
   => UpdateAtLabelAttF' 'False l v ( '(l2,v2) ': r) where
   type UpdateAtLabelAttFR' 'False l v ( '(l2,v2) ': r)
     = '(l2,v2) ': UpdateAtLabelAttFR l v r
-  updateAtLabelAttF' _ l v (lv `ConsR` r) = lv *. (updateAtLabelAttF l v r) 
+  updateAtLabelAttF' _ l v (lv `ConsRec` r) = lv *. (updateAtLabelAttF l v r) 
 
 
 

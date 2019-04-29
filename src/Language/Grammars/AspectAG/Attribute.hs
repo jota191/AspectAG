@@ -23,19 +23,24 @@ Used to build attributions, which are mappings from labels to values
              FunctionalDependencies,
              UndecidableInstances,
              ScopedTypeVariables,
-             TypeFamilies
+             TypeFamilies,
+             PatternSynonyms
 #-}
 
 module Language.Grammars.AspectAG.Attribute where
 import Language.Grammars.AspectAG.TagUtils
+import Language.Grammars.AspectAG.GenRecord
 
 -- | An Attribute is actually isomprphic to a Tagged (from Data.Tagged).
 --it contains a label (purelly phantom) and a value. Attribute has kind
 --  k-> * -> *
 -- l 
-newtype Attribute l value = Attribute { getVal :: value }
-                          deriving (Eq, Ord,Show)
+--newtype Attribute l value = Attribute { getVal :: value }
+--                          deriving (Eq, Ord,Show)
  
+--type Attribute = TagField AttReco
+pattern Attribute :: v -> TagField AttReco l v
+pattern Attribute v = TagField Label Label v
 
 
 -- | Apretty constructor for an attribute 

@@ -64,14 +64,17 @@ instance TypeError
 
 -- | TypeError
 
-instance TypeError ( Text "Type Error : No Child Found on Production:" :$$:
-    Text "(Possibly, in some production there is a reference to a child " :<>:
-    Text "that does not exist, or the attribute is not defined there)" :$$:
-    Text "No Child of type " :<>: ShowType l
-    :<>: Text " on Attribution" )
-  => HasChildF l '[] where
-   type LookupByChildFR l '[] = TypeError (Text "Look at the previous error")
-   lookupByChildF = undefined
+-- instance (TypeError ( Text "Type Error : No Child Found on Production:" :$$:
+--     Text "(Possibly, in some production there is a reference to a child " :<>:
+--     Text "that does not exist, or the attribute is not defined there)" :$$:
+--     Text "No Child of type " :<>: ShowType att
+--     :<>: Text " on Attribution" ), Ctx att)
+--   => HasChildF l '[] where
+--    type LookupByChildFR l '[] = '[] -- (Text "Look at the previous error")
+--    lookupByChildF = undefined
+
+class Ctx (att :: k) where {}
+instance Ctx (att :: k) where {}
 
 
 type NoAttToUpdate l r

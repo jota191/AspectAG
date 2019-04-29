@@ -16,7 +16,8 @@
              TypeFamilies,
              InstanceSigs,
              AllowAmbiguousTypes,
-             TypeApplications
+             TypeApplications,
+             PatternSynonyms
 #-}
 
 module Language.Grammars.AspectAG.GenRecord where
@@ -25,7 +26,7 @@ import Data.Kind
 import Data.Type.Equality
 import Data.Proxy
 import Language.Grammars.AspectAG.TPrelude
-import Data.Tagged hiding (unTagged)
+-- import Data.Tagged hiding (unTagged)
 import Language.Grammars.AspectAG.TagUtils
 import GHC.TypeLits
 
@@ -33,100 +34,271 @@ import GHC.TypeLits
 
 -- | REC is a generic definition parametrized by the datatype used to build
 -- fields. 
-data REC :: forall k k'. (k -> k' -> Type) -> [(k,k')] -> Type where
-  EmptyR :: REC field '[]
-  ConsR  :: LabelSet ( '(l,v) ': r) =>
-            field l v -> REC field r -> REC field ( '(l,v) ': r)
+-- data REC :: forall k k'. (k -> k' -> Type) -> [(k,k')] -> Type where
+--   EmptyR :: REC field '[]
+--   ConsR  :: LabelSet ( '(l,v) ': r) =>
+--             field l v -> REC field r -> REC field ( '(l,v) ': r)
 
 
 -- * Pretty constructors
 
 infixr 2 .*.
 (.*.) :: LabelSet ( '(l, v) ': r) =>
-    field l v -> REC field r -> REC field ( '(l,v) ': r)
-(.*.) = ConsR
+    TagField c l v -> Rec c r -> Rec c ( '(l,v) ': r)
+(.*.) = ConsRec
 
 -- * destructors
 
 -- | A getter, also a predicate
-class HasField (l :: k) (r :: [(k, k')]) field where
-  type LookupByLabel field l r :: Type
-  (#) :: REC field r -> Label l -> LookupByLabel field l v
+-- class HasField (l :: k) (r :: [(k, k')]) field where
+--   type LookupByLabel field l r :: Type
+--   (#) :: REC field r -> Label l -> LookupByLabel field l v
 
 
-tailRec :: REC field ( '(l,v) ': r) -> REC field r
-tailRec (ConsR _ t) = t
+tailRec :: Rec c ( '(l,v) ': r) -> Rec c r
+tailRec (ConsRec _ t) = t
 
-data Rec :: forall k k'. (k -> k' -> Type) -> [(k,k')] -> Type where
-  EmptyRec :: Rec field '[]
+data Rec (c :: k) (r :: [(k', k'')]) :: Type where
+  EmptyRec :: Rec c '[]
   ConsRec  :: LabelSet ( '(l,v) ': r) =>
-              field l v -> Rec field r -> Rec field ( '(l,v) ': r)
+              TagField c l v -> Rec c r -> Rec c ( '(l,v) ': r)
+
+data TagField (cat :: k) (l :: k') (v :: k'') where
+  TagField :: Label c -> Label l -> WrapField c v -> TagField c l v
+
+untagField :: TagField c l v -> WrapField c v
+untagField (TagField lc lv v) = v
+
+type family    WrapField (c :: Type)  (v :: k) -- = ftype | ftype c -> v
+type instance  WrapField Reco    (v :: Type) = v
+type instance  WrapField AttReco  (v :: Type) = v
+type instance  WrapField ChiReco  (v :: [(k, Type)]) = Attribution v
+
+data ChiReco; data AttReco; data Reco
+
+type Attribution = Rec AttReco
+type ChAttsRec   = Rec ChiReco
+type Record      = Rec Reco
 
 
-data OpLookup (f  :: k -> k' -> Type)
+type Attribute     = TagField AttReco
+type TaggedChAttr  = TagField ChiReco
+
+type Tagged = TagField Reco
+unTagged :: Tagged l v -> v
+unTagged (TagField _ _ v) = v
+
+pattern Tagged :: v -> Tagged l v
+pattern Tagged v = TagField Label Label v
+
+  {-Attribution, but again the injectivity problem-}
+pattern TaggedChAttr :: Label l -> WrapField ChiReco v -> TaggedChAttr l v
+pattern TaggedChAttr l v
+  = TagField (Label :: Label ChiReco) l v
+
+
+labelChAttr :: TaggedChAttr l a -> Label l
+labelChAttr _ = Label
+
+-- lookup ignorando el contexto para pegarlo directamente en Repmin con la nueva
+-- implementacion
+
+
+
+infixl 8 .##
+
+(.##)
+  :: Require (OpLookup ChiReco w r) '[] =>
+     Rec ChiReco r -> Label w -> ReqR (OpLookup ChiReco w r)
+chi .## l = req (Proxy @ '[]) (OpLookup @_ @ChiReco l chi)
+
+
+
+field1  :: TagField Reco L1 Bool
+field1  =  TagField Label Label False
+field2  :: TagField Reco L2 Char
+field2  =  TagField Label Label '4'
+data L1 
+data L2
+data L3
+data L4
+type Re = Rec Tagged
+r1 = field1 `ConsRec` (field2 `ConsRec` EmptyRec)
+
+
+
+{-
+Node:
+We cannot encode the dependency {ftype, c} -> v since TypeFamilyDependencies
+does not support this general dependencies. So from (WrapField c v) we
+can't infer c.
+
+-}
+
+
+
+-- class WrapFieldC (t :: Type)  (v :: k) where
+--   type WrapField' t v :: Type
+--   wrapfield :: WrapField' t v -> 
+
+
+data OpLookup (c :: Type)
               (l  :: k)
-              (r  :: [(k, k')]) :: Type
- where
-   OpLookup :: Label l -> Proxy f -> Rec f r -> OpLookup f l r
+              (r  :: [(k, k')]) :: Type where
+  OpLookup :: Label l -> Rec c r -> OpLookup c l r
+
+data OpLookup' (b  :: Bool)
+               (c  :: Type)
+               (l  :: k)
+               (r  :: [(k, k')]) :: Type where
+  OpLookup' :: Proxy b -> Label l -> Rec c r -> OpLookup' b c l r
 
 
-data OpLookup'  (b  :: Bool)
-                (f  :: k -> k' -> Type)
-                (l  :: k)
-                (r  :: [(k, k')]) :: Type
- where
-   OpLookup' :: Proxy b -> Label l -> Proxy f -> Rec f r -> OpLookup' b f l r
-
-
---type family Demote (op :: Type) :: Constraint
---type instance Demote (Lookup l f r) = HasField l r f
-
-class Require (op   :: Type) --todo: ?
+class Require (op   :: Type)
               (ctx  :: [Symbol])  where
    type ReqR op
-   req :: Proxy ctx -> ReqR op
+   req :: Proxy ctx -> op -> ReqR op
 
-type family Lookup (f :: k -> k' -> Type) (l :: k) (r :: [(k, k')]) :: Type
+instance (Require (OpLookup' (l == l') c l ( '(l', v) ': r)) ctx)
+  => Require (OpLookup c l ( '(l', v) ': r)) ctx where
+  type ReqR (OpLookup c l ( '(l', v) ': r))
+    = ReqR (OpLookup' (l == l') c l ( '(l', v) ': r))
+  req ctx (OpLookup l r) = req ctx (OpLookup' (Proxy @ (l == l')) l r)
 
+instance Require (OpLookup' 'True c l ( '(l, v) ': r)) ctx where
+  type ReqR (OpLookup' 'True c l ( '(l, v) ': r)) = WrapField c v
+  req Proxy (OpLookup' Proxy Label (ConsRec f _)) = untagField f
 
--------------------------------------------------------------------------------
-instance ( Require' (l1 == l2) (OpLookup f l1 ( '(l2 , v) ': r)) ctx
-         , ReqR' (l1 == l2) (OpLookup f l1 ( '(l2 , v) ': r))
-         ~ (Label l1 -> Rec f r -> Lookup f l1 ('(l2, v) : r)))
-  => Require (OpLookup f l1 ( '(l2 , v) ': r)) ctx where
-  type ReqR (OpLookup f l1 ( '(l2 , v) ': r)) = Label l1 -> Rec f r
-         -> Lookup f l1 ( '(l2 , v) ': r)
-  req p l r = req' (Proxy @ (l1 == l2)) p l r
+instance (Require (OpLookup c l r) ctx)
+  => Require (OpLookup' False c l ( '(l', v) ': r)) ctx where
+  type ReqR (OpLookup' False c l ( '(l', v) ': r)) = ReqR (OpLookup c l r)
+  req ctx (OpLookup' Proxy l (ConsRec _ r)) = req ctx (OpLookup l r)
 
--- instance Require (OpLookup' b f l r) ctx where
---   type ReqR (OpLookup' b f l r) = Proxy b -> Label l -> Rec f r -> Lookup f l r
---   req p b l r = undefined
-
-class Require' (b    :: Bool)
-               (op   :: Type) --todo: ?
-               (ctx  :: [Symbol])  where
-   type ReqR' b op
-   req' :: Proxy b -> Proxy ctx -> ReqR' b op
+                                              
 
 
+-- el mensaje no tiene sentido, solo para testear:
+instance (TypeError (Text "field not Found on Record,"
+                    :<>: Text "looking up the label: " :<>: ShowType l
+                    :$$: Text "from the use of " :<>: Text ctx))
+  => Require (OpLookup Reco l '[]) '[ctx] where {}
+
+instance (TypeError (Text "field not Found on Record,"
+                    :<>: Text "updating the label: " :<>: ShowType l
+                    :$$: Text "from the use of " :<>: Text ctx))
+  => Require (OpUpdate Reco l v '[]) '[ctx] where {}
+
+-- -- req (Proxy @ '["lolo"]) (OpLookup (Label @ Char) r1)<<<----probar esto :) 
+-- instance (TypeError (Text "Error: " :<>: Text txt :<>:
+--                      Text "from context:" :<>: Text ctx))
+--   => Require (OpError txt) '[ctx]
+
+-- | update
+
+data OpUpdate (c  :: Type)
+              (l  :: k)
+              (v  :: k')
+              (r  :: [(k, k')]) :: Type where
+  OpUpdate :: Label l -> WrapField c v -> Rec c r
+           -> OpUpdate c l v r
+
+data OpUpdate' (b  :: Bool)
+               (c  :: Type)
+               (l  :: k)
+               (v  :: k')
+               (r  :: [(k, k')]) :: Type where
+  OpUpdate' :: Proxy p -> Label l {- -> Proxy v-}-> WrapField c v ->  Rec c r
+           -> OpUpdate' b c l v r
+
+{- Look at the comment above, WrapField c v is not enough to recover
+v, that's why we use an extra proxy
+
+update: Instead of the proxy, I use TypeApplications below
+
+-}
+
+instance (Require (OpUpdate' (l == l') c l v ( '(l', v') ': r) ) ctx )
+  => Require (OpUpdate c l v ( '(l', v') ': r) ) ctx where
+  type ReqR (OpUpdate c l v ( '(l', v') ': r) )
+    = ReqR (OpUpdate' (l == l') c l v ( '(l', v') ': r) )
+  req ctx (OpUpdate l f r)
+    = (req @(OpUpdate' (l == l') _ _ v _ )) -- v is explicity instantiated 
+       ctx (OpUpdate' (Proxy @(l == l')) l f r)
 
 
--- class ReqLookup (f   :: k -> k' -> Type)
---                 (l   :: k)
---                 (r   :: [(k, k')])
---                 (ctx :: [Symbol]) where
---   type ReqLR f l r :: Type
---   reqLookup :: Proxy ctx -> Label l -> Rec f r -> ReqLR f l r
+instance ( LabelSet ( '(l, v) ': r)
+         , LabelSet ( '(l, v') ': r))
+  => Require (OpUpdate' 'True c l v ( '(l, v') ': r)) ctx where
+  type ReqR (OpUpdate' 'True c l v ( '(l, v') ': r))
+    = Rec c ( '(l, v) ': r)
+  req ctx (OpUpdate' proxy label field (ConsRec tgf r))
+    = ConsRec (TagField Label label field) r
 
--- class ReqLookup' (b :: Bool)
---                  (f   :: k -> k' -> Type)
---                  (l   :: k)
---                  (r   :: [(k, k')])
---                  (ctx :: [Symbol]) where
---   type ReqLR' b f l r :: Type
---   reqLookup' :: Proxy ctx -> Proxy b -> Label l -> Rec f r -> ReqLR' f l r
+-- instance ( Require (OpUpdate c l v r) ctx
+--          , ConsFam l' v' (ReqR (OpUpdate c l v r)) ~ Rec c ( '(l', v') : r0)
+--          , ReqR (OpUpdate c l v r) ~ Rec c r0
+--          , LabelSet ( '(l', v') : r0)
+--          )
+--   => Require (OpUpdate' 'False c l v ( '(l',v') ': r)) ctx where
+--   type ReqR (OpUpdate' 'False c l v ( '(l',v') ': r))
+--     = ConsFam l' v' (ReqR (OpUpdate c l v r))
+--   req ctx (OpUpdate' _ l f (ConsRec field r))
+--     = ConsRec field $ (req @(OpUpdate _ _ v r)) ctx (OpUpdate l f r)
 
--- instance RecLookup' (l == l') f l ( '(l', v) ': r) ctx
---   => RecLookup f l ( '(l', v) ': r) ctx where
---   type ReqLR f l ( '(l', v) ': r) = ReqLR' (l == l') l ( '(l', v) ': r)
---   reqLookup ctx l r = reqLookup' ctx (Proxy @ (l == l')) l r 
+{- to manipulate cons at type level in a generic way -}
+---type family ConsFam (l :: k) (v :: k') r
+---type instance ConsFam l v (Rec c r) = Rec c ( '(l,v) ': r)
+
+
+instance ( Require (OpUpdate c l v r) ctx
+         , UnWrap (ReqR (OpUpdate c l v r)) ~ r0
+         , LabelSet ( '(l', v') : r0)
+         , ReqR (OpUpdate c l v r) ~ Rec c r0)
+  => Require (OpUpdate' 'False c l v ( '(l',v') ': r)) ctx where
+  type ReqR (OpUpdate' 'False c l v ( '(l',v') ': r))
+    = Rec c ( '(l',v') ': (UnWrap (ReqR (OpUpdate c l v r))))
+  req ctx (OpUpdate' _ l f (ConsRec field r))
+    = ConsRec field $ (req @(OpUpdate _ _ v r)) ctx (OpUpdate l f r)
+
+
+
+type family UnWrap t :: [(k,k')]
+type instance UnWrap (Rec c r) = r
+
+
+
+-- | Get the label of a Tagged value, restricted to the case
+--when labels are a pair, for safety, since this function is used
+--on that context
+labelLVPair :: Tagged '(k1,k2) v -> Label '(k1,k2)
+labelLVPair _ = Label
+
+
+-- |Get the first member of a pair label, as a label 
+sndLabel :: Label '(a,b) -> Label b
+sndLabel _ = undefined
+
+-- |Untag a value 
+unTaggedChAtt :: Tagged l v -> v
+unTaggedChAtt (Tagged v) = v
+
+-- |Untag a value, different names to use on diferent contexts,
+--in a future iteration possibly We'll have different Types of tag
+--unTagged :: Tagged l v -> v
+--unTagged (Tagged v) = v
+
+
+-- | Get a label
+label :: Tagged l v -> Label l
+label _ = Label
+
+-- | Same, mnemonically defined
+labelTChAtt :: Tagged l v -> Label l
+labelTChAtt _ = Label
+
+-- | Pretty Constructor
+infixr 4 .=.
+(.=.) :: Label l -> v -> Tagged l v
+l .=. v = Tagged v
+
+

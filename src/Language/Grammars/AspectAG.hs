@@ -38,6 +38,8 @@ This was implemented from scratch using the improvements on GHC on the last
 {-# LANGUAGE TypeApplications          #-}
 {-# LANGUAGE FunctionalDependencies    #-}
 {-# LANGUAGE TypeFamilyDependencies    #-}
+
+
 module Language.Grammars.AspectAG (
               module Language.Grammars.AspectAG,
               module Language.Grammars.AspectAG.Attribute,
@@ -58,7 +60,7 @@ import Language.Grammars.AspectAG.Attribution
 import Language.Grammars.AspectAG.Record
 import Language.Grammars.AspectAG.Attribute
 import Data.Kind
-import Data.Tagged hiding (unTagged)
+--import Data.Tagged hiding (unTagged)
 import Language.Grammars.AspectAG.TPrelude
 import Data.Proxy
 import Language.Grammars.AspectAG.ChildAtts
@@ -234,7 +236,7 @@ instance ( Defs att nts vs ic
                  att
                  (Tagged '(lch,t) vch)
                  (DefsR att nts vs ic)
-  defs att nts (ConsR pch vs) ic = singledef mch mnts att pch ic' 
+  defs att nts (ConsRec pch vs) ic = singledef mch mnts att pch ic' 
       where ic'  = defs att nts vs ic
             lch  = labelLVPair pch
             mch  = hasLabelChildAtts lch ic'
@@ -314,10 +316,10 @@ instance ( Com (ComSingleR (HasLabelRecRes prd r) prd rule r)  r'
   => Com r ( '(prd, rule) ': r') where
      type r .++. ( '(prd, rule) ': r')
        = (ComSingleR (HasLabelRecRes prd r) prd rule r) .++. r'
-     r .+. (pr `ConsR` r') = let b   = hasLabelRec (labelPrd pr) r
-                                 r'''= comSingle b pr r
-                                 r'' = r''' .+. r'
-                             in  r''
+     r .+. (pr `ConsRec` r') = let b      = hasLabelRec (labelPrd pr) r
+                                   r'''   = comSingle b pr r
+                                   r''    = r''' .+. r'
+                               in  r''
 
 
 
@@ -345,7 +347,7 @@ class Empties (fc :: [((k, Type),Type)]) where
 
 instance Empties '[] where
   type EmptiesR '[] = '[]
-  empties EmptyR = emptyCh
+  empties EmptyRec = emptyCh
 
 
 -- instance (( Empties fcr
@@ -353,7 +355,7 @@ instance Empties '[] where
 --   => Empties ( '( '(lch, t), Type) ': fcr) where
 --   type EmptiesR ( '( '(lch, t), Type) ': fcr)
 --      = '( '(lch, t), '[]) ': EmptiesR fcr
---   empties (ConsR pch fcr)
+--   empties (ConsRec pch fcr)
 --     = let lch = labelTChAtt pch
 --       in  (lch .= emptyAtt) .* (empties fcr)
 
@@ -362,7 +364,7 @@ instance (( Empties fcr
   => Empties ( '( '(lch, t), Attribution e -> Attribution a) ': fcr) where
   type EmptiesR ( '( '(lch, t), Attribution e -> Attribution a) ': fcr)
      = '( '(lch, t), '[]) ': EmptiesR fcr
-  empties (ConsR pch fcr)
+  empties (ConsRec pch fcr)
     = let lch = labelTChAtt pch
       in  (lch .= emptyAtt) .* (empties fcr)
 
@@ -386,12 +388,12 @@ instance ( Kn fc
     = '(lch , ich) ': ICh fc
   type SCh ( '(lch , Attribution ich -> Attribution sch) ': fc)
     = '(lch , sch) ': SCh fc
-  kn (ConsR pfch fcr) (ConsR pich icr)
+  kn (ConsRec pfch fcr) (ConsRec pich icr)
    = let scr = kn fcr icr
          lch = labelTChAtt pfch
          fch = unTagged pfch
          ich = unTaggedChAttr pich
-     in ConsR (TaggedChAttr lch (fch ich)) scr
+     in ConsRec (TaggedChAttr lch (fch ich)) scr
 
 
 -----------------------------------------------------------------------------
@@ -427,10 +429,10 @@ instance ( HMember' t nts
          , HMemberRes' t nts ~ mnts
          , Use' mnts att nts a ( '( '(lch, t ), attr) ': scr))
   => Use att nts a ( '( '(lch, t ), attr) ': scr) where
-  usechi att nts op (ConsR lattr scr)
+  usechi att nts op (ConsRec lattr scr)
     = let k = ()
          --  mnts = hMember' (sndLabel (labelChAttr lattr)) nts
-      in  usechi' (Proxy @ mnts) att nts op (ConsR lattr scr)
+      in  usechi' (Proxy @ mnts) att nts op (ConsRec lattr scr)
     
 -- | /usechi'/ to pattern match on /mnts/
 class Use' (mnts :: Bool) (att :: k) (nts :: [Type]) (a :: Type) sc
@@ -438,7 +440,7 @@ class Use' (mnts :: Bool) (att :: k) (nts :: [Type]) (a :: Type) sc
   usechi' :: Proxy mnts -> Label att -> HList nts -> (a -> a -> a)
           -> ChAttsRec sc -> Maybe a
 
--- instance ( LabelSet ( '(lch, b) ': scr) -- FIXME: needed since we use ConsR 
+-- instance ( LabelSet ( '(lch, b) ': scr) -- FIXME: needed since we use ConsRec 
 --          , Use att nts a scr )
 --   => Use' False att nts a ( '(lch, b) ': scr) where
 --   usechi' _ att nts a (ConsCh _ scr) = usechi att nts a scr
@@ -663,170 +665,9 @@ app att nts f = inhdef att nts . f
 --       in (syndef att (maybe unit id res))
           
 
-data Rec (c :: k) (r :: [(k', k'')]) :: Type where
-  EmptyRec :: Rec c '[]
-  ConsRec  :: LabelSet ( '(l,v) ': r) =>
-              TagField c l v -> Rec c r -> Rec c ( '(l,v) ': r)
 
-data TagField (cat :: k) (l :: k') (v :: k'') where
-  TagField :: Label c -> Label l -> WrapField c v -> TagField c l v
+-- getter
+syndef' :: Label att -> val -> Fam ic sp -> a -> Fam ic ('(att, val) : sp)
+syndef' = undefined
 
-untagField :: TagField c l v -> WrapField c v
-untagField (TagField lc lv v) = v
-
-data ChiRec; data Attrib; data Reco
-
-field1  :: TagField Reco L1 Bool
-field1  =  TagField Label Label False
-field2  :: TagField Reco L2 Char
-field2  =  TagField Label Label '4'
-data L1 
-data L2
-data L3
-data L4
-type Re = Rec Tagged
-r1 = field1 `ConsRec` (field2 `ConsRec` EmptyRec)
-
-
-type family    WrapField (c :: Type)  (v :: k) -- = ftype | ftype c -> v
-type instance  WrapField Reco    (v :: Type) = v
-type instance  WrapField Attrib  (v :: Type) = v
-type instance  WrapField ChiRec  (v :: [(k, Type)]) = Attribution v
-
-{-
-Node:
-We cannot encode the dependency {ftype, c} -> v since TypeFamilyDependencies
-does not support this general dependencies. So from (WrapField c v) we
-can't infer c.
-
--}
-
-
-
--- class WrapFieldC (t :: Type)  (v :: k) where
---   type WrapField' t v :: Type
---   wrapfield :: WrapField' t v -> 
-
-
-data OpLookup (c :: Type)
-              (l  :: k)
-              (r  :: [(k, k')]) :: Type where
-  OpLookup :: Label l -> Rec c r -> OpLookup c l r
-
-data OpLookup' (b  :: Bool)
-               (c  :: Type)
-               (l  :: k)
-               (r  :: [(k, k')]) :: Type where
-  OpLookup' :: Proxy b -> Label l -> Rec c r -> OpLookup' b c l r
-
-
-class Require (op   :: Type)
-              (ctx  :: [Symbol])  where
-   type ReqR op
-   req :: Proxy ctx -> op -> ReqR op
-
-instance (Require (OpLookup' (l == l') c l ( '(l', v) ': r)) ctx)
-  => Require (OpLookup c l ( '(l', v) ': r)) ctx where
-  type ReqR (OpLookup c l ( '(l', v) ': r))
-    = ReqR (OpLookup' (l == l') c l ( '(l', v) ': r))
-  req ctx (OpLookup l r) = req ctx (OpLookup' (Proxy @ (l == l')) l r)
-
-instance Require (OpLookup' 'True c l ( '(l, v) ': r)) ctx where
-  type ReqR (OpLookup' 'True c l ( '(l, v) ': r)) = WrapField c v
-  req Proxy (OpLookup' Proxy Label (ConsRec f _)) = untagField f
-
-instance (Require (OpLookup c l r) ctx)
-  => Require (OpLookup' False c l ( '(l', v) ': r)) ctx where
-  type ReqR (OpLookup' False c l ( '(l', v) ': r)) = ReqR (OpLookup c l r)
-  req ctx (OpLookup' Proxy l (ConsRec _ r)) = req ctx (OpLookup l r)
-
-                                              
-
-
--- el mensaje no tiene sentido, solo para testear:
-instance (TypeError (Text "field not Found on Record,"
-                    :<>: Text "looking up the label: " :<>: ShowType l
-                    :$$: Text "from the use of " :<>: Text ctx))
-  => Require (OpLookup Reco l '[]) '[ctx] where {}
-
-instance (TypeError (Text "field not Found on Record,"
-                    :<>: Text "updating the label: " :<>: ShowType l
-                    :$$: Text "from the use of " :<>: Text ctx))
-  => Require (OpUpdate Reco l v '[]) '[ctx] where {}
-
--- -- req (Proxy @ '["lolo"]) (OpLookup (Label @ Char) r1)<<<----probar esto :) 
--- instance (TypeError (Text "Error: " :<>: Text txt :<>:
---                      Text "from context:" :<>: Text ctx))
---   => Require (OpError txt) '[ctx]
-
--- | update
-
-data OpUpdate (c  :: Type)
-              (l  :: k)
-              (v  :: k')
-              (r  :: [(k, k')]) :: Type where
-  OpUpdate :: Label l -> WrapField c v -> Rec c r
-           -> OpUpdate c l v r
-
-data OpUpdate' (b  :: Bool)
-               (c  :: Type)
-               (l  :: k)
-               (v  :: k')
-               (r  :: [(k, k')]) :: Type where
-  OpUpdate' :: Proxy p -> Label l {- -> Proxy v-}-> WrapField c v ->  Rec c r
-           -> OpUpdate' b c l v r
-
-{- Look at the comment above, WrapField c v is not enough to recover
-v, that's why we use an extra proxy
-
-update: Instead of the proxy, I use TypeApplications below
-
--}
-
-instance (Require (OpUpdate' (l == l') c l v ( '(l', v') ': r) ) ctx )
-  => Require (OpUpdate c l v ( '(l', v') ': r) ) ctx where
-  type ReqR (OpUpdate c l v ( '(l', v') ': r) )
-    = ReqR (OpUpdate' (l == l') c l v ( '(l', v') ': r) )
-  req ctx (OpUpdate l f r)
-    = (req @(OpUpdate' (l == l') _ _ v _ )) -- v is explicity instantiated 
-       ctx (OpUpdate' (Proxy @(l == l')) l f r)
-
-
-instance ( LabelSet ( '(l, v) ': r)
-         , LabelSet ( '(l, v') ': r))
-  => Require (OpUpdate' 'True c l v ( '(l, v') ': r)) ctx where
-  type ReqR (OpUpdate' 'True c l v ( '(l, v') ': r))
-    = Rec c ( '(l, v) ': r)
-  req ctx (OpUpdate' proxy label field (ConsRec tgf r))
-    = ConsRec (TagField Label label field) r
-
--- instance ( Require (OpUpdate c l v r) ctx
---          , ConsFam l' v' (ReqR (OpUpdate c l v r)) ~ Rec c ( '(l', v') : r0)
---          , ReqR (OpUpdate c l v r) ~ Rec c r0
---          , LabelSet ( '(l', v') : r0)
---          )
---   => Require (OpUpdate' 'False c l v ( '(l',v') ': r)) ctx where
---   type ReqR (OpUpdate' 'False c l v ( '(l',v') ': r))
---     = ConsFam l' v' (ReqR (OpUpdate c l v r))
---   req ctx (OpUpdate' _ l f (ConsRec field r))
---     = ConsRec field $ (req @(OpUpdate _ _ v r)) ctx (OpUpdate l f r)
-
----type family ConsFam (l :: k) (v :: k') r
----type instance ConsFam l v (Rec c r) = Rec c ( '(l,v) ': r)
-
-
-instance ( Require (OpUpdate c l v r) ctx
-         , UnWrap (ReqR (OpUpdate c l v r)) ~ r0
-         , LabelSet ( '(l', v') : r0)
-         , ReqR (OpUpdate c l v r) ~ Rec c r0)
-  => Require (OpUpdate' 'False c l v ( '(l',v') ': r)) ctx where
-  type ReqR (OpUpdate' 'False c l v ( '(l',v') ': r))
-    = Rec c ( '(l',v') ': (UnWrap (ReqR (OpUpdate c l v r))))
-  req ctx (OpUpdate' _ l f (ConsRec field r))
-    = ConsRec field $ (req @(OpUpdate _ _ v r)) ctx (OpUpdate l f r)
-
-
-{- to manipulate cons at type level in a generic way -}
-
-type family UnWrap t :: [(k,k')]
-type instance UnWrap (Rec c r) = r
+-- (.##) :: ChAttsRec r -> Label l -> Attribution ?
