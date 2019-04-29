@@ -28,7 +28,8 @@ and using type families. The latter approach is the one we actually use.
              UndecidableInstances,
              ScopedTypeVariables,
              TypeFamilies,
-             PatternSynonyms
+             PatternSynonyms,
+             TypeApplications
 #-}
 
 module Language.Grammars.AspectAG.ChildAtts where
