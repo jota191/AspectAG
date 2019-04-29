@@ -157,7 +157,10 @@ infixl 8 .#
      Rec ChiReco r -> Label w -> ReqR (OpLookup ChiReco w r)
 chi .# l = req (Proxy @ '[]) (OpLookup @_ @ChiReco l chi)
 
-
+lookupCtx
+  :: Require (OpLookup ChiReco w r) ctx =>
+     Proxy ctx -> Rec ChiReco r -> Label w -> ReqR (OpLookup ChiReco w r)
+lookupCtx (p :: Proxy ctx) chi l = req p (OpLookup @_ @ChiReco l chi)
 
 -- |* Update
 

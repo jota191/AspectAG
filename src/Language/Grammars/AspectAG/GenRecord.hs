@@ -1,4 +1,6 @@
 
+{-# OPTIONS_GHC -fno-warn-missing-methods #-}
+
 {-# LANGUAGE DataKinds,
              TypeOperators,
              PolyKinds,
@@ -174,24 +176,49 @@ instance (Require (OpLookup c l r) ctx)
   type ReqR (OpLookup' False c l ( '(l', v) ': r)) = ReqR (OpLookup c l r)
   req ctx (OpLookup' Proxy l (ConsRec _ r)) = req ctx (OpLookup l r)
 
-                                              
+                                            
 
 
--- el mensaje no tiene sentido, solo para testear:
-instance (TypeError (Text "field not Found on Record,"
-                    :<>: Text "looking up the label: " :<>: ShowType l
-                    :$$: Text "from the use of " :<>: Text ctx))
-  => Require (OpLookup Reco l '[]) '[ctx] where {}
+instance (TypeError (Text "Error: " :<>: m :$$:
+                     Text "from context: " :<>: ShowCTX ctx))
+  => Require (OpError m) ctx where {}
 
+data OpError (m :: ErrorMessage) where {}
+
+
+type family ShowCTX (ctx :: [Symbol]) :: ErrorMessage
+type instance ShowCTX '[] = Text ""
+type instance ShowCTX (m ': ms) = Text m :$$: ShowCTX ms
+
+type family ShowEM (m :: ErrorMessage) :: ErrorMessage
+
+
+instance Require (OpError (Text "field not Found on " :<>: Text (ShowRec c)
+                           :$$: Text "looking up the " :<>: Text (ShowField c)
+                           :<>: ShowType l
+                          )) ctx
+  => Require (OpLookup c l '[]) ctx where {}
+
+type family ShowRec c :: Symbol
+type instance ShowRec ChiReco  = "children map"
+type instance ShowRec AttReco  = "Attribution"
+type instance ShowRec Reco     = "Record"
+
+type family ShowField c :: Symbol
+type instance ShowField ChiReco   = "children labelled "
+type instance ShowField AttReco   = "attribute named "
+type instance ShowField Reco      = "field named "
+
+
+-- TODO
 instance (TypeError (Text "field not Found on Record,"
                     :<>: Text "updating the label: " :<>: ShowType l
-                    :$$: Text "from the use of " :<>: Text ctx))
-  => Require (OpUpdate Reco l v '[]) '[ctx] where {}
+                    :$$: Text "from the use of " :<>: ShowCTX ctx))
+  => Require (OpUpdate c l v '[]) ctx where {}
 
--- -- req (Proxy @ '["lolo"]) (OpLookup (Label @ Char) r1)<<<----probar esto :) 
--- instance (TypeError (Text "Error: " :<>: Text txt :<>:
---                      Text "from context:" :<>: Text ctx))
---   => Require (OpError txt) '[ctx]
+
+
+
 
 -- | update
 

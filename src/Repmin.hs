@@ -18,6 +18,7 @@ import System.Exit (exitFailure)
 import Language.Grammars.AspectAG
 import Language.Grammars.AspectAG.Derive
 import Control.Monad
+import Data.Proxy
 
 data Root = Root Tree
           deriving Show
@@ -85,8 +86,12 @@ leaf_sres (Fam chi par)
   = syndef sres $ Leaf (par #. ival)
 
 
+--node_smin (Fam chi par)
+--  = syndef smin $ (chi .# ch_l #. smin) `min` (chi .# ch_r #. smin)
+
 node_smin (Fam chi par)
-  = syndef smin $ (chi .# ch_l #. smin) `min` (chi .# ch_r #. smin)
+  = syndef smin $ ((lookupCtx (Proxy @ '["syndef smin"])chi ch_i) #. smin)
+  `min` (chi .# ch_r #. smin)
 
 --node_smin = use smin (nt_Tree .: ε) min 0
 
