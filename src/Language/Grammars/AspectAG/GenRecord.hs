@@ -105,12 +105,12 @@ labelChAttr _ = Label
 
 
 
-infixl 8 .##
+--infixl 8 .##
 
-(.##)
-  :: Require (OpLookup ChiReco w r) '[] =>
-     Rec ChiReco r -> Label w -> ReqR (OpLookup ChiReco w r)
-chi .## l = req (Proxy @ '[]) (OpLookup @_ @ChiReco l chi)
+--(.##)
+--  :: Require (OpLookup ChiReco w r) '[] =>
+--     Rec ChiReco r -> Label w -> ReqR (OpLookup ChiReco w r)
+--chi .## l = req (Proxy @ '[]) (OpLookup @_ @ChiReco l chi)
 
 
 

@@ -146,10 +146,18 @@ instance (HasChildF l r) =>
   lookupByChildF' _ l (ConsRec _ r) = lookupByChildF l r
 
 -- | Pretty lookup,
+--infixl 8 .#
+--(.#)  :: (HasChildF l r, LookupByChildFR l r ~ v) =>
+--         ChAttsRec r -> Label l ->  Attribution v
+--c .# l = lookupByChildF l c
+
 infixl 8 .#
-(.#)  :: (HasChildF l r, LookupByChildFR l r ~ v) =>
-         ChAttsRec r -> Label l ->  Attribution v
-c .# l = lookupByChildF l c
+(.#)
+  :: Require (OpLookup ChiReco w r) '[] =>
+     Rec ChiReco r -> Label w -> ReqR (OpLookup ChiReco w r)
+chi .# l = req (Proxy @ '[]) (OpLookup @_ @ChiReco l chi)
+
+
 
 -- |* Update
 
