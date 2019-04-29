@@ -37,7 +37,7 @@ This was implemented from scratch using the improvements on GHC on the last
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE TypeApplications          #-}
 {-# LANGUAGE FunctionalDependencies    #-}
-
+{-# LANGUAGE TypeFamilyDependencies    #-}
 module Language.Grammars.AspectAG (
               module Language.Grammars.AspectAG,
               module Language.Grammars.AspectAG.Attribute,
@@ -669,9 +669,9 @@ data Rec (c :: k) (r :: [(k', k'')]) :: Type where
               TagField c l v -> Rec c r -> Rec c ( '(l,v) ': r)
 
 data TagField (cat :: k) (l :: k') (v :: k'') where
-  TagField :: Label c -> Label l -> WrapF c v -> TagField c l v
+  TagField :: Label c -> Label l -> WrapField c v -> TagField c l v
 
-untagField :: TagField c l v -> WrapF c v
+untagField :: TagField c l v -> WrapField c v
 untagField (TagField lc lv v) = v
 
 data ChiRec; data Attrib; data Reco
@@ -682,14 +682,31 @@ field2  :: TagField Reco L2 Char
 field2  =  TagField Label Label '4'
 data L1 
 data L2
+data L3
+data L4
 type Re = Rec Tagged
 r1 = field1 `ConsRec` (field2 `ConsRec` EmptyRec)
 
 
-type family    WrapF (t :: Type)  (v :: k) :: Type
-type instance  WrapF Reco    (v :: Type) = v
-type instance  WrapF Attrib  (v :: Type) = v
-type instance  WrapF ChiRec  (v :: [(k, Type)]) = Attribution v
+type family    WrapField (c :: Type)  (v :: k) -- = ftype | ftype c -> v
+type instance  WrapField Reco    (v :: Type) = v
+type instance  WrapField Attrib  (v :: Type) = v
+type instance  WrapField ChiRec  (v :: [(k, Type)]) = Attribution v
+
+{-
+Node:
+We cannot encode the dependency {ftype, c} -> v since TypeFamilyDependencies
+does not support this general dependencies. So from (WrapField c v) we
+can't infer c.
+
+-}
+
+
+
+-- class WrapFieldC (t :: Type)  (v :: k) where
+--   type WrapField' t v :: Type
+--   wrapfield :: WrapField' t v -> 
+
 
 data OpLookup (c :: Type)
               (l  :: k)
@@ -715,7 +732,7 @@ instance (Require (OpLookup' (l == l') c l ( '(l', v) ': r)) ctx)
   req ctx (OpLookup l r) = req ctx (OpLookup' (Proxy @ (l == l')) l r)
 
 instance Require (OpLookup' 'True c l ( '(l, v) ': r)) ctx where
-  type ReqR (OpLookup' 'True c l ( '(l, v) ': r)) = WrapF c v
+  type ReqR (OpLookup' 'True c l ( '(l, v) ': r)) = WrapField c v
   req Proxy (OpLookup' Proxy Label (ConsRec f _)) = untagField f
 
 instance (Require (OpLookup c l r) ctx)
@@ -723,12 +740,93 @@ instance (Require (OpLookup c l r) ctx)
   type ReqR (OpLookup' False c l ( '(l', v) ': r)) = ReqR (OpLookup c l r)
   req ctx (OpLookup' Proxy l (ConsRec _ r)) = req ctx (OpLookup l r)
 
-
+                                              
 
 
 -- el mensaje no tiene sentido, solo para testear:
-instance (TypeError (Text "field not Found on Record, looking up the label: " :<>: ShowType l
-                     :$$: Text "from the use of " :<>: Text ctx))
-  => Require (OpLookup Reco l '[]) '[ctx]
+instance (TypeError (Text "field not Found on Record,"
+                    :<>: Text "looking up the label: " :<>: ShowType l
+                    :$$: Text "from the use of " :<>: Text ctx))
+  => Require (OpLookup Reco l '[]) '[ctx] where {}
 
--- req (Proxy @ '["lolo"]) (OpLookup (Label @ Char) r1)  <<<---- probar esto  :) 
+instance (TypeError (Text "field not Found on Record,"
+                    :<>: Text "updating the label: " :<>: ShowType l
+                    :$$: Text "from the use of " :<>: Text ctx))
+  => Require (OpUpdate Reco l v '[]) '[ctx] where {}
+
+-- -- req (Proxy @ '["lolo"]) (OpLookup (Label @ Char) r1)<<<----probar esto :) 
+-- instance (TypeError (Text "Error: " :<>: Text txt :<>:
+--                      Text "from context:" :<>: Text ctx))
+--   => Require (OpError txt) '[ctx]
+
+-- | update
+
+data OpUpdate (c  :: Type)
+              (l  :: k)
+              (v  :: k')
+              (r  :: [(k, k')]) :: Type where
+  OpUpdate :: Label l -> WrapField c v -> Rec c r
+           -> OpUpdate c l v r
+
+data OpUpdate' (b  :: Bool)
+               (c  :: Type)
+               (l  :: k)
+               (v  :: k')
+               (r  :: [(k, k')]) :: Type where
+  OpUpdate' :: Proxy p -> Label l {- -> Proxy v-}-> WrapField c v ->  Rec c r
+           -> OpUpdate' b c l v r
+
+{- Look at the comment above, WrapField c v is not enough to recover
+v, that's why we use an extra proxy
+
+update: Instead of the proxy, I use TypeApplications below
+
+-}
+
+instance (Require (OpUpdate' (l == l') c l v ( '(l', v') ': r) ) ctx )
+  => Require (OpUpdate c l v ( '(l', v') ': r) ) ctx where
+  type ReqR (OpUpdate c l v ( '(l', v') ': r) )
+    = ReqR (OpUpdate' (l == l') c l v ( '(l', v') ': r) )
+  req ctx (OpUpdate l f r)
+    = (req @(OpUpdate' (l == l') _ _ v _ )) -- v is explicity instantiated 
+       ctx (OpUpdate' (Proxy @(l == l')) l f r)
+
+
+instance ( LabelSet ( '(l, v) ': r)
+         , LabelSet ( '(l, v') ': r))
+  => Require (OpUpdate' 'True c l v ( '(l, v') ': r)) ctx where
+  type ReqR (OpUpdate' 'True c l v ( '(l, v') ': r))
+    = Rec c ( '(l, v) ': r)
+  req ctx (OpUpdate' proxy label field (ConsRec tgf r))
+    = ConsRec (TagField Label label field) r
+
+-- instance ( Require (OpUpdate c l v r) ctx
+--          , ConsFam l' v' (ReqR (OpUpdate c l v r)) ~ Rec c ( '(l', v') : r0)
+--          , ReqR (OpUpdate c l v r) ~ Rec c r0
+--          , LabelSet ( '(l', v') : r0)
+--          )
+--   => Require (OpUpdate' 'False c l v ( '(l',v') ': r)) ctx where
+--   type ReqR (OpUpdate' 'False c l v ( '(l',v') ': r))
+--     = ConsFam l' v' (ReqR (OpUpdate c l v r))
+--   req ctx (OpUpdate' _ l f (ConsRec field r))
+--     = ConsRec field $ (req @(OpUpdate _ _ v r)) ctx (OpUpdate l f r)
+
+---type family ConsFam (l :: k) (v :: k') r
+---type instance ConsFam l v (Rec c r) = Rec c ( '(l,v) ': r)
+
+
+instance ( Require (OpUpdate c l v r) ctx
+         , UnWrap (ReqR (OpUpdate c l v r)) ~ r0
+         , LabelSet ( '(l', v') : r0)
+         , ReqR (OpUpdate c l v r) ~ Rec c r0)
+  => Require (OpUpdate' 'False c l v ( '(l',v') ': r)) ctx where
+  type ReqR (OpUpdate' 'False c l v ( '(l',v') ': r))
+    = Rec c ( '(l',v') ': (UnWrap (ReqR (OpUpdate c l v r))))
+  req ctx (OpUpdate' _ l f (ConsRec field r))
+    = ConsRec field $ (req @(OpUpdate _ _ v r)) ctx (OpUpdate l f r)
+
+
+{- to manipulate cons at type level in a generic way -}
+
+type family UnWrap t :: [(k,k')]
+type instance UnWrap (Rec c r) = r
