@@ -100,7 +100,8 @@ library
                        containers >= 0.5,
                        template-haskell >= 2.13,
                        th-strict-compat >= 0.1,
-                       mtl >= 2.0
+                       mtl >= 2.0,
+                       ghc-prim >= 0.5
                        
 
   -- Directories containing source files.
