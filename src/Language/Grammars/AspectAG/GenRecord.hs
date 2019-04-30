@@ -329,3 +329,50 @@ infixr 4 .=.
 l .=. v = Tagged v
 
 
+data OpExtend (c :: Type)
+              (l  :: k)
+              (v  :: k')
+              (r  :: [(k, k')]) :: Type where
+  OpExtend :: Label l -> WrapField c v -> Rec c r
+           -> OpExtend c l v r
+
+data OpExtend' (b :: Bool)
+               (c :: Type)
+               (l  :: k)
+               (v  :: k')
+               (r  :: [(k, k')]) :: Type where
+  OpExtend' :: Proxy b -> Label l -> WrapField c v -> Rec c r
+           -> OpExtend' b c l v r
+
+
+instance (LabelSetF ( '(l, v) ': r) ~ 'True)
+  => Require (OpExtend' True  c l v r) ctx where
+  type ReqR (OpExtend' True c l v r) = Rec c ( '(l, v) ': r)
+  req ctx (OpExtend' _ l f r) = ConsRec (TagField (Label @c) l f) r
+
+--instance (LabelSetF ( '(l, v) ': r) ~ False)
+--  => Require (OpExtend' False  c l v r) ctx
+  
+instance ( LabelSetF ( '(l, v) ':  r) ~ b
+         , Require (OpExtend' b c l v r) ctx)
+  => Require (OpExtend c l v r) ctx where
+  type ReqR (OpExtend c l v r)
+    = ReqR (OpExtend' (LabelSetF ( '(l, v) ': r)) c l v r)
+  req ctx (OpExtend l v r)
+    = req @(OpExtend' (LabelSetF ( '(l, v) ': r)) _ _ v _ )
+      ctx (OpExtend' Proxy l v r) 
+
+instance Require (OpError (Text "Duplicated Labels on " :<>: Text (ShowRec c)
+                          :$$: Text "on the " :<>: Text (ShowField c)
+                           :<>: ShowType l
+                          )) ctx
+  => Require (OpExtend' False c l v r) ctx where
+  type ReqR (OpExtend' False c l v r) = ()
+  req ctx (OpExtend' p l v r) = undefined
+
+-- instance (LabelSet ( '(l, v) ': r))
+--   => Require (OpExtend c l v r) ctx where
+--   type ReqR (OpExtend c l v r) = Rec c ( '(l, v) ': r)
+--   req ctx (OpExtend l f r) = ConsRec (TagField (Label @c) l f) r
+
+

@@ -78,7 +78,8 @@ root_sres (Fam chi par)
   = syndef sres (chi .# ch_tree #. sres)
 
 node_sres (Fam chi par)
-  = syndef sres (Node (chi .# ch_r #. sres)(chi .# ch_r #. sres))
+  = syndef sres (Node ((lookupCtx (Proxy @ '["syndef sres"])chi ch_l) #. sres)
+                      ((lookupCtx (Proxy @ '["syndef sres"])chi ch_r) #. sres))
 
 --node_sres = use sres (nt_Tree .: ε) Node (error "unreacheable")
 
@@ -90,8 +91,8 @@ leaf_sres (Fam chi par)
 --  = syndef smin $ (chi .# ch_l #. smin) `min` (chi .# ch_r #. smin)
 
 node_smin (Fam chi par)
-  = syndef smin $ ((lookupCtx (Proxy @ '["syndef smin"])chi ch_i) #. smin)
-  `min` (chi .# ch_r #. smin)
+  = syndef smin $ ((lookupCtx (Proxy @ '["syndef smin"])chi ch_l) #. smin)
+  `min` ((lookupCtx (Proxy @ '["syndef smin"])chi ch_r) #. smin)
 
 --node_smin = use smin (nt_Tree .: ε) min 0
 

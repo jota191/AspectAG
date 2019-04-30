@@ -57,27 +57,40 @@ type family Not (l :: Bool) :: Bool where
 --k1 is a label, k2 possibly a value.
 --The first member of each pair must be unique, this is a predicate of
 --well formedness
-class LabelSet (l :: [(k1,k2)])
+-- class LabelSet (l :: [(k1,k2)])
 
--- | The empty set is a valid mapping
-instance LabelSet '[]
+-- -- | The empty set is a valid mapping
+-- instance LabelSet '[]
 
--- | A singleton set is a valid mapping, defined only in one point.
-instance LabelSet '[ '(x,v)] 
-
-
-
-instance ( {-HEqK l1 l2 leq
-         ,-} LabelSet' '(l1,v1) '(l2,v2) (l1==l2) r)
-        => LabelSet ( '(l1,v1) ': '(l2,v2) ': r)
-
-class LabelSet' l1v1 l2v2 (leq::Bool) r
-instance ( LabelSet ( '(l2,v2) ': r)
-         , LabelSet ( '(l1,v1) ': r)
-         ) => LabelSet' '(l1,v1) '(l2,v2) False r
+-- -- | A singleton set is a valid mapping, defined only in one point.
+-- instance LabelSet '[ '(x,v)] 
 
 
 
+-- instance ( {-HEqK l1 l2 leq
+--          ,-} LabelSet' '(l1,v1) '(l2,v2) (l1==l2) r)
+--         => LabelSet ( '(l1,v1) ': '(l2,v2) ': r)
+
+-- class LabelSet' l1v1 l2v2 (leq::Bool) r
+-- instance ( LabelSet ( '(l2,v2) ': r)
+--          , LabelSet ( '(l1,v1) ': r)
+--          ) => LabelSet' '(l1,v1) '(l2,v2) False r
+
+type family LabelSetF (r :: [(k, k')]) :: Bool where
+  LabelSetF '[] = True
+  LabelSetF '[ '(l, v)] = True
+  LabelSetF ( '(l, v) ': '(l', v') ': r) = And3 (Not (l == l')) 
+                                                (LabelSetF ( '(l, v)   ': r) )
+                                                (LabelSetF ( '(l', v') ': r) )
+
+
+class LabelSet (r :: [(k, k')]) where {}
+instance LabelSetF r ~ True => LabelSet r
+
+type family And3 (a1 :: Bool) (a2 :: Bool) (a3 :: Bool) where
+  And3 True True True  = True
+  And3 _     _   _     = False
+                                                 
 -- | Predicate of membership, for lists at type level
 type family HMemberT (e::k)(l ::[k]) :: Bool where
   HMemberT k '[] = 'False
