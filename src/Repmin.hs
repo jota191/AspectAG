@@ -1,9 +1,9 @@
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE 
              TypeFamilies,
              FlexibleContexts,
              ScopedTypeVariables,
              NoMonomorphismRestriction,
-             AllowAmbiguousTypes,
              ImplicitParams,
              ExtendedDefaultRules,
              UnicodeSyntax,
@@ -19,6 +19,7 @@ import Language.Grammars.AspectAG
 import Language.Grammars.AspectAG.Derive
 import Control.Monad
 import Data.Proxy
+import GHC.TypeLits
 
 data Root = Root Tree
           deriving Show
@@ -75,24 +76,39 @@ node_ival (Fam chi par) =
                             .*. emptyRecord)
 
 root_sres (Fam chi par)
-  = syndef sres (chi .# ch_tree #. sres)
+  = syndef' sres (chi .# ch_tree #. sres)
 
 node_sres (Fam chi par)
-  = syndef sres (Node ((lookupCtx (Proxy @ '["syndef sres"])chi ch_l) #. sres)
-                      ((lookupCtx (Proxy @ '["syndef sres"])chi ch_r) #. sres))
+  = syndef' sres (Node ((lookupCtx (Proxy @ '[Text "syndef sres"])chi ch_l) #. sres)
+                      ((lookupCtx (Proxy @ '[Text "syndef sres"])chi ch_r) #. sres))
 
 --node_sres = use sres (nt_Tree .: ε) Node (error "unreacheable")
 
 leaf_sres (Fam chi par)
-  = syndef sres $ Leaf (par #. ival)
+  = syndef' sres $ Leaf (par #. ival)
 
+--f = lookupCtx' @Reco (Proxy @ '[] ) (asp_smin) p_Leaf
 
 --node_smin (Fam chi par)
 --  = syndef smin $ (chi .# ch_l #. smin) `min` (chi .# ch_r #. smin)
 
+
+smin1 (Fam chi par) = syndef' smin (8 :: Int)
+smin2 (Fam chi par) = syndef' sres (1 :: Int)
+
+err inp  = snd (((smin1 `ext` smin2) inp (Fam EmptyRec EmptyRec)),
+               ((smin1 `ext` smin2) inp))
+
+err'= (req (Proxy @ '[Text "1"])
+       (OpExtend @_ @Reco sres (1 :: Int)
+       (req (Proxy @ '[Text "0"])
+       (OpExtend @_ @Reco smin (0 :: Int) EmptyRec))))
+       
+
+
 node_smin (Fam chi par)
-  = syndef smin $ ((lookupCtx (Proxy @ '["syndef smin"])chi ch_l) #. smin)
-  `min` ((lookupCtx (Proxy @ '["syndef smin"])chi ch_r) #. smin)
+  = syndef' smin $ ((lookupCtx (Proxy @ '[Text "syndef smin"])chi ch_l) #. smin)
+  `min` ((lookupCtx (Proxy @ '[Text "syndef smin"])chi ch_r) #. smin)
 
 --node_smin = use smin (nt_Tree .: ε) min 0
 
@@ -112,7 +128,7 @@ asp_smin =  p_Leaf .=. leaf_smin
 
 
 
-asp_repmin = asp_smin .+. asp_sres .+. asp_ival
+asp_repmin = asp_smin  .+. asp_sres .+. asp_ival
 
 examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
                       (Node (Leaf 2) (Leaf 7))
@@ -128,4 +144,4 @@ exampleT n = Node (exampleT (n-1)) (exampleT (n-1))
 
 repmin t = sem_Root asp_repmin (Root t) emptyAtt #. sres
 
-minimo t = sem_Tree asp_smin t emptyAtt #. smin
+--minimo t = sem_Tree asp_smin t emptyAtt #. smin

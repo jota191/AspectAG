@@ -100,9 +100,14 @@ type Rule (sc  :: [((k,Type), [(k, Type)])])
 
 -- | Composition of rules
 ext :: Rule sc ip ic sp ic' sp'
-  -> (Fam sc ip -> a0 -> Fam ic sp)
-  -> (Fam sc ip -> a0 -> Fam ic' sp')
+  -> (Fam sc ip -> Fam a b -> Fam ic sp)
+  -> (Fam sc ip -> Fam a b -> Fam ic' sp')
 (f `ext` g) input = f input . g input
+
+f `ext2` g = let _ = flip (f `ext` g) emptyFam
+             in f `ext` g
+
+emptyFam = Fam EmptyRec EmptyRec
 
 
 -- | Type level getters for Rules
@@ -125,9 +130,17 @@ type family Inh3 (rule :: Type) :: [(k, Type)] where
 --It takes a label 'att' representing the name of the new attribute, 
 --a value 'val' to be assigned to this attribute, and it builds a function which 
 --updates the output constructed thus far.
-syndef  :: (LabelSet ( '(att,val) ': sp), Ctx att) =>
+syndef  :: LabelSet ( '(att,val) ': sp) =>
     Label att -> val -> (Fam ic sp -> Fam ic ( '(att,val) ': sp))
 syndef latt val (Fam ic sp) = Fam ic (latt =. val *. sp)
+
+--syndef'  :: (Require (OpExtend AttReco att val sp) '[]) =>
+--    Label att -> val -> (Fam ic sp -> Fam ic ( '(att,val) ': sp))
+syndef' (latt :: Label att) val (Fam ic sp) =
+  Fam ic (req (Proxy @ '[Text "Syndef::" :$$: ShowType att])
+          (OpExtend @_ @AttReco latt val sp))
+-- (latt =. val *. sp)
+
 
 -- | The function 'synmod' modifies the definition of a synthesized attribute.
 --   It takes a label 'att' representing the name of the attribute, 
@@ -292,7 +305,7 @@ instance ( UpdateAtLabelRecF prd (Rule sc ip ic  sp  ic'' sp'') r
     where l    = labelPrd f
           oldR = lookupByLabelRec l r
           newR = rulePrd f
-
+          --test = flip (oldR `ext` newR) emptyFam
 
 -- | Unicode pretty operator
 (⊕) :: (Com r s) => Aspect r -> Aspect s -> Aspect (r .++. s)
@@ -667,7 +680,7 @@ app att nts f = inhdef att nts . f
 
 
 -- getter
-syndef' :: Label att -> val -> Fam ic sp -> a -> Fam ic ('(att, val) : sp)
-syndef' = undefined
+--syndef' :: Label att -> val -> Fam ic sp -> a -> Fam ic ('(att, val) : sp)
+--syndef' = undefined
 
 -- (.##) :: ChAttsRec r -> Label l -> Attribution ?

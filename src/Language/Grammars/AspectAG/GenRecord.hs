@@ -157,7 +157,7 @@ data OpLookup' (b  :: Bool)
 
 
 class Require (op   :: Type)
-              (ctx  :: [Symbol])  where
+              (ctx  :: [ErrorMessage])  where
    type ReqR op
    req :: Proxy ctx -> op -> ReqR op
 
@@ -186,9 +186,9 @@ instance (TypeError (Text "Error: " :<>: m :$$:
 data OpError (m :: ErrorMessage) where {}
 
 
-type family ShowCTX (ctx :: [Symbol]) :: ErrorMessage
+type family ShowCTX (ctx :: [ErrorMessage]) :: ErrorMessage
 type instance ShowCTX '[] = Text ""
-type instance ShowCTX (m ': ms) = Text m :$$: ShowCTX ms
+type instance ShowCTX (m ': ms) = m :$$: ShowCTX ms
 
 type family ShowEM (m :: ErrorMessage) :: ErrorMessage
 
@@ -367,8 +367,8 @@ instance Require (OpError (Text "Duplicated Labels on " :<>: Text (ShowRec c)
                            :<>: ShowType l
                           )) ctx
   => Require (OpExtend' False c l v r) ctx where
-  type ReqR (OpExtend' False c l v r) = ()
-  req ctx (OpExtend' p l v r) = undefined
+  type ReqR (OpExtend' False c l v r) = Rec c '[]
+  --req ctx (OpExtend' p l v r) = undefined
 
 -- instance (LabelSet ( '(l, v) ': r))
 --   => Require (OpExtend c l v r) ctx where
@@ -376,3 +376,7 @@ instance Require (OpError (Text "Duplicated Labels on " :<>: Text (ShowRec c)
 --   req ctx (OpExtend l f r) = ConsRec (TagField (Label @c) l f) r
 
 
+lookupCtx'
+  :: Require (OpLookup c w r) ctx =>
+     Proxy ctx -> Rec c r -> Label w -> ReqR (OpLookup c w r)
+lookupCtx' (p :: Proxy ctx) chi l = req p (OpLookup @_ l chi)
