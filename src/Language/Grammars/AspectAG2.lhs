@@ -99,23 +99,29 @@
 > --       -> (Proxy (ctx) -> Fam ip sc -> val)
 > --       -> CRule ctx prd ip sc ic sp ic sp'
 > syndef
->   :: (Require
->         (OpExtend' (LabelSetF ('(l, v) : sp)) AttReco l v sp) ctx,
->       ReqR (OpExtend' (LabelSetF ('(l, v) : sp)) AttReco l v sp)
->       ~ Rec AttReco sp') =>
->      Label l
+>   :: ( Require
+>          (OpExtend' (LabelSetF ('(att, v) : sp))
+>                      AttReco att v sp) ctx
+>      , ReqR (OpExtend' (LabelSetF ('(att, v) : sp)) AttReco att v sp)
+>          ~ Rec AttReco sp'
+>      , ctx'
+>          ~ ((Text "syndef::"
+>              :<>: ShowType att
+>              :<>: ShowType prd) ': ctx))
+>      => Label att
 >      -> Label prd
->      -> (Proxy ctx -> Fam ip sc -> v)
+>      -> (Proxy ctx' -> Fam ip sc -> v)
 >      -> CRule ctx prd ip sc ic sp ic sp'
 
-> --     -> Proxy ctx
-> --     -> Fam ip sc
-> --     -> Fam ic sp
-> --     -> Fam ic sp'
+> syndef (att :: Label att) (prd :: Label prd) f
+>        (ctx :: Proxy ctx) inp (Fam ic sp)
+>   = Fam ic $ req ctx (OpExtend @_ @AttReco att (f nctx inp) sp)
+>   where nctx = Proxy @ ((Text "syndef::"
+>                          :<>: ShowType att
+>                          :<>: ShowType prd) ': ctx)
 
-> syndef att prd f ctx inp (Fam ic sp)
->   = Fam ic $ req ctx (OpExtend @_ @AttReco att (f ctx inp) sp)
 
+> emptyCtx = Proxy @'[]
 
 syndef'' (latt :: Label att)
          (f  :: Fam ip sc -> val)
