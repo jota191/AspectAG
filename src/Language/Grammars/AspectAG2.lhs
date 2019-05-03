@@ -92,8 +92,14 @@
 >   = Fam sc ip -> Fam ic sp -> Fam ic' sp'
 
 > type CRule (ctx :: [ErrorMessage]) prd sc ip ic sp ic' sp'
->   = Proxy ctx -> Fam sc ip -> Fam ic sp -> Fam ic' sp'
+>   = Proxy '(ctx, prd) -> Fam sc ip -> Fam ic sp -> Fam ic' sp'
 
+
+> type family Fst (p :: (k1,k2)) :: k1 where
+>   Fst '(a, b) = a
+
+> type family Snd (p :: (k1,k2)) :: k2 where
+>   Snd '(a, b) = b
 
 > --syndef ::  Label att -> Label prd
 > --       -> (Proxy (ctx) -> Fam ip sc -> val)
@@ -110,12 +116,12 @@
 >              :<>: ShowType prd) ': ctx))
 >      => Label att
 >      -> Label prd
->      -> (Proxy ctx' -> Fam ip sc -> v)
->      -> CRule ctx prd ip sc ic sp ic sp'
+>      -> (Proxy ctx' -> Fam sc ip -> v)
+>      -> CRule ctx prd sc ip ic sp ic sp'
 
 > syndef (att :: Label att) (prd :: Label prd) f
->        (ctx :: Proxy ctx) inp (Fam ic sp)
->   = Fam ic $ req ctx (OpExtend @_ @AttReco att (f nctx inp) sp)
+>        (ctx :: Proxy '(ctx , prd)) inp (Fam ic sp)
+>   = Fam ic $ req (Proxy @ ctx) (OpExtend @_ @AttReco att (f nctx inp) sp)
 >   where nctx = Proxy @ ((Text "syndef::"
 >                          :<>: ShowType att
 >                          :<>: ShowType prd) ': ctx)
@@ -123,14 +129,25 @@
 
 > emptyCtx = Proxy @'[]
 
+
 > ext :: CRule ctx prd sc ip ic sp ic' sp'
->   -> CRule ctx prd sc ip a b ic sp
->   -> CRule ctx prd sc ip a b ic' sp'
+>     -> CRule ctx prd sc ip a b ic sp
+>     -> CRule ctx prd sc ip a b ic' sp'
 > (f `ext` g) ctx input = f ctx input . g ctx input
 
-f `ext2` g = let _ = flip (f `ext` g) emptyFam
-             in f `ext` g
 
+> (f `ext2` g) ctx
+>   = let _ = flip ((f `ext` g) ctx) emptyFam
+>     in (f `ext` g) ctx
+
+
+> emptyFam = Fam undefined undefined --- todo
+
+> type family ChildrenLst (prd :: k) :: [(k, Type)]
+
+> type family EmptiesT (chn :: [(k, Type)]) :: [((k, Type), [(k, Type)])] where
+>   EmptiesT '[] = '[]
+>   EmptiesT ( '(chi, t) ': chn) = '( '(chi, t), '[] ) ': EmptiesT chn
 
 syndef'' (latt :: Label att)
          (f  :: Fam ip sc -> val)

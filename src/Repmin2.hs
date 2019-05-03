@@ -16,7 +16,7 @@ module Repmin where
 
 import System.Exit (exitFailure)
 import Language.Grammars.AspectAG2
-import Language.Grammars.AspectAG.Derive
+--import Language.Grammars.AspectAG.Derive
 import Control.Monad
 import Data.Proxy
 import GHC.TypeLits
@@ -52,10 +52,15 @@ data P_Root; p_Root = Label :: Label (P_Root)
 data P_Node; p_Node = Label :: Label (P_Node)
 data P_Leaf; p_Leaf = Label :: Label (P_Leaf)  
 
+type instance ChildrenLst P_Node = '[ '(Ch_l, Tree), '(Ch_l, Tree)]
+type instance ChildrenLst P_Root = '[ '(Ch_r, Tree)]
+type instance ChildrenLst P_Leaf = '[ '(Ch_i, Int)]
 
-smin1 = syndef smin p_Node (\_ fam -> (3::Int))
-smin2 = syndef sres p_Node (\_ fam -> (3::Int))
 
+smin1  = syndef sres p_Node (\_ fam -> (3::Int))
+smin2  = syndef smin p_Node (\_ fam -> (3::Int))
+smin3  = syndef ival p_Node (\_ fam -> (3::Int))
+smin3' = syndef ival p_Node (\_ fam -> (3::Int))
 
 --smin2 (Fam chi par) = syndef sres p_Node Proxy ((1 :: Int)
 --smin3 (Fam chi par) = syndef ival p_Node Proxy ((1 :: Int)
