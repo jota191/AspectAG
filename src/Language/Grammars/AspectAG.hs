@@ -107,7 +107,9 @@ ext :: Rule sc ip ic sp ic' sp'
 f `ext2` g = let _ = flip (f `ext` g) emptyFam
              in f `ext` g
 
-emptyFam = Fam EmptyRec EmptyRec
+infixr 5 `ext2`
+
+emptyFam = Fam undefined EmptyAtt
 
 
 -- | Type level getters for Rules
@@ -136,10 +138,20 @@ syndef latt val (Fam ic sp) = Fam ic (latt =. val *. sp)
 
 --syndef'  :: (Require (OpExtend AttReco att val sp) '[]) =>
 --    Label att -> val -> (Fam ic sp -> Fam ic ( '(att,val) ': sp))
-syndef' (latt :: Label att) val (Fam ic sp) =
-  Fam ic (req (Proxy @ '[Text "Syndef::" :$$: ShowType att])
-          (OpExtend @_ @AttReco latt val sp))
--- (latt =. val *. sp)
+syndef' (latt :: Label att)
+         val
+        (ctx :: Proxy ctx)
+        (Fam ic sp) =
+  Fam ic (req (Proxy @ ((Text "Syndef::" :<>: ShowType att) ': ctx))
+         (OpExtend @_ @AttReco latt val sp))
+
+syndef'' (latt :: Label att)
+         (f  :: Fam ip sc -> val)
+         (ctx :: Proxy ctx)
+         = \fam -> \(Fam ic sp) ->
+  Fam ic (req (Proxy @ ((Text "Syndef::" :<>: ShowType att) ': ctx))
+         (OpExtend @_ @AttReco latt (f fam) sp))
+
 
 
 -- | The function 'synmod' modifies the definition of a synthesized attribute.
@@ -196,7 +208,7 @@ type UndefinedNonTerminal t = () -- TODO
 
 instance (TypeError (Text "TypeError: Undefined non terminal."
                 :$$: Text "In some definition of an INHERITED attribute "
-                :$$: Text "there is a children associated to a non-terminal: "
+                :$$: Text "there is a child associated to a non-terminal: "
                 :<>: ShowType t
                 :$$: Text "for which the attribute is not being declared."),
           pv ~ Tagged (lch, t) vch
@@ -291,21 +303,24 @@ instance ( LabelSet ('(prd, rule) ': r)) =>
 
 -- | When the production is already defined, the new
 -- rule must be combined with the previous one
-instance ( UpdateAtLabelRecF prd (Rule sc ip ic  sp  ic'' sp'') r
-         , HasFieldRec prd r
-         , LookupByLabelRec prd r ~ (Rule sc ip ic' sp' ic'' sp'')
-         , ic'' ~ (Syn3 (LookupByLabelRec prd r))
-         , sp'' ~ (Inh3 (LookupByLabelRec prd r))
+instance ( UpdateAtLabelRecF prd (Rule sc ip ic sp  ic'' sp'') r
+         , sp ~ '[]
+         -- , ic ~ '[]
+         , HasFieldRec prd r              {-oldR-}
+         , LookupByLabelRec prd r ~ (Rule sc ip ic sp ic' sp')
+         , ic ~ (Syn2 (LookupByLabelRec prd r))
+         , sp ~ (Inh2 (LookupByLabelRec prd r))
          ) =>
-  ComSingle 'True prd (Rule sc ip ic  sp  ic'  sp') r where
-  type ComSingleR 'True prd (Rule sc ip ic  sp  ic'  sp') r
-    = UpdateAtLabelRecFR prd (Rule sc ip ic sp (Syn3 (LookupByLabelRec prd r))
-                                               (Inh3 (LookupByLabelRec prd r))) r
-  comSingle _ f r = updateAtLabelRecF l (oldR `ext` newR) r 
+                             {-newR-}  
+  ComSingle 'True prd (Rule sc ip ic'  sp'  ic''  sp'') r where
+  type ComSingleR 'True prd (Rule sc ip ic'  sp'  ic''  sp'') r
+    = UpdateAtLabelRecFR prd (Rule sc ip (Syn2 (LookupByLabelRec prd r))
+                                         (Inh2 (LookupByLabelRec prd r))
+                               ic'' sp'') r
+  comSingle _ f r = updateAtLabelRecF l (newR `ext2` oldR) r 
     where l    = labelPrd f
           oldR = lookupByLabelRec l r
           newR = rulePrd f
-          --test = flip (oldR `ext` newR) emptyFam
 
 -- | Unicode pretty operator
 (⊕) :: (Com r s) => Aspect r -> Aspect s -> Aspect (r .++. s)
