@@ -29,7 +29,7 @@
 > {-# LANGUAGE TypeApplications          #-}
 > {-# LANGUAGE FunctionalDependencies    #-}
 > {-# LANGUAGE TypeFamilyDependencies    #-}
-
+> {-# LANGUAGE PartialTypeSignatures     #-}
 
 > module Language.Grammars.AspectAG2 (
 >               module Language.Grammars.AspectAG2,
@@ -68,7 +68,8 @@
 
 > -- | In each node of the grammar, the "Fam" contains a single attribution
 > --for the parent, and a collection (Record) of attributions for the children:
-> data Fam (c::[((k, Type),[(k,Type)])]) (p :: [(k,Type)]) :: Type where
+> data Fam (c :: [((k, Type), [(k, Type)])])
+>          (p :: [(k, Type)]) :: Type where
 >   Fam :: ChAttsRec c -> Attribution p -> Fam c p
 
 > -- | desctructors
@@ -91,8 +92,8 @@
 >   (sp' :: [(k,       Type)])
 >   = Fam sc ip -> Fam ic sp -> Fam ic' sp'
 
-> type CRule (ctx :: [ErrorMessage]) prd sc ip ic sp ic' sp'
->   = Proxy '(ctx, prd) -> Fam sc ip -> Fam ic sp -> Fam ic' sp'
+> newtype CRule (ctx :: [ErrorMessage]) (prd :: k) sc (ip :: [(k, Type)]) ic sp ic' sp'
+>  = CRule { runCRule :: (Proxy ctx -> Rule sc ip ic sp ic' sp')}
 
 
 > type family Fst (p :: (k1,k2)) :: k1 where
@@ -101,9 +102,10 @@
 > type family Snd (p :: (k1,k2)) :: k2 where
 >   Snd '(a, b) = b
 
-> --syndef ::  Label att -> Label prd
-> --       -> (Proxy (ctx) -> Fam ip sc -> val)
-> --       -> CRule ctx prd ip sc ic sp ic sp'
+syndef ::  Label att -> Label prd
+      -> (Proxy (ctx) -> Fam ip sc -> val)
+      -> CRule ctx prd ip sc ic sp ic sp'
+
 > syndef
 >   :: ( Require
 >          (OpExtend' (LabelSetF ('(att, v) : sp))
@@ -118,29 +120,64 @@
 >      -> Label prd
 >      -> (Proxy ctx' -> Fam sc ip -> v)
 >      -> CRule ctx prd sc ip ic sp ic sp'
-
 > syndef (att :: Label att) (prd :: Label prd) f
->        (ctx :: Proxy '(ctx , prd)) inp (Fam ic sp)
->   = Fam ic $ req (Proxy @ ctx) (OpExtend @_ @AttReco att (f nctx inp) sp)
->   where nctx = Proxy @ ((Text "syndef::"
->                          :<>: ShowType att
->                          :<>: ShowType prd) ': ctx)
+>   = CRule $ \(ctx :: Proxy ctx) inp (Fam ic sp)
+>    -> let nctx = Proxy @ ((Text "syndef::"
+>                            :<>: ShowType att
+>                            :<>: ShowType prd) ': ctx)
+>       in  Fam ic $ req ctx (OpExtend @_ @AttReco att (f nctx inp) sp)
 
+>    --   where nctx = Proxy @ ((Text "syndef::"
+>     --                       :<>: ShowType att
+>      --                      :<>: ShowType prd) ': ctx)
+
+> consCtx :: Proxy ctx -> Proxy a -> Proxy (a ': ctx)
+> consCtx Proxy Proxy = Proxy
 
 > emptyCtx = Proxy @'[]
-
 
 > ext :: CRule ctx prd sc ip ic sp ic' sp'
 >     -> CRule ctx prd sc ip a b ic sp
 >     -> CRule ctx prd sc ip a b ic' sp'
-> (f `ext` g) ctx input = f ctx input . g ctx input
+> (CRule f) `ext` (CRule g)
+>  = CRule $ \ ctx input -> f ctx input . g ctx input
 
-> ext2 :: CRule ctx prd sc ip ic sp ic' sp'
->     -> CRule ctx prd sc ip (EmptiesT (ChildrenLst prd)) '[] ic sp
->     -> CRule ctx prd sc ip (EmptiesT (ChildrenLst prd)) '[] ic' sp'
-> (f `ext2` g) ctx
->   = let _ = flip ((f `ext` g) ctx) (emptyFam (sndProxy ctx))
->     in (f `ext` g) ctx
+> ext2 -- :: (Require (OpEqLabel prd prd 'True) (Text "prds" ': ctx))
+>      :: CRule ctx prd sc ip ic sp ic' sp'
+>      -> CRule ctx prd
+>               sc ip
+>               (EmptiesT (ChildrenLst prd)) ('[] :: [(k, Type)])
+>               ic sp
+>      -> CRule ctx prd
+>               sc ip
+>              (EmptiesT (ChildrenLst prd)) ( '[] :: [(k, Type)])
+>               ic' sp'
+> (f :: CRule ctx prd
+>               sc ip
+>               ic sp
+>               ic' sp')
+>   `ext2` g
+>   = CRule $ \ctx ->  let _ = flip (runCRule (f `ext` g) ctx)
+>                              (emptyFam (Label @ prd))
+>                      in runCRule (f `ext` g) ctx
+
+
+> data OpEqLabel prd1 prd2 (b :: Bool) where
+>   OpEqLabel :: Label prd1 -> Label prd2 -> OpEqLabel prd1 prd2 (prd1 == prd2)
+
+
+> instance (prd1 ~ prd2)
+>   => Require (OpEqLabel prd1 prd2 'True) ctx where
+>   type ReqR (OpEqLabel prd1 prd2 'True) = ()
+>   req = undefined
+
+
+> instance Require (OpError (Text "" :<>: ShowType prd1 :<>: Text " /= "
+>                            :<>: ShowType prd2)) ctx
+>   => Require (OpEqLabel prd1 prd2 'False) ctx where
+>   type ReqR (OpEqLabel prd1 prd2 'False) = ()
+>   req = undefined
+
 
 > infixr 5 `ext2`
 
@@ -150,9 +187,12 @@
 > sndProxy :: Proxy '(a, b) -> Proxy b
 > sndProxy Proxy = Proxy
 
+> pr2Lb :: Proxy a -> Label a
+> pr2Lb Proxy = Label
 
-> emptyFam :: Proxy prd -> Fam (EmptiesT (ChildrenLst prd)) '[]
-> emptyFam (Proxy :: Proxy prd)
+
+> emptyFam :: Label prd -> Fam (EmptiesT (ChildrenLst prd)) ('[] :: [(k, Type)])
+> emptyFam (Label :: Label prd)
 >   = Fam (undefined :: ChAttsRec (EmptiesT (ChildrenLst prd))) EmptyAtt
 
 > type family ChildrenLst (prd :: k) :: [(k, Type)]
@@ -162,272 +202,113 @@
 >   EmptiesT '[] = '[]
 >   EmptiesT ( '(chi, t) ': chn) = '( '(chi, t), '[] ) ': EmptiesT chn
 
-syndef'' (latt :: Label att)
-         (f  :: Fam ip sc -> val)
-         (ctx :: Proxy ctx)
-         = \fam -> \(Fam ic sp) ->
-  Fam ic (req (Proxy @ ((Text "Syndef::" :<>: ShowType att) ': ctx))
-         (OpExtend @_ @AttReco latt (f fam) sp))
-
-
-{-
--- | Composition of rules
-ext :: Rule sc ip ic sp ic' sp'
-  -> (Fam sc ip -> Fam a b -> Fam ic sp)
-  -> (Fam sc ip -> Fam a b -> Fam ic' sp')
-(f `ext` g) input = f input . g input
-
-f `ext2` g = let _ = flip (f `ext` g) emptyFam
-             in f `ext` g
-
-infixr 5 `ext2`
-
-emptyFam = Fam undefined EmptyAtt
-
-
--- | Type level getters for Rules
-type family Syn1 (rule :: Type) :: [((k,Type), [(k, Type)])] where
-  Syn1 (Rule sc ip ic  sp  ic'' sp'') = sc
-type family Inh1 (rule :: Type) :: [(k, Type)] where
-  Inh1 (Rule sc ip ic  sp  ic'' sp'') = ip
-type family Syn2 (rule :: Type) :: [((k,Type), [(k, Type)])] where
-  Syn2 (Rule sc ip ic  sp  ic'' sp'') = ic
-type family Inh2 (rule :: Type) :: [(k, Type)] where
-  Inh2 (Rule sc ip ic  sp  ic'' sp'') = sp
-type family Syn3 (rule :: Type) :: [((k,Type), [(k, Type)])] where
-  Syn3 (Rule sc ip ic  sp  ic'' sp'') = ic''
-type family Inh3 (rule :: Type) :: [(k, Type)] where
-  Inh3 (Rule sc ip ic  sp  ic'' sp'') = sp''
 
 
 
--- |The function 'syndef' adds the definition of a synthesized attribute.
---It takes a label 'att' representing the name of the new attribute, 
---a value 'val' to be assigned to this attribute, and it builds a function which 
---updates the output constructed thus far.
-syndef  :: LabelSet ( '(att,val) ': sp) =>
-    Label att -> val -> (Fam ic sp -> Fam ic ( '(att,val) ': sp))
-syndef latt val (Fam ic sp) = Fam ic (latt =. val *. sp)
 
---syndef'  :: (Require (OpExtend AttReco att val sp) '[]) =>
---    Label att -> val -> (Fam ic sp -> Fam ic ( '(att,val) ': sp))
-syndef' (latt :: Label att)
-         val
-        (ctx :: Proxy ctx)
-        (Fam ic sp) =
-  Fam ic (req (Proxy @ ((Text "Syndef::" :<>: ShowType att) ': ctx))
-         (OpExtend @_ @AttReco latt val sp))
+-- > inhdef
+-- >   :: -- ( Require
 
-syndef'' (latt :: Label att)
-         (f  :: Fam ip sc -> val)
-         (ctx :: Proxy ctx)
-         = \fam -> \(Fam ic sp) ->
-  Fam ic (req (Proxy @ ((Text "Syndef::" :<>: ShowType att) ': ctx))
-         (OpExtend @_ @AttReco latt (f fam) sp))
+  >          (OpExtend' (LabelSetF ('(att, v) : sp))
+  >                      AttReco att v sp) ctx
+  >      , ReqR (OpExtend' (LabelSetF ('(att, v) : sp)) AttReco att v sp)
+  >          ~ Rec AttReco sp') 
 
+-- >      ( Require (OpLookup ChiReco chi ic) ctx
+-- >      , ReqR (OpLookup ChiReco chi ic) ~ Rec AttReco catts)
+-- >      => Label (att :: k)
+-- >      -> Label (prd :: k)
+-- >      -> Label (chi :: (k, Type))
+-- >      -> (Proxy ctx -> Fam sc ip -> v)
+-- >      -> CRule ctx prd sc ip ic sp ic' sp
 
-
--- | The function 'synmod' modifies the definition of a synthesized attribute.
---   It takes a label 'att' representing the name of the attribute, 
---   a value 'val' to be assigned to this attribute, and it builds a function
---   which  updates the output constructed thus far.
-synmod  ::  ( UpdateAtLabelAttF att val sp
-            , UpdateAtLabelAttFR att val sp ~ sp')
-  =>  Label att -> val -> Fam ic sp -> Fam ic sp'
-synmod att v (Fam ic sp) = Fam ic (updateAtLabelAttF att v sp)
-
-------------------------------------------------------------------------------
-
--- | The function 'inhdef' introduces a new inherited attribute for 
---   a collection of non-terminals.
---   It takes the following parameters:
---     'att': the attribute which is being defined,
---     'nts': the non-terminals with which this attribute is being associated
---     'vals': a record labelled with child names and containing values, 
---              describing how to compute the attribute being defined at each 
---              of the applicable child  positions.
---   It builds a function which updates the output constructed thus far.
-inhdef :: Defs att nts vals ic
-  => Label att -> HList nts -> Record vals
-  -> (Fam ic sp -> Fam (DefsR att nts vals ic) sp)
-inhdef att nts vals (Fam ic sp) = Fam (defs att nts vals ic) sp
+> inhdef
+>   :: (Require
+>         (OpExtend' (LabelSetF ('(att, v) : r)) AttReco att v r) ctx,
+>       Require (OpUpdate ChiReco chi v2 ic) ctx,
+>       Require (OpLookup ChiReco chi ic) ctx,
+>       ReqR (OpLookup ChiReco chi ic) ~ Rec AttReco r,
+>       ReqR (OpUpdate ChiReco chi v2 ic) ~ Rec ChiReco ic',
+>       ReqR (OpExtend' (LabelSetF ('(att, v) : r)) AttReco att v r)
+>       ~ Rec AttReco v2
+>      , ctx' ~ ((Text "inhdef::"
+>        :<>: ShowType att :<>: ShowType prd
+>        :<>: ShowType chi) ': ctx))
+>      =>
+>      Label att
+>      -> Label prd
+>      -> Label chi
+>      -> (Proxy ctx' -> Fam sc ip -> v)
+>      -> CRule ctx prd sc ip ic sp ic' sp
+> inhdef (att :: Label att) (prd :: Label prd) (chi :: Label chi)
+>        (f :: Proxy ctx' -> Fam sc ip -> v)
+>   = CRule $ \(ctx :: Proxy ctx) inp (Fam ic sp :: Fam ic sp)
+>        -> let
+>         ic'   = req (Proxy @ ctx) (OpUpdate @chi @ChiReco chi catts' ic)
+>         catts = req (Proxy @ ctx) (OpLookup @chi @ChiReco @ic chi ic)
+>         catts'= req (Proxy @ ctx) (OpExtend @att @AttReco @v att
+>                                    (f nctx inp) catts)
+>         nctx  = Proxy @ ((Text "inhdef::"
+>                          :<>: ShowType att :<>: ShowType prd
+>                          :<>: ShowType chi) ': ctx)
+>           in  Fam ic' sp
 
 
--- | singledef is an auxiliar function to implement Defs.
---   it inserts a definition into the attribution of the corresponding child
--- mch  ~ memnership of chld
--- mnts ~ membership of nonterminals
+> data FcReco
+> type TaggedFc = TagField FcReco
+> type FcRecord = Rec FcReco
 
-class SingleDef (mch::Bool)(mnts::Bool) att pv (ic ::[((k,Type),[(k,Type)])]) where
-  type SingleDefR mch mnts att pv ic :: [((k,Type),[(k,Type)])]
-  singledef :: Proxy mch -> Proxy mnts -> Label att -> pv -> ChAttsRec ic
-                -> ChAttsRec (SingleDefR mch mnts att pv ic)
+semantic functions of children are maps from attributions (ic)
+to attributions (sc). We put this at kind level:
 
-instance ( HasChildF lch ic
-         , och ~ LookupByChildFR lch ic
-         , UpdateAtChildF lch ( '(att,vch) ': och) ic
-         , LabelSet ( '(att, vch) ': och)) =>
-  SingleDef 'True 'True att (Tagged lch vch) ic where
-  type SingleDefR 'True 'True att (Tagged lch vch) ic
-    = UpdateAtChildFR lch ( '(att,vch) ': (LookupByChildFR lch ic)) ic
-  singledef _ _ att pch ic
-    = updateAtChildF (Label :: Label lch) ( att =. vch *. och) ic
-    where lch = labelTChAtt pch
-          vch = unTaggedChAtt pch
-          och = lookupByChildF lch ic
+> type instance WrapField FcReco (v :: ([(k, Type)], [(k, Type)]))
+>   = Attribution (Fst v) -> Attribution (Snd v)
 
--- | Error instance, undefined Non Terminal
-type UndefinedNonTerminal t = () -- TODO
+> class Kn (fcr :: [((k, Type), ([(k, Type)], [(k, Type)]))]) where
+>  type ICh fcr :: [((k, Type), [(k, Type)])]
+>  type SCh fcr :: [((k, Type), [(k, Type)])]
+>  kn :: FcRecord fcr -> ChAttsRec (ICh fcr) -> ChAttsRec (SCh fcr)
 
-instance (TypeError (Text "TypeError: Undefined non terminal."
-                :$$: Text "In some definition of an INHERITED attribute "
-                :$$: Text "there is a child associated to a non-terminal: "
-                :<>: ShowType t
-                :$$: Text "for which the attribute is not being declared."),
-          pv ~ Tagged (lch, t) vch
-          )
-  => SingleDef 'True 'False att pv ic where
-  type SingleDefR 'True 'False att pv ic = '[]
-  singledef = undefined
+> instance Kn '[] where
+>  type ICh '[] = '[]
+>  type SCh '[] = '[]
+>  kn _ _ = emptyCh 
 
+> instance ( lch ~ '(l, t)
+>          , LabelSet ('( '(l, t), inp) ': ICh fcs)
+>          , LabelSet ('( '(l, t), out) ': SCh fcs)
+>          , Kn fcs
+>          )
+>   => Kn ( '(lch, '(inp, out) ) ': fcs) where
+>   type ICh ( '(lch, '(inp, out) ) ': fcs)
+>     = '(lch, inp) ': ICh fcs
+>   type SCh ( '(lch, '(inp, out) ) ': fcs)
+>     = '(lch, out) ': SCh fcs
+>   kn (ConsRec (TagField _ lch fch) fcr) (ConsCh pich icr)
+>    = let scr = kn fcr icr
+>          ich = unTaggedChAttr pich
+>      in ConsCh (TaggedChAttr lch (fch ich)) scr
 
--- | Error instance, undefined Non Terminal/Child
-type UndefinedNonTerminalCh t = () -- TODO
-instance (TypeError (Text "undefined Non Terminal/Child" :$$:
-                     Text "Non-terminal named: " :<>: ShowType t :$$:
-                     Text "Child named: " :<>: ShowType lch :<>:
-                     Text " related to that terminal")
-         , pv ~ Tagged (lch, t) vch
-         )
-  => SingleDef 'False 'False att pv ic where
-  type SingleDefR 'False 'False att pv ic = '[]
-  singledef = undefined
+> knit :: ( Kn fc
+>         ) =>
+>   CRule '[] prd (SCh fc) ip (EmptiesT (ChildrenLst prd)) '[] (ICh fc) sp
+>   -> FcRecord fc -> Attribution ip -> Attribution sp
+> knit (rule :: CRule '[] prd (SCh fc) ip
+>               (EmptiesT (ChildrenLst prd)) '[] (ICh fc) sp)
+>               (fc :: FcRecord fc) ip
+>   = let (Fam ic sp) = runCRule rule emptyCtx
+>                        (Fam sc ip) (emptyFam (Label @prd))
+>         sc          = kn fc ic
+>     in  sp
 
 
-
--- | The class 'Defs' is defined by induction over the record 'vals' 
---   containing the new definitions. 
---   The function 'defs' inserts each definition into the attribution 
---   of the corresponding child.
-
-class Defs att (nts :: [Type])
-            (vals :: [((k,Type),Type)]) (ic :: [((k,Type),[(k,Type)])]) where
-  type DefsR att nts vals ic :: [((k,Type),[(k,Type)])]
-  defs :: Label att -> HList nts -> Record vals -> ChAttsRec ic
-       -> ChAttsRec (DefsR att nts vals ic)
-
-instance Defs att nts '[] ic where
-  type DefsR att nts '[] ic = ic
-  defs _ _ _ ic = ic
-
-instance ( Defs att nts vs ic
-         , ic' ~ DefsR att nts vs ic
-         , HMember' t nts
-         , HMemberRes' t nts ~ mnts
-         , HasLabelChildAttsRes '(lch,t) ic' ~ mch
-         , HasLabelChildAtts '(lch,t) ic'
-         , SingleDef mch mnts att (Tagged '(lch,t) vch) ic') => 
-  Defs att nts ( '( '(lch,t), vch) ': vs) ic where
-  type DefsR att nts ( '( '(lch,t), vch) ': vs) ic
-    = SingleDefR (HasLabelChildAttsRes '(lch,t) (DefsR att nts vs ic))
-                 (HMemberRes' t nts)
-                 att
-                 (Tagged '(lch,t) vch)
-                 (DefsR att nts vs ic)
-  defs att nts (ConsRec pch vs) ic = singledef mch mnts att pch ic' 
-      where ic'  = defs att nts vs ic
-            lch  = labelLVPair pch
-            mch  = hasLabelChildAtts lch ic'
-            mnts = hMember' (sndLabel lch) nts
-
--- * Aspects: Aspects are record that have a rule for each production:
--- | aspects are actually records
-type Aspect = Record
+> infixr 4 .=..
+> (.=..) :: Label l -> WrapField FcReco v -> TagField FcReco l v
+> l .=.. v = TagField (Label @ FcReco) l v
 
 
--- | Let a Type for the fields:
-type Prd prd rule = Tagged prd rule
+kn (ConsRec (TagField c l w) fcr) = undefined
 
-labelPrd (Tagged v :: Tagged l v) = Label :: Label l 
-rulePrd (Tagged v)= v
-
-
--- | Lets define the combination of aspects. When labels are only present once,
---  the new aspect has a copy of the field. In the other hand, when a label is
---  repeated, rules are combined with the function ext.
-class Com (r :: [(k,Type)]) (s :: [(k, Type)]) where
-  type (.++.) r s :: [(k,Type)]
-  (.+.) :: Aspect r -> Aspect s -> Aspect (r .++. s)
-
-
--- | ComSingle inserts one Rule in an aspect
--- The boolean parameter is True if prd is a label in the record.
-class ComSingle (b::Bool) (prd :: k) (rule :: Type) (r :: [(k,Type)]) where
-  type ComSingleR b prd rule r :: [(k, Type)]
-  comSingle :: Proxy b -> Prd prd rule -> Aspect r
-            -> Aspect (ComSingleR b prd rule r)
-
-
--- | When there is no production with the name prd, the map is simply extended
-instance ( LabelSet ('(prd, rule) ': r)) => 
-  ComSingle 'False prd rule r where
-  type ComSingleR 'False prd rule r = '(prd, rule) ': r
-  comSingle _ prd asp = prd .*. asp
-
--- | When the production is already defined, the new
--- rule must be combined with the previous one
-instance ( UpdateAtLabelRecF prd (Rule sc ip ic sp  ic'' sp'') r
-         , sp ~ '[]
-         -- , ic ~ '[]
-         , HasFieldRec prd r              {-oldR-}
-         , LookupByLabelRec prd r ~ (Rule sc ip ic sp ic' sp')
-         , ic ~ (Syn2 (LookupByLabelRec prd r))
-         , sp ~ (Inh2 (LookupByLabelRec prd r))
-         ) =>
-                             {-newR-}  
-  ComSingle 'True prd (Rule sc ip ic'  sp'  ic''  sp'') r where
-  type ComSingleR 'True prd (Rule sc ip ic'  sp'  ic''  sp'') r
-    = UpdateAtLabelRecFR prd (Rule sc ip (Syn2 (LookupByLabelRec prd r))
-                                         (Inh2 (LookupByLabelRec prd r))
-                               ic'' sp'') r
-  comSingle _ f r = updateAtLabelRecF l (newR `ext2` oldR) r 
-    where l    = labelPrd f
-          oldR = lookupByLabelRec l r
-          newR = rulePrd f
-
--- | Unicode pretty operator
-(⊕) :: (Com r s) => Aspect r -> Aspect s -> Aspect (r .++. s)
-(⊕) = (.+.)
-
-
--- | The proper Com, by induction over the second Aspect.
-
--- | The empty record is a neutral element by right
-instance Com r '[] where
-  type r .++. '[] = r
-  r .+. _ = r
-
--- | For the recursive step, take the head of the second argument,
--- use comsingle on the first parameter, call (.+.) with the result
--- and the tail
-instance ( Com (ComSingleR (HasLabelRecRes prd r) prd rule r)  r'
-         , HasLabelRecRes prd r ~ b
-         , HasLabelRec prd r
-         , ComSingle b prd rule r)
-  => Com r ( '(prd, rule) ': r') where
-     type r .++. ( '(prd, rule) ': r')
-       = (ComSingleR (HasLabelRecRes prd r) prd rule r) .++. r'
-     r .+. (pr `ConsRec` r') = let b      = hasLabelRec (labelPrd pr) r
-                                   r'''   = comSingle b pr r
-                                   r''    = r''' .+. r'
-                               in  r''
-
-
-
--- | The function 'knit' takes the combined rules for a node and the 
---   semantic functions of the children, and builds a
---   function from the inherited attributes of the parent to its
---   synthesized attributes.
 
 knit :: ( Empties fc
         , Kn fc ) =>

@@ -8,7 +8,8 @@
              ExtendedDefaultRules,
              UnicodeSyntax,
              DataKinds,
-             TypeApplications
+             TypeApplications,
+             PartialTypeSignatures
 #-}
 
 
@@ -66,16 +67,16 @@ smin3' = syndef ival p_Node (\_ fam -> (3::Int))
 --smin3 (Fam chi par) = syndef ival p_Node Proxy ((1 :: Int)
 
 
--- sem_Tree asp (Node l r) = knit (asp .#. p_Node)$
---                            ch_l .=. sem_Tree asp l
---                        .*. ch_r .=. sem_Tree asp r
---                        .*. emptyRecord
+sem_Tree asp (Node l r) = knit ((asp .#. p_Node))$
+                              (ch_l .=.. sem_Tree asp l)
+                         .*. ((ch_r .=.. sem_Tree asp r)
+                         .*.  EmptyRec)
 
 -- sem_Tree asp (Leaf i)   = knit (asp .#. p_Leaf)$
---                           ch_i .=. sem_Lit i .*. emptyRecord
+--                           ch_i .=.. sem_Lit i .*. EmptyRec
 
 -- sem_Root  asp (Root t) = knit (asp .#. p_Root)$
---                          ch_tree .=. sem_Tree asp t .*. emptyRecord
+--                          ch_tree .=.. sem_Tree asp t .*. EmptyRec
 
 
 

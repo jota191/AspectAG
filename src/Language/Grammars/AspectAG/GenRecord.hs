@@ -76,6 +76,7 @@ type instance  WrapField Reco    (v :: Type) = v
 type instance  WrapField AttReco  (v :: Type) = v
 type instance  WrapField ChiReco  (v :: [(k, Type)]) = Attribution v
 
+
 data ChiReco; data AttReco; data Reco
 
 type Attribution = Rec AttReco
@@ -158,7 +159,7 @@ data OpLookup' (b  :: Bool)
 
 class Require (op   :: Type)
               (ctx  :: [ErrorMessage])  where
-   type ReqR op
+   type ReqR op :: k
    req :: Proxy ctx -> op -> ReqR op
 
 instance (Require (OpLookup' (l == l') c l ( '(l', v) ': r)) ctx)
@@ -186,9 +187,10 @@ instance (TypeError (Text "Error: " :<>: m :$$:
 data OpError (m :: ErrorMessage) where {}
 
 
-type family ShowCTX (ctx :: [ErrorMessage]) :: ErrorMessage
-type instance ShowCTX '[] = Text ""
-type instance ShowCTX (m ': ms) = m :$$: ShowCTX ms
+type family ShowCTX (ctx :: [ErrorMessage]) :: ErrorMessage where
+  ShowCTX '[] = Text ""
+  ShowCTX (m ': ms) = m :$$: ShowCTX ms
+
 
 type family ShowEM (m :: ErrorMessage) :: ErrorMessage
 
@@ -366,8 +368,8 @@ instance Require (OpError (Text "Duplicated Labels on " :<>: Text (ShowRec c)
                           :$$: Text "on the " :<>: Text (ShowField c)
                            :<>: ShowType l
                           )) ctx
-  => Require (OpExtend' False c l v r) ctx where
-  type ReqR (OpExtend' False c l v r) = Rec c '[]
+  => Require (OpExtend' False c l v (r :: [(k, k')])) ctx where
+  type ReqR (OpExtend' False c l v r) = Rec c ('[] :: [(k, k')])
   --req ctx (OpExtend' p l v r) = undefined
 
 -- instance (LabelSet ( '(l, v) ': r))

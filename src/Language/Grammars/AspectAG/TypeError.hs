@@ -40,7 +40,7 @@ import Language.Grammars.AspectAG.Attribution
 import Language.Grammars.AspectAG.Record
 import Language.Grammars.AspectAG.Attribute
 import Data.Kind
-import Data.Tagged hiding (unTagged)
+--import Data.Tagged hiding (unTagged)
 import Language.Grammars.AspectAG.TPrelude
 import Data.Proxy
 import Language.Grammars.AspectAG.ChildAtts
