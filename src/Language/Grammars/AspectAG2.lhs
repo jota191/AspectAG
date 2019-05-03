@@ -123,6 +123,15 @@
 
 > emptyCtx = Proxy @'[]
 
+> ext :: CRule ctx prd sc ip ic sp ic' sp'
+>   -> CRule ctx prd sc ip a b ic sp
+>   -> CRule ctx prd sc ip a b ic' sp'
+> (f `ext` g) ctx input = f ctx input . g ctx input
+
+f `ext2` g = let _ = flip (f `ext` g) emptyFam
+             in f `ext` g
+
+
 syndef'' (latt :: Label att)
          (f  :: Fam ip sc -> val)
          (ctx :: Proxy ctx)
