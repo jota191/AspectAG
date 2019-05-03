@@ -104,12 +104,14 @@
 >       ReqR (OpExtend' (LabelSetF ('(l, v) : sp)) AttReco l v sp)
 >       ~ Rec AttReco sp') =>
 >      Label l
->      -> p2
->      -> (Proxy ctx -> t -> v)
->      -> Proxy ctx
->      -> t
->      -> Fam ic sp
->      -> Fam ic sp'
+>      -> Label prd
+>      -> (Proxy ctx -> Fam ip sc -> v)
+>      -> CRule ctx prd ip sc ic sp ic sp'
+
+> --     -> Proxy ctx
+> --     -> Fam ip sc
+> --     -> Fam ic sp
+> --     -> Fam ic sp'
 
 > syndef att prd f ctx inp (Fam ic sp)
 >   = Fam ic $ req ctx (OpExtend @_ @AttReco att (f ctx inp) sp)
