@@ -135,17 +135,30 @@
 >     -> CRule ctx prd sc ip a b ic' sp'
 > (f `ext` g) ctx input = f ctx input . g ctx input
 
-
+> ext2 :: CRule ctx prd sc ip ic sp ic' sp'
+>     -> CRule ctx prd sc ip (EmptiesT (ChildrenLst prd)) '[] ic sp
+>     -> CRule ctx prd sc ip (EmptiesT (ChildrenLst prd)) '[] ic' sp'
 > (f `ext2` g) ctx
->   = let _ = flip ((f `ext` g) ctx) emptyFam
+>   = let _ = flip ((f `ext` g) ctx) (emptyFam (sndProxy ctx))
 >     in (f `ext` g) ctx
 
+> infixr 5 `ext2`
 
-> emptyFam = Fam undefined undefined --- todo
+> fstProxy :: Proxy '(a, b) -> Proxy a
+> fstProxy Proxy = Proxy
+
+> sndProxy :: Proxy '(a, b) -> Proxy b
+> sndProxy Proxy = Proxy
+
+
+> emptyFam :: Proxy prd -> Fam (EmptiesT (ChildrenLst prd)) '[]
+> emptyFam (Proxy :: Proxy prd)
+>   = Fam (undefined :: ChAttsRec (EmptiesT (ChildrenLst prd))) EmptyAtt
 
 > type family ChildrenLst (prd :: k) :: [(k, Type)]
 
-> type family EmptiesT (chn :: [(k, Type)]) :: [((k, Type), [(k, Type)])] where
+> type family EmptiesT (chn :: [(k, Type)])
+>     = (r :: [((k, Type), [(k, Type)])]) | r -> chn where
 >   EmptiesT '[] = '[]
 >   EmptiesT ( '(chi, t) ': chn) = '( '(chi, t), '[] ) ': EmptiesT chn
 

@@ -52,12 +52,12 @@ data P_Root; p_Root = Label :: Label (P_Root)
 data P_Node; p_Node = Label :: Label (P_Node)
 data P_Leaf; p_Leaf = Label :: Label (P_Leaf)  
 
-type instance ChildrenLst P_Node = '[ '(Ch_l, Tree), '(Ch_l, Tree)]
-type instance ChildrenLst P_Root = '[ '(Ch_r, Tree)]
+type instance ChildrenLst P_Node = '[ '(Ch_l, Tree), '(Ch_r, Tree)]
+type instance ChildrenLst P_Root = '[ '(Ch_tree, Tree)]
 type instance ChildrenLst P_Leaf = '[ '(Ch_i, Int)]
 
 
-smin1  = syndef sres p_Node (\_ fam -> (3::Int))
+smin1  = syndef sres p_Leaf (\_ fam -> (3::Int))
 smin2  = syndef smin p_Node (\_ fam -> (3::Int))
 smin3  = syndef ival p_Node (\_ fam -> (3::Int))
 smin3' = syndef ival p_Node (\_ fam -> (3::Int))
