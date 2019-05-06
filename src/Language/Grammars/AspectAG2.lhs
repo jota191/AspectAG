@@ -357,8 +357,8 @@ to attributions (sc). We put this at kind level:
 >          , Kn3 fc
 >          , LabelSet ('(lch, sch) : SCh3 fc)
 >          , LabelSet ('(lch, ich) : ICh3 fc)
->          , WrapField FcReco (Attribution ich -> Attribution sch)
->            ~ (Attribution ich -> Attribution sch)
+>  --        , WrapField FcReco (Attribution ich -> Attribution sch)
+>  --          ~ (Attribution ich -> Attribution sch)
 >          ) => 
 >   Kn3 ( '(lch , Attribution ich -> Attribution sch) ': fc) where
 >   type ICh3 ( '(lch , Attribution ich -> Attribution sch) ': fc)
