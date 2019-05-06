@@ -16,7 +16,6 @@
 > {-# LANGUAGE ConstraintKinds           #-}
 > {-# LANGUAGE RankNTypes                #-}
 > {-# LANGUAGE TypeOperators             #-}
-> {-# LANGUAGE TypeInType                #-}
 > {-# LANGUAGE FlexibleInstances         #-}
 > {-# LANGUAGE FlexibleContexts          #-}
 > {-# LANGUAGE GADTs                     #-}
@@ -30,6 +29,7 @@
 > {-# LANGUAGE FunctionalDependencies    #-}
 > {-# LANGUAGE TypeFamilyDependencies    #-}
 > {-# LANGUAGE PartialTypeSignatures     #-}
+> {-# LANGUAGE IncoherentInstances       #-}
 
 > module Language.Grammars.AspectAG2 (
 >               module Language.Grammars.AspectAG2,
@@ -264,6 +264,38 @@ to attributions (sc). We put this at kind level:
 > type instance WrapField FcReco (v :: ([(k, Type)], [(k, Type)]))
 >   = Attribution (Fst v) -> Attribution (Snd v)
 
+> class Kn2 (fcr :: [((k, Type), ([(k, Type)], [(k, Type)]))]) where
+>  type FSem fcr :: ([((k, Type), [(k, Type)])],[((k, Type), [(k, Type)])])
+>      -- | res -> fcr
+>  kn2 :: FcRecord fcr -> ChAttsRec (Fst (FSem fcr))
+>      -> ChAttsRec (Snd (FSem fcr))
+
+> instance Kn2 '[] where
+>   type FSem '[] = '( '[], '[])
+>   kn2 _ _ = EmptyCh
+
+> instance ( lch ~ '(l, t)
+>          , LabelSet ('( '(l, t), inp) : Fst (FSem fcs))
+>          , LabelSet ('( '(l, t), out) : Snd (FSem fcs))
+>          , Kn2 fcs
+>          )
+>   => Kn2 ( '( '(l, t), '(inp, out) ) ': fcs) where
+>   type FSem ( '( '(l, t), '(inp, out) ) ': fcs)
+>     = '( '( '(l, t), inp) ': Fst (FSem fcs), '( '(l, t), out) ': Snd (FSem fcs))
+>   kn2 (ConsRec (TagField _ lch fch) fcr) (ConsCh pich icr)
+>    = let scr = kn2 fcr icr
+>          ich = unTaggedChAttr pich
+>      in ConsCh (TaggedChAttr lch
+>                 (fch ich)) scr
+
+-- > 
+-- > ICh ( '(lch, '(inp, out) ) ': fcs)
+-- >     = '(lch, inp) ': ICh fcs
+-- >   type SCh ( '(lch, '(inp, out) ) ': fcs)
+-- >     = '(lch, out) ': SCh fcs
+
+
+
 > class Kn (fcr :: [((k, Type), ([(k, Type)], [(k, Type)]))]) where
 >  type ICh fcr :: [((k, Type), [(k, Type)])]
 >  type SCh fcr :: [((k, Type), [(k, Type)])]
@@ -287,7 +319,9 @@ to attributions (sc). We put this at kind level:
 >   kn (ConsRec (TagField _ lch fch) fcr) (ConsCh pich icr)
 >    = let scr = kn fcr icr
 >          ich = unTaggedChAttr pich
->      in ConsCh (TaggedChAttr lch (fch ich)) scr
+>      in ConsCh (TaggedChAttr lch
+>                 ((fch :: Attribution inp -> Attribution out)
+>                  ich)) scr
 
 > knit :: ( Kn fc
 >         ) =>
@@ -303,11 +337,48 @@ to attributions (sc). We put this at kind level:
 
 
 > infixr 4 .=..
-> (.=..) :: Label l -> WrapField FcReco v -> TagField FcReco l v
+
+--> (.=..) :: Label l -> (Attribution ip -> Attribution sp)
+-->                      -> TagField FcReco l '(ip, sp)
+
 > l .=.. v = TagField (Label @ FcReco) l v
 
+> class Kn3 (fcr :: [((k, Type), Type)]) where
+>   type ICh3 fcr :: [((k, Type), [(k, Type)])]
+>   type SCh3 fcr :: [((k, Type), [(k, Type)])]
+>   kn3 :: Record fcr -> ChAttsRec (ICh3 fcr) -> ChAttsRec (SCh3 fcr)
 
-kn (ConsRec (TagField c l w) fcr) = undefined
+> instance Kn3 '[] where
+>   type ICh3 '[] = '[]
+>   type SCh3 '[] = '[] 
+>   kn3 _ _ = emptyCh
+
+> instance ( lch ~ '(l, t)
+>          , Kn3 fc
+>          , LabelSet ('(lch, sch) : SCh3 fc)
+>          , LabelSet ('(lch, ich) : ICh3 fc)
+>          , WrapField FcReco (Attribution ich -> Attribution sch)
+>            ~ (Attribution ich -> Attribution sch)
+>          ) => 
+>   Kn3 ( '(lch , Attribution ich -> Attribution sch) ': fc) where
+>   type ICh3 ( '(lch , Attribution ich -> Attribution sch) ': fc)
+>     = '(lch , ich) ': ICh3 fc
+>   type SCh3 ( '(lch , Attribution ich -> Attribution sch) ': fc)
+>     = '(lch , sch) ': SCh3 fc
+>   kn3 (ConsRec (TagField _ lch fch) fcr) (ConsCh pich icr)
+>    = let scr = kn3 fcr icr
+>          ich = unTaggedChAttr pich
+>      in ConsCh (TaggedChAttr lch
+>                 (fch ich)) scr
+
+> knit3 (rule :: CRule '[] prd (SCh3 fc) ip
+>               (EmptiesT (ChildrenLst prd)) '[] (ICh3 fc) sp)
+>               (fc :: Record fc) ip
+>   = let (Fam ic sp) = runCRule rule emptyCtx
+>                        (Fam sc ip) (emptyFam (Label @prd))
+>         sc          = kn3 fc ic
+>     in  sp
+
 
 
 knit :: ( Empties fc

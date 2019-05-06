@@ -66,18 +66,38 @@ smin3' = syndef ival p_Node (\_ fam -> (3::Int))
 --smin2 (Fam chi par) = syndef sres p_Node Proxy ((1 :: Int)
 --smin3 (Fam chi par) = syndef ival p_Node Proxy ((1 :: Int)
 
+-- sem_Tree
+--   :: (HasFieldRec P_Node r,
+--       LookupByLabelRec P_Node r
+--       ~ CRule '[] P_Node '[ '( '(Ch_l, Tree), sp), '( '(Ch_r, Tree), sp)] ip
+--           '[ '( '(Ch_l, Tree), '[]), '( '(Ch_r, Tree), '[])] '[]
+--           '[ '( '(Ch_l, Tree), ip), '( '(Ch_r, Tree), ip)] sp)
+--       => Record r -> Tree -> Attribution ip -> Attribution sp
 
-sem_Tree asp (Node l r) = knit ((asp .#. p_Node))$
-                              (ch_l .=.. sem_Tree asp l)
-                         .*. ((ch_r .=.. sem_Tree asp r)
+
+sem_Tree asp (Node l r) = knit3 ((asp .#. p_Node))$
+                              (ch_l .=. sem_Tree asp l)
+                         .*. ((ch_r .=. sem_Tree asp r)
                          .*.  EmptyRec)
-
--- sem_Tree asp (Leaf i)   = knit (asp .#. p_Leaf)$
+--sem_Tree asp (Leaf i)   = knit (asp .#. p_Leaf)$
 --                           ch_i .=.. sem_Lit i .*. EmptyRec
 
 -- sem_Root  asp (Root t) = knit (asp .#. p_Root)$
 --                          ch_tree .=.. sem_Tree asp t .*. EmptyRec
 
+-- foo :: Kn '[ '( '(Ch_l, Tree), v1), '( '(Ch_r, Tree), v2)] =>
+--                (Attribution (Fst v1) -> Attribution (Snd v1))
+--                -> (Attribution (Fst v2) -> Attribution (Snd v2))
+--                -> Rec ChiReco (ICh '[ '( '(Ch_l, Tree), v1),
+--                                       '( '(Ch_r, Tree), v2)])
+--                -> ChAttsRec (SCh '[ '( '(Ch_l, Tree), v1),
+--                                     '( '(Ch_r, Tree), v2)])
+
+
+foo seml semr ic
+   = kn3 ((TagField (Label @ Reco) ch_l seml)
+      .*. TagField (Label @ Reco) ch_r semr
+      .*.  EmptyRec) ic
 
 
 
