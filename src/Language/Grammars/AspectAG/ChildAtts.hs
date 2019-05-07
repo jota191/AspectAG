@@ -58,21 +58,21 @@ import GHC.TypeLits
 
 -- | Pattern synonyms, since now we implement ChAttsRec as a generic record,
 -- this allows us to recover pattern matching
-pattern EmptyCh :: ChAttsRec '[]
+pattern EmptyCh :: ChAttsRec prd '[]
 pattern EmptyCh = EmptyRec
 pattern ConsCh :: (LabelSet ( '( '(l, t), v) ': xs)) =>
-  TaggedChAttr '(l,t) v -> ChAttsRec xs -> ChAttsRec ( '( '(l,t),v) ': xs)
+  TaggedChAttr prd '(l,t) v -> ChAttsRec prd xs -> ChAttsRec prd ( '( '(l,t),v) ': xs)
 pattern ConsCh h t = ConsRec h t
 
 -- | Pretty constructors
 infixr 2 .*
 (.*) :: LabelSet ('(ch, attrib) ': attribs) =>
-  TaggedChAttr ch attrib -> ChAttsRec attribs
-    -> ChAttsRec ('(ch, attrib) ': attribs)
+  TaggedChAttr prd ch attrib -> ChAttsRec prd attribs
+    -> ChAttsRec prd ('(ch, attrib) ': attribs)
 (.*) = ConsRec
 
 -- | no child
-emptyCh :: ChAttsRec '[]
+emptyCh :: ChAttsRec prd '[]
 emptyCh = EmptyRec
 
 -- |** This are the tag utils for tag attributions of the childred
@@ -86,11 +86,11 @@ emptyCh = EmptyRec
 
 -- | Pretty constructor for tagging a child
 infixr 4 .=
-(.=) :: Label l -> WrapField ChiReco v -> TaggedChAttr l v
+(.=) :: Label l -> WrapField (ChiReco prd) v -> TaggedChAttr prd l v
 (.=) = TaggedChAttr
 
 -- | To get the atribution
-unTaggedChAttr :: TaggedChAttr l v -> WrapField ChiReco v
+unTaggedChAttr :: TaggedChAttr prd l v -> WrapField (ChiReco prd) v
 unTaggedChAttr (TaggedChAttr _ a) = a
 
 
@@ -102,49 +102,49 @@ unTaggedChAttr (TaggedChAttr _ a) = a
 -- |* Lookup
 
 -- | Haschild is a predicate that implements a lookup at term level
-class HasChild (l::(k,Type)) (r :: [((k,Type) ,[(k,Type)])]) v | l r -> v where
-   lookupByChild :: Label l -> ChAttsRec r -> Attribution v
+-- class HasChild (l::(k,Type)) (r :: [((k,Type) ,[(k,Type)])]) v | l r -> v where
+--    lookupByChild :: Label l -> ChAttsRec r -> Attribution v
 
-instance (HEqK l l1 b, HasChild' b l ( '(l1,v1) ': r) v)
-    => HasChild l ( '(l1,v1) ': r) v where
-    lookupByChild l (r :: ChAttsRec ( '(l1,v1) ': r)) =
-         lookupByChild' (Proxy::Proxy b) l r
+-- instance (HEqK l l1 b, HasChild' b l ( '(l1,v1) ': r) v)
+--     => HasChild l ( '(l1,v1) ': r) v where
+--     lookupByChild l (r :: ChAttsRec ( '(l1,v1) ': r)) =
+--          lookupByChild' (Proxy::Proxy b) l r
 
-class HasChild' (b::Bool) (l :: (k,Type)) (r::[((k,Type),[(k,Type)])]) v | b l r -> v where
-    lookupByChild':: Proxy b -> Label l -> ChAttsRec r -> Attribution v
+-- class HasChild' (b::Bool) (l :: (k,Type)) (r::[((k,Type),[(k,Type)])]) v | b l r -> v where
+--     lookupByChild':: Proxy b -> Label l -> ChAttsRec r -> Attribution v
 
-instance HasChild' True l ( '(l,v) ': r) v where
-   lookupByChild' _ _ (ConsRec lv _) = unTaggedChAttr lv
-instance HasChild l r v => HasChild' False l ( '(l2,v2) ': r) v where
-   lookupByChild' _ l (ConsRec _ r) = lookupByChild l r
+-- instance HasChild' True l ( '(l,v) ': r) v where
+--    lookupByChild' _ _ (ConsRec lv _) = unTaggedChAttr lv
+-- instance HasChild l r v => HasChild' False l ( '(l2,v2) ': r) v where
+--    lookupByChild' _ l (ConsRec _ r) = lookupByChild l r
 
 
 -- | HaschildF is the type family version of HasChild
 
-class HasChildF (l::(k,Type)) (r :: [((k,Type) ,[(k,Type)])]) where
-  type LookupByChildFR l r :: [(k,Type)]
-  lookupByChildF :: Label l -> ChAttsRec r -> Attribution (LookupByChildFR l r)
+-- class HasChildF (l::(k,Type)) (r :: [((k,Type) ,[(k,Type)])]) where
+--   type LookupByChildFR l r :: [(k,Type)]
+--   lookupByChildF :: Label l -> ChAttsRec r -> Attribution (LookupByChildFR l r)
 
-class HasChildF' (b :: Bool) (l::(k,Type)) (r :: [((k,Type) ,[(k,Type)])]) where
-  type LookupByChildFR' b l r :: [(k,Type)]
-  lookupByChildF' :: Proxy b -> Label l -> ChAttsRec r
-    -> Attribution (LookupByChildFR' b l r)
+-- class HasChildF' (b :: Bool) (l::(k,Type)) (r :: [((k,Type) ,[(k,Type)])]) where
+--   type LookupByChildFR' b l r :: [(k,Type)]
+--   lookupByChildF' :: Proxy b -> Label l -> ChAttsRec r
+--     -> Attribution (LookupByChildFR' b l r)
 
-instance (HasChildF' (l==l1) l ( '(l1,v) ': r)) =>
-  HasChildF l ( '(l1,v) ': r) where
-  type LookupByChildFR l ( '(l1,v) ': r)
-    =  LookupByChildFR' (l == l1) l ( '(l1,v) ': r)
-  lookupByChildF l r = lookupByChildF' (Proxy :: Proxy (l == l1)) l r
+-- instance (HasChildF' (l==l1) l ( '(l1,v) ': r)) =>
+--   HasChildF l ( '(l1,v) ': r) where
+--   type LookupByChildFR l ( '(l1,v) ': r)
+--     =  LookupByChildFR' (l == l1) l ( '(l1,v) ': r)
+--   lookupByChildF l r = lookupByChildF' (Proxy :: Proxy (l == l1)) l r
 
-instance
-  HasChildF' 'True l ( '(l,v) ': r) where
-  type LookupByChildFR' 'True l ( '(l,v) ': r) = v
-  lookupByChildF' _ _ (ConsRec lv _) = unTaggedChAttr lv
+-- instance
+--   HasChildF' 'True l ( '(l,v) ': r) where
+--   type LookupByChildFR' 'True l ( '(l,v) ': r) = v
+--   lookupByChildF' _ _ (ConsRec lv _) = unTaggedChAttr lv
 
-instance (HasChildF l r) => 
-  HasChildF' 'False l ( '(l1,v) ': r) where
-  type LookupByChildFR' 'False l ( '(l1,v) ': r) = LookupByChildFR l r
-  lookupByChildF' _ l (ConsRec _ r) = lookupByChildF l r
+-- instance (HasChildF l r) => 
+--   HasChildF' 'False l ( '(l1,v) ': r) where
+--   type LookupByChildFR' 'False l ( '(l1,v) ': r) = LookupByChildFR l r
+--   lookupByChildF' _ l (ConsRec _ r) = lookupByChildF l r
 
 -- | Pretty lookup,
 --infixl 8 .#
@@ -154,19 +154,19 @@ instance (HasChildF l r) =>
 
 infixl 8 .#
 (.#)
-  :: Require (OpLookup ChiReco w r) '[] =>
-     Rec ChiReco r -> Label w -> ReqR (OpLookup ChiReco w r)
-chi .# l = req (Proxy @ '[]) (OpLookup @_ @ChiReco l chi)
+  :: Require (OpLookup (ChiReco prd) w r) '[] =>
+     Rec (ChiReco prd) r -> Label w -> ReqR (OpLookup (ChiReco prd) w r)
+(chi :: Rec (ChiReco prd) r) .# l = req (Proxy @ '[]) (OpLookup @_ @(ChiReco prd) l chi)
 
-lookupCtx
-  :: Require (OpLookup ChiReco w r) ctx =>
-     Proxy ctx -> Rec ChiReco r -> Label w -> ReqR (OpLookup ChiReco w r)
-lookupCtx (p :: Proxy ctx) chi l = req p (OpLookup @_ @ChiReco l chi)
+-- lookupCtx
+--   :: Require (OpLookup ChiReco w r) ctx =>
+--      Proxy ctx -> Rec ChiReco r -> Label w -> ReqR (OpLookup ChiReco w r)
+--lookupCtx (p :: Proxy ctx) chi l = req p (OpLookup @_ @ChiReco l chi)
 
 -- |* Update
 
--- -- | updates an attribution at a child, this is the implementation of
--- --   UpdateAtLabel for children, using functional dependencies
+-- | updates an attribution at a child, this is the implementation of
+--   UpdateAtLabel for children, using functional dependencies
 -- class UpdateAtChild (l :: (k,Type))(v :: [(k,Type)])
 --       (r :: [((k,Type),[(k,Type)])])(r' :: [((k,Type),[(k,Type)])])
 --    | l v r -> r' where
@@ -201,24 +201,24 @@ lookupCtx (p :: Proxy ctx) chi l = req p (OpLookup @_ @ChiReco l chi)
 --         xs' -> attrib .*. xs' :: ChAttsRec (a ': r')
 
 
--- TODO: Type errors
---instance Fail (FieldNotFound l) => UpdateAtChild l v '[] '[] where
---    updateAtChild _ _ r = r
+-- -- TODO: Type errors
+-- --instance Fail (FieldNotFound l) => UpdateAtChild l v '[] '[] where
+-- --    updateAtChild _ _ r = r
 
 
 -- | updates an attribution at a child, this is the implementation of
 --   UpdateAtLabel for children, using type families
 class UpdateAtChildF (l :: (k,Type))(v :: [(k,Type)])(r :: [((k,Type),[(k,Type)])]) where
   type UpdateAtChildFR l v r :: [((k,Type),[(k,Type)])]
-  updateAtChildF :: Label l -> Attribution v -> ChAttsRec r
-                 -> ChAttsRec (UpdateAtChildFR l v r)
+  updateAtChildF :: Label l -> Attribution v -> ChAttsRec prd r
+                 -> ChAttsRec prd (UpdateAtChildFR l v r)
 
 class UpdateAtChildF' (b :: Bool)
                       (l :: (k,Type))(v :: [(k,Type)])
                       (r :: [((k,Type),[(k,Type)])]) where
   type UpdateAtChildFR' b l v r :: [((k,Type),[(k,Type)])]
-  updateAtChildF' :: Proxy b -> Label l -> Attribution v -> ChAttsRec r
-                 -> ChAttsRec (UpdateAtChildFR' b l v r)
+  updateAtChildF' :: Proxy b -> Label l -> Attribution v -> ChAttsRec prd r
+                 -> ChAttsRec prd (UpdateAtChildFR' b l v r)
 
 
 instance (LabelSet ( '(l,v') ': r), LabelSet ( '(l,v) ': r)) =>
@@ -251,7 +251,7 @@ instance (UpdateAtChildF' (l==l') l v ( '(l',v')': r)) =>
 class HasLabelChildAtts (e :: (k,Type))(r :: [((k,Type),[(k,Type)])]) where
   type HasLabelChildAttsRes (e::(k,Type))(r :: [((k,Type),[(k,Type)])]) :: Bool
   hasLabelChildAtts
-   :: Label e -> ChAttsRec r -> Proxy (HasLabelChildAttsRes e r)
+   :: Label e -> ChAttsRec prd r -> Proxy (HasLabelChildAttsRes e r)
 
 instance HasLabelChildAtts e '[] where
   type HasLabelChildAttsRes e '[] = 'False
@@ -267,11 +267,11 @@ instance HasLabelChildAtts k ( '(k' ,v) ': ls) where
 
 
 -- | Some boilerplate to show Attributes and Attributions
-instance Show (ChAttsRec '[]) where
+instance Show (ChAttsRec prd '[]) where
   show _ = "{}"
 
-instance (Show (WrapField ChiReco v), Show (ChAttsRec xs)) =>
-         Show (ChAttsRec ( '(l,v) ': xs ) ) where
+instance (Show (WrapField (ChiReco prd) v), Show (ChAttsRec prd xs)) =>
+         Show (ChAttsRec prd ( '(l,v) ': xs ) ) where
   show (ConsRec lv xs) = let tail = show xs
                        in "{" ++ show (unTaggedChAttr lv) ++
                           "," ++ drop 1 tail 

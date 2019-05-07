@@ -71,21 +71,21 @@ data TagField (cat :: k) (l :: k') (v :: k'') where
 untagField :: TagField c l v -> WrapField c v
 untagField (TagField lc lv v) = v
 
-type family    WrapField (c :: Type)  (v :: k) -- = ftype | ftype c -> v
+type family    WrapField (c :: k')  (v :: k) -- = ftype | ftype c -> v
 type instance  WrapField Reco    (v :: Type) = v
 type instance  WrapField AttReco  (v :: Type) = v
-type instance  WrapField ChiReco  (v :: [(k, Type)]) = Attribution v
+type instance  WrapField (ChiReco prd)  (v :: [(k, Type)]) = Attribution v
 
 
-data ChiReco; data AttReco; data Reco
+data ChiReco (prd :: k); data AttReco; data Reco
 
 type Attribution = Rec AttReco
-type ChAttsRec   = Rec ChiReco
+type ChAttsRec prd  = Rec (ChiReco prd)
 type Record      = Rec Reco
 
 
 type Attribute     = TagField AttReco
-type TaggedChAttr  = TagField ChiReco
+type TaggedChAttr prd = TagField (ChiReco prd)
 
 type Tagged = TagField Reco
 unTagged :: Tagged l v -> v
@@ -95,12 +95,12 @@ pattern Tagged :: v -> Tagged l v
 pattern Tagged v = TagField Label Label v
 
   {-Attribution, but again the injectivity problem-}
-pattern TaggedChAttr :: Label l -> WrapField ChiReco v -> TaggedChAttr l v
+pattern TaggedChAttr :: Label l -> WrapField (ChiReco prd) v -> TaggedChAttr prd l v
 pattern TaggedChAttr l v
-  = TagField (Label :: Label ChiReco) l v
+  = TagField (Label :: Label (ChiReco prd)) l v
 
 
-labelChAttr :: TaggedChAttr l a -> Label l
+labelChAttr :: TaggedChAttr prd l a -> Label l
 labelChAttr _ = Label
 
 -- lookup ignorando el contexto para pegarlo directamente en Repmin con la nueva
@@ -202,12 +202,12 @@ instance Require (OpError (Text "field not Found on " :<>: Text (ShowRec c)
   => Require (OpLookup c l '[]) ctx where {}
 
 type family ShowRec c :: Symbol
-type instance ShowRec ChiReco  = "children map"
+type instance ShowRec (ChiReco a)  = "children map"
 type instance ShowRec AttReco  = "Attribution"
 type instance ShowRec Reco     = "Record"
 
 type family ShowField c :: Symbol
-type instance ShowField ChiReco   = "children labelled "
+type instance ShowField (ChiReco a)   = "children labelled "
 type instance ShowField AttReco   = "attribute named "
 type instance ShowField Reco      = "field named "
 

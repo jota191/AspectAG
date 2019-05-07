@@ -119,3 +119,8 @@ type family (a :: k1) === (b :: k2) where
 
 type family TPair (a :: k) b where
   TPair a b = '(a, b)
+
+
+type family LabelsOf (r :: [(k, k')]) :: [k] where
+  LabelsOf '[] = '[]
+  LabelsOf ( '(k, ks) ': ls) = k ': LabelsOf ls

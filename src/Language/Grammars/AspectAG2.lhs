@@ -65,368 +65,367 @@
 > import Data.Type.Equality
 
 
+> data NT    = NT Symbol
+> data Prod  = Prod Symbol NT
+> data Child = Child Symbol Prod NT
+> data Att   = Att Symbol Type
 
-> -- | In each node of the grammar, the "Fam" contains a single attribution
-> --for the parent, and a collection (Record) of attributions for the children:
-> data Fam (c :: [((k, Type), [(k, Type)])])
->          (p :: [(k, Type)]) :: Type where
->   Fam :: ChAttsRec c -> Attribution p -> Fam c p
 
-> -- | desctructors
-> chi :: Fam c p -> ChAttsRec c
-> chi (Fam chi _) = chi
+> data Fam (prd :: Prod)
+>          (c :: [(Child, [(Att, Type)])])
+>          (p :: [(Att, Type)]) :: Type
+>  where
+>   Fam :: ChAttsRec prd c -> Attribution p -> Fam prd c p
 
-> par :: Fam c p -> Attribution p
-> par (Fam _ par) = par
+> chi :: Fam prd c p -> ChAttsRec prd c
+> chi (Fam c p) = c
 
-> -- | Rules, aka definition of attribution computations
-> --Rules are defined as a mapping from an input family to an output family,
-> --the added arity is for make them composable
+> par :: Fam prd c p -> Attribution p
+> par (Fam c p) = p
+
+-- > -- | Rules, aka definition of attribution computations
+-- > --Rules are defined as a mapping from an input family to an output family,
+-- > --the added arity is for make them composable
 
 > type Rule
->   (sc  :: [((k,Type), [(k, Type)])])
->   (ip  :: [(k,       Type)])
->   (ic  :: [((k,Type), [(k, Type)])])
->   (sp  :: [(k,       Type)])
->   (ic' :: [((k,Type), [(k, Type)])])
->   (sp' :: [(k,       Type)])
->   = Fam sc ip -> Fam ic sp -> Fam ic' sp'
+>   (prd :: Prod)
+>   (sc  :: [(Child, [(Att, Type)])])
+>   (ip  :: [(Att,       Type)])
+>   (ic  :: [(Child, [(Att, Type)])])
+>   (sp  :: [(Att,       Type)])
+>   (ic'  :: [(Child, [(Att, Type)])])
+>   (sp'  :: [(Att,       Type)])
+>   = Fam prd sc ip -> Fam prd ic sp -> Fam prd ic' sp'
 
-> newtype CRule (ctx :: [ErrorMessage]) (prd :: k) sc (ip :: [(k, Type)]) ic sp ic' sp'
->  = CRule { runCRule :: (Proxy ctx -> Rule sc ip ic sp ic' sp')}
+> newtype CRule (ctx :: [ErrorMessage]) prd sc ip ic sp ic' sp'
+>  = CRule { runCRule :: (Proxy ctx -> Rule prd sc ip ic sp ic' sp')}
 
 
-> type family Fst (p :: (k1,k2)) :: k1 where
->   Fst '(a, b) = a
-
-> type family Snd (p :: (k1,k2)) :: k2 where
->   Snd '(a, b) = b
-
-syndef ::  Label att -> Label prd
-      -> (Proxy (ctx) -> Fam ip sc -> val)
-      -> CRule ctx prd ip sc ic sp ic sp'
 
 > syndef
 >   :: ( Require
->          (OpExtend' (LabelSetF ('(att, v) : sp))
->                      AttReco att v sp) ctx
->      , ReqR (OpExtend' (LabelSetF ('(att, v) : sp)) AttReco att v sp)
+>          (OpExtend' (LabelSetF ('( 'Att att t, t) : sp))
+>                      AttReco ('Att att t) t sp) ctx
+>      , ReqR (OpExtend' (LabelSetF ('( ('Att att t), t) : sp))
+>           AttReco ('Att att t) t sp)
 >          ~ Rec AttReco sp'
 >      , ctx'
 >          ~ ((Text "syndef::"
->              :<>: ShowType att
+>              :<>: ShowType ('Att att t)
 >              :<>: ShowType prd) ': ctx))
->      => Label att
+>      => Label ('Att att t)
 >      -> Label prd
->      -> (Proxy ctx' -> Fam sc ip -> v)
+>      -> (Proxy ctx' -> Fam prd sc ip -> t)
 >      -> CRule ctx prd sc ip ic sp ic sp'
-> syndef (att :: Label att) (prd :: Label prd) f
+> syndef (att :: Label ('Att att t)) (prd :: Label prd) (f :: Proxy ctx' -> Fam prd sc ip -> t)
 >   = CRule $ \(ctx :: Proxy ctx) inp (Fam ic sp)
 >    -> let nctx = Proxy @ ((Text "syndef::"
->                            :<>: ShowType att
+>                            :<>: ShowType ('Att att t)
 >                            :<>: ShowType prd) ': ctx)
->       in  Fam ic $ req ctx (OpExtend @_ @AttReco att (f nctx inp) sp)
+>       in  Fam ic $ req ctx (OpExtend @_ @AttReco @t att (f nctx inp) sp)
 
->    --   where nctx = Proxy @ ((Text "syndef::"
->     --                       :<>: ShowType att
->      --                      :<>: ShowType prd) ': ctx)
+-- > consCtx :: Proxy ctx -> Proxy a -> Proxy (a ': ctx)
+-- > consCtx Proxy Proxy = Proxy
 
-> consCtx :: Proxy ctx -> Proxy a -> Proxy (a ': ctx)
-> consCtx Proxy Proxy = Proxy
+-- > emptyCtx = Proxy @'[]
 
-> emptyCtx = Proxy @'[]
+-- > ext :: CRule ctx prd sc ip ic sp ic' sp'
+-- >     -> CRule ctx prd sc ip a b ic sp
+-- >     -> CRule ctx prd sc ip a b ic' sp'
+-- > (CRule f) `ext` (CRule g)
+-- >  = CRule $ \ ctx input -> f ctx input . g ctx input
 
-> ext :: CRule ctx prd sc ip ic sp ic' sp'
->     -> CRule ctx prd sc ip a b ic sp
->     -> CRule ctx prd sc ip a b ic' sp'
-> (CRule f) `ext` (CRule g)
->  = CRule $ \ ctx input -> f ctx input . g ctx input
-
-> ext2 -- :: (Require (OpEqLabel prd prd 'True) (Text "prds" ': ctx))
->      :: (ReifyEmp (ChildrenLst prd)) => 
->      CRule ctx prd sc ip ic sp ic' sp'
->      -> CRule ctx prd
->               sc ip
->               (ReifyEmpR (ChildrenLst prd)) ('[] :: [(k, Type)])
->               ic sp
->      -> CRule ctx prd
->               sc ip
->              (ReifyEmpR (ChildrenLst prd)) ( '[] :: [(k, Type)])
->               ic' sp'
-> (f :: CRule ctx prd
->               sc ip
->               ic sp
->               ic' sp')
->   `ext2` g
->   = CRule $ \ctx ->  let _ = flip (runCRule (f `ext` g) ctx)
->                              (emptyFam (Label @ prd))
->                      in runCRule (f `ext` g) ctx
+-- > ext2 -- :: (Require (OpEqLabel prd prd 'True) (Text "prds" ': ctx))
+-- >      :: (ReifyEmp (ChildrenLst prd)) => 
+-- >      CRule ctx prd sc ip ic sp ic' sp'
+-- > 
+-- >      -> CRule ctx prd
+-- >               sc ip
+-- >               (ReifyEmpR (ChildrenLst prd)) ('[] :: [(k, Type)])
+-- >               ic sp
+-- >      -> CRule ctx prd
+-- >               sc ip
+-- >              (ReifyEmpR (ChildrenLst prd)) ( '[] :: [(k, Type)])
+-- >               ic' sp'
+-- > (f :: CRule ctx prd
+-- >               sc ip
+-- >               ic sp
+-- >               ic' sp')
+-- >   `ext2` g
+-- >   = CRule $ \ctx ->  let _ = flip (runCRule (f `ext` g) ctx)
+-- >                              (emptyFam (Label @ prd))
+-- >                      in runCRule (f `ext` g) ctx
 
 
-> data OpEqLabel prd1 prd2 (b :: Bool) where
->   OpEqLabel :: Label prd1 -> Label prd2 -> OpEqLabel prd1 prd2 (prd1 == prd2)
+-- > data OpEqLabel prd1 prd2 (b :: Bool) where
+-- >   OpEqLabel :: Label prd1 -> Label prd2 -> OpEqLabel prd1 prd2 (prd1 == prd2)
 
 
-> instance (prd1 ~ prd2)
->   => Require (OpEqLabel prd1 prd2 'True) ctx where
->   type ReqR (OpEqLabel prd1 prd2 'True) = ()
->   req = undefined
+-- > instance (prd1 ~ prd2)
+-- >   => Require (OpEqLabel prd1 prd2 'True) ctx where
+-- >   type ReqR (OpEqLabel prd1 prd2 'True) = ()
+-- >   req = undefined
 
 
-> instance Require (OpError (Text "" :<>: ShowType prd1 :<>: Text " /= "
->                            :<>: ShowType prd2)) ctx
->   => Require (OpEqLabel prd1 prd2 'False) ctx where
->   type ReqR (OpEqLabel prd1 prd2 'False) = ()
->   req = undefined
+-- > instance Require (OpError (Text "" :<>: ShowType prd1 :<>: Text " /= "
+-- >                            :<>: ShowType prd2)) ctx
+-- >   => Require (OpEqLabel prd1 prd2 'False) ctx where
+-- >   type ReqR (OpEqLabel prd1 prd2 'False) = ()
+-- >   req = undefined
 
 
-> infixr 5 `ext2`
+-- > infixr 5 `ext2`
 
-> fstProxy :: Proxy '(a, b) -> Proxy a
-> fstProxy Proxy = Proxy
+-- > fstProxy :: Proxy '(a, b) -> Proxy a
+-- > fstProxy Proxy = Proxy
 
-> sndProxy :: Proxy '(a, b) -> Proxy b
-> sndProxy Proxy = Proxy
+-- > sndProxy :: Proxy '(a, b) -> Proxy b
+-- > sndProxy Proxy = Proxy
 
-> pr2Lb :: Proxy a -> Label a
-> pr2Lb Proxy = Label
-
-
-> -- emptyFam :: Label prd -> Fam (EmptiesT (ChildrenLst prd)) ('[] :: [(k, Type)])
-> emptyFam (Label :: Label prd)
->   = Fam (rempties (Proxy @ (ChildrenLst prd)))
->         EmptyAtt
-
-> type family ChildrenLst (prd :: k) :: [(k, Type)]
-
-> type family EmptiesT (chn :: [(k, Type)])
->     = (r :: [((k, Type), [(k, Type)])]) | r -> chn where
->   EmptiesT '[] = '[]
->   EmptiesT ( '(chi, t) ': chn) = '( '(chi, t), '[] ) ': EmptiesT chn
+-- > pr2Lb :: Proxy a -> Label a
+-- > pr2Lb Proxy = Label
 
 
-> class ReifyEmp (emp :: [(k, Type)]) where
->   type ReifyEmpR emp :: [((k, Type),[(k, Type)])]
->   rempties :: Proxy emp -> ChAttsRec (ReifyEmpR emp)
+-- > -- emptyFam :: Label prd -> Fam (EmptiesT (ChildrenLst prd)) ('[] :: [(k, Type)])
+-- > emptyFam (Label :: Label prd)
+-- >   = Fam (rempties (Proxy @ (ChildrenLst prd)))
+-- >         EmptyAtt
 
-> instance ReifyEmp '[] where
->   type ReifyEmpR '[] = '[] 
->   rempties _ = EmptyCh
+-- > type family ChildrenLst (prd :: k) :: [(k, Type)]
 
-> instance
->   ( ReifyEmp chs
->   , LabelSet ('( '(l, t), '[]) : ReifyEmpR chs) )
->   => ReifyEmp ( '(l, t) ': chs) where
->   type ReifyEmpR( '(l, t) ': chs) = '( '(l, t), '[]) ': ReifyEmpR chs
->   rempties _ = Label @ '(l, t) .= EmptyAtt .*. rempties (Proxy @ chs)
+-- > type family EmptiesT (chn :: [(k, Type)])
+-- >     = (r :: [((k, Type), [(k, Type)])]) | r -> chn where
+-- >   EmptiesT '[] = '[]
+-- >   EmptiesT ( '(chi, t) ': chn) = '( '(chi, t), '[] ) ': EmptiesT chn
 
-> class Empties (fc :: [((k, Type),Type)]) where
->   type EmptiesR fc :: [((k, Type), [(k, Type)])] -- KnownBug, k = k' from here
->   empties :: Record fc -> ChAttsRec (EmptiesR fc)
 
-> instance Empties '[] where
->   type EmptiesR '[] = '[]
->   empties EmptyRec = emptyCh
+-- > class ReifyEmp (emp :: [(k, Type)]) where
+-- >   type ReifyEmpR emp :: [((k, Type),[(k, Type)])]
+-- >   rempties :: Proxy emp -> ChAttsRec (ReifyEmpR emp)
 
-> instance (( Empties fcr
->          , LabelSet ( '( '(lch, t), '[]) ': EmptiesR fcr)) )
->   => Empties ( '( '(lch, t), Attribution e -> Attribution a) ': fcr) where
->   type EmptiesR ( '( '(lch, t), Attribution e -> Attribution a) ': fcr)
->      = '( '(lch, t), '[]) ': EmptiesR fcr
->   empties (ConsRec pch fcr)
->     = let lch = labelTChAtt pch
->       in  (lch .= emptyAtt) .* (empties fcr)
+-- > instance ReifyEmp '[] where
+-- >   type ReifyEmpR '[] = '[] 
+-- >   rempties _ = EmptyCh
 
+-- > instance
+-- >   ( ReifyEmp chs
+-- >   , LabelSet ('( '(l, t), '[]) : ReifyEmpR chs) )
+-- >   => ReifyEmp ( '(l, t) ': chs) where
+-- >   type ReifyEmpR( '(l, t) ': chs) = '( '(l, t), '[]) ': ReifyEmpR chs
+-- >   rempties _ = Label @ '(l, t) .= EmptyAtt .*. rempties (Proxy @ chs)
+
+-- > class Empties (fc :: [((k, Type),Type)]) where
+-- >   type EmptiesR fc :: [((k, Type), [(k, Type)])] -- KnownBug, k = k' from here
+-- >   empties :: Record fc -> ChAttsRec (EmptiesR fc)
+
+-- > instance Empties '[] where
+-- >   type EmptiesR '[] = '[]
+-- >   empties EmptyRec = emptyCh
+
+-- > instance (( Empties fcr
+-- >          , LabelSet ( '( '(lch, t), '[]) ': EmptiesR fcr)) )
+-- >   => Empties ( '( '(lch, t), Attribution e -> Attribution a) ': fcr) where
+-- >   type EmptiesR ( '( '(lch, t), Attribution e -> Attribution a) ': fcr)
+-- >      = '( '(lch, t), '[]) ': EmptiesR fcr
+-- >   empties (ConsRec pch fcr)
+-- >     = let lch = labelTChAtt pch
+-- >       in  (lch .= emptyAtt) .* (empties fcr)
+
+
+-- -- > inhdef
+-- -- >   :: -- ( Require
+
+--   >          (OpExtend' (LabelSetF ('(att, v) : sp))
+--   >                      AttReco att v sp) ctx
+--   >      , ReqR (OpExtend' (LabelSetF ('(att, v) : sp)) AttReco att v sp)
+--   >          ~ Rec AttReco sp') 
+
+-- -- >      ( Require (OpLookup ChiReco chi ic) ctx
+-- -- >      , ReqR (OpLookup ChiReco chi ic) ~ Rec AttReco catts)
+-- -- >      => Label (att :: k)
+-- -- >      -> Label (prd :: k)
+-- -- >      -> Label (chi :: (k, Type))
+-- -- >      -> (Proxy ctx -> Fam sc ip -> v)
+-- -- >      -> CRule ctx prd sc ip ic sp ic' sp
 
 -- > inhdef
--- >   :: -- ( Require
-
-  >          (OpExtend' (LabelSetF ('(att, v) : sp))
-  >                      AttReco att v sp) ctx
-  >      , ReqR (OpExtend' (LabelSetF ('(att, v) : sp)) AttReco att v sp)
-  >          ~ Rec AttReco sp') 
-
--- >      ( Require (OpLookup ChiReco chi ic) ctx
--- >      , ReqR (OpLookup ChiReco chi ic) ~ Rec AttReco catts)
--- >      => Label (att :: k)
--- >      -> Label (prd :: k)
--- >      -> Label (chi :: (k, Type))
--- >      -> (Proxy ctx -> Fam sc ip -> v)
+-- >   :: (Require
+-- >         (OpExtend' (LabelSetF ('(att, v) : r)) AttReco att v r) ctx,
+-- >       Require (OpUpdate ChiReco chi v2 ic) ctx,
+-- >       Require (OpLookup ChiReco chi ic) ctx,
+-- >       ReqR (OpLookup ChiReco chi ic) ~ Rec AttReco r,
+-- >       ReqR (OpUpdate ChiReco chi v2 ic) ~ Rec ChiReco ic',
+-- >       ReqR (OpExtend' (LabelSetF ('(att, v) : r)) AttReco att v r)
+-- >       ~ Rec AttReco v2
+-- >      , ctx' ~ ((Text "inhdef::"
+-- >        :<>: ShowType att :<>: ShowType prd
+-- >        :<>: ShowType chi) ': ctx))
+-- >      =>
+-- >      Label att
+-- >      -> Label prd
+-- >      -> Label chi
+-- >      -> (Proxy ctx' -> Fam sc ip -> v)
 -- >      -> CRule ctx prd sc ip ic sp ic' sp
-
-> inhdef
->   :: (Require
->         (OpExtend' (LabelSetF ('(att, v) : r)) AttReco att v r) ctx,
->       Require (OpUpdate ChiReco chi v2 ic) ctx,
->       Require (OpLookup ChiReco chi ic) ctx,
->       ReqR (OpLookup ChiReco chi ic) ~ Rec AttReco r,
->       ReqR (OpUpdate ChiReco chi v2 ic) ~ Rec ChiReco ic',
->       ReqR (OpExtend' (LabelSetF ('(att, v) : r)) AttReco att v r)
->       ~ Rec AttReco v2
->      , ctx' ~ ((Text "inhdef::"
->        :<>: ShowType att :<>: ShowType prd
->        :<>: ShowType chi) ': ctx))
->      =>
->      Label att
->      -> Label prd
->      -> Label chi
->      -> (Proxy ctx' -> Fam sc ip -> v)
->      -> CRule ctx prd sc ip ic sp ic' sp
-> inhdef (att :: Label att) (prd :: Label prd) (chi :: Label chi)
->        (f :: Proxy ctx' -> Fam sc ip -> v)
->   = CRule $ \(ctx :: Proxy ctx) inp (Fam ic sp :: Fam ic sp)
->        -> let
->         ic'   = req (Proxy @ ctx) (OpUpdate @chi @ChiReco chi catts' ic)
->         catts = req (Proxy @ ctx) (OpLookup @chi @ChiReco @ic chi ic)
->         catts'= req (Proxy @ ctx) (OpExtend @att @AttReco @v att
->                                    (f nctx inp) catts)
->         nctx  = Proxy @ ((Text "inhdef::"
->                          :<>: ShowType att :<>: ShowType prd
->                          :<>: ShowType chi) ': ctx)
->           in  Fam ic' sp
+-- > inhdef (att :: Label att) (prd :: Label prd) (chi :: Label chi)
+-- >        (f :: Proxy ctx' -> Fam sc ip -> v)
+-- >   = CRule $ \(ctx :: Proxy ctx) inp (Fam ic sp :: Fam ic sp)
+-- >        -> let
+-- >         ic'   = req (Proxy @ ctx) (OpUpdate @chi @ChiReco chi catts' ic)
+-- >         catts = req (Proxy @ ctx) (OpLookup @chi @ChiReco @ic chi ic)
+-- >         catts'= req (Proxy @ ctx) (OpExtend @att @AttReco @v att
+-- >                                    (f nctx inp) catts)
+-- >         nctx  = Proxy @ ((Text "inhdef::"
+-- >                          :<>: ShowType att :<>: ShowType prd
+-- >                          :<>: ShowType chi) ': ctx)
+-- >           in  Fam ic' sp
 
 
-> data FcReco
-> type TaggedFc = TagField FcReco
-> type FcRecord = Rec FcReco
+-- > data FcReco
+-- > type TaggedFc = TagField FcReco
+-- > type FcRecord = Rec FcReco
 
-semantic functions of children are maps from attributions (ic)
-to attributions (sc). We put this at kind level:
+-- semantic functions of children are maps from attributions (ic)
+-- to attributions (sc). We put this at kind level:
 
-> type instance WrapField FcReco (v :: ([(k, Type)], [(k, Type)]))
->   = Attribution (Fst v) -> Attribution (Snd v)
+-- > type instance WrapField FcReco (v :: ([(k, Type)], [(k, Type)]))
+-- >   = Attribution (Fst v) -> Attribution (Snd v)
 
-> class Kn2 (fcr :: [((k, Type), ([(k, Type)], [(k, Type)]))]) where
->  type FSem fcr :: ([((k, Type), [(k, Type)])],[((k, Type), [(k, Type)])])
->      -- | res -> fcr
->  kn2 :: FcRecord fcr -> ChAttsRec (Fst (FSem fcr))
->      -> ChAttsRec (Snd (FSem fcr))
+-- > class Kn2 (fcr :: [((k, Type), ([(k, Type)], [(k, Type)]))]) where
+-- >  type FSem fcr :: ([((k, Type), [(k, Type)])],[((k, Type), [(k, Type)])])
+-- >      -- | res -> fcr
+-- >  kn2 :: FcRecord fcr -> ChAttsRec (Fst (FSem fcr))
+-- >      -> ChAttsRec (Snd (FSem fcr))
 
-> instance Kn2 '[] where
->   type FSem '[] = '( '[], '[])
->   kn2 _ _ = EmptyCh
+-- > instance Kn2 '[] where
+-- >   type FSem '[] = '( '[], '[])
+-- >   kn2 _ _ = EmptyCh
 
-> instance ( lch ~ '(l, t)
->          , LabelSet ('( '(l, t), inp) : Fst (FSem fcs))
->          , LabelSet ('( '(l, t), out) : Snd (FSem fcs))
->          , Kn2 fcs
->          )
->   => Kn2 ( '( '(l, t), '(inp, out) ) ': fcs) where
->   type FSem ( '( '(l, t), '(inp, out) ) ': fcs)
->     = '( '( '(l, t), inp) ': Fst (FSem fcs), '( '(l, t), out) ': Snd (FSem fcs))
->   kn2 (ConsRec (TagField _ lch fch) fcr) (ConsCh pich icr)
->    = let scr = kn2 fcr icr
->          ich = unTaggedChAttr pich
->      in ConsCh (TaggedChAttr lch
->                 (fch ich)) scr
+-- > instance ( lch ~ '(l, t)
+-- >          , LabelSet ('( '(l, t), inp) : Fst (FSem fcs))
+-- >          , LabelSet ('( '(l, t), out) : Snd (FSem fcs))
+-- >          , Kn2 fcs
+-- >          )
+-- >   => Kn2 ( '( '(l, t), '(inp, out) ) ': fcs) where
+-- >   type FSem ( '( '(l, t), '(inp, out) ) ': fcs)
+-- >     = '( '( '(l, t), inp) ': Fst (FSem fcs), '( '(l, t), out) ': Snd (FSem fcs))
+-- >   kn2 (ConsRec (TagField _ lch fch) fcr) (ConsCh pich icr)
+-- >    = let scr = kn2 fcr icr
+-- >          ich = unTaggedChAttr pich
+-- >      in ConsCh (TaggedChAttr lch
+-- >                 (fch ich)) scr
 
--- > 
--- > ICh ( '(lch, '(inp, out) ) ': fcs)
+-- -- > 
+-- -- > ICh ( '(lch, '(inp, out) ) ': fcs)
+-- -- >     = '(lch, inp) ': ICh fcs
+-- -- >   type SCh ( '(lch, '(inp, out) ) ': fcs)
+-- -- >     = '(lch, out) ': SCh fcs
+
+
+
+-- > class Kn (fcr :: [((k, Type), ([(k, Type)], [(k, Type)]))]) where
+-- >  type ICh fcr :: [((k, Type), [(k, Type)])]
+-- >  type SCh fcr :: [((k, Type), [(k, Type)])]
+-- >  kn :: FcRecord fcr -> ChAttsRec (ICh fcr) -> ChAttsRec (SCh fcr)
+
+-- > instance Kn '[] where
+-- >  type ICh '[] = '[]
+-- >  type SCh '[] = '[]
+-- >  kn _ _ = emptyCh 
+
+-- > instance ( lch ~ '(l, t)
+-- >          , LabelSet ('( '(l, t), inp) ': ICh fcs)
+-- >          , LabelSet ('( '(l, t), out) ': SCh fcs)
+-- >          , Kn fcs
+-- >          )
+-- >   => Kn ( '(lch, '(inp, out) ) ': fcs) where
+-- >   type ICh ( '(lch, '(inp, out) ) ': fcs)
 -- >     = '(lch, inp) ': ICh fcs
 -- >   type SCh ( '(lch, '(inp, out) ) ': fcs)
 -- >     = '(lch, out) ': SCh fcs
+-- >   kn (ConsRec (TagField _ lch fch) fcr) (ConsCh pich icr)
+-- >    = let scr = kn fcr icr
+-- >          ich = unTaggedChAttr pich
+-- >      in ConsCh (TaggedChAttr lch
+-- >                 ((fch :: Attribution inp -> Attribution out)
+-- >                  ich)) scr
+
+-- > knit :: ( Kn fc
+-- >         , ReifyEmp (ChildrenLst prd)) =>
+-- >   CRule '[] prd (SCh fc) ip (ReifyEmpR (ChildrenLst prd)) '[] (ICh fc) sp
+-- >   -> FcRecord fc -> Attribution ip -> Attribution sp
+-- > knit (rule :: CRule '[] prd (SCh fc) ip
+-- >               (ReifyEmpR (ChildrenLst prd)) '[] (ICh fc) sp)
+-- >               (fc :: FcRecord fc) ip
+-- >   = let (Fam ic sp) = runCRule rule emptyCtx
+-- >                        (Fam sc ip) (emptyFam (Label @prd))
+-- >         sc          = kn fc ic
+-- >     in  sp
+
+
+-- > infixr 4 .=..
+
+-- --> (.=..) :: Label l -> (Attribution ip -> Attribution sp)
+-- -->                      -> TagField FcReco l '(ip, sp)
+
+-- > l .=.. v = TagField (Label @ FcReco) l v
+
+-- > class Kn3 (fcr :: [((k, Type), Type)]) where
+-- >   type ICh3 fcr :: [((k, Type), [(k, Type)])]
+-- >   type SCh3 fcr :: [((k, Type), [(k, Type)])]
+-- >   kn3 :: Record fcr -> ChAttsRec (ICh3 fcr) -> ChAttsRec (SCh3 fcr)
+
+-- > instance Kn3 '[] where
+-- >   type ICh3 '[] = '[]
+-- >   type SCh3 '[] = '[] 
+-- >   kn3 _ _ = emptyCh
+
+-- > instance ( lch ~ '(l, t)
+-- >          , Kn3 fc
+-- >          , LabelSet ('(lch, sch) : SCh3 fc)
+-- >          , LabelSet ('(lch, ich) : ICh3 fc)
+-- >  --        , WrapField FcReco (Attribution ich -> Attribution sch)
+-- >  --          ~ (Attribution ich -> Attribution sch)
+-- >          ) => 
+-- >   Kn3 ( '(lch , Attribution ich -> Attribution sch) ': fc) where
+-- >   type ICh3 ( '(lch , Attribution ich -> Attribution sch) ': fc)
+-- >     = '(lch , ich) ': ICh3 fc
+-- >   type SCh3 ( '(lch , Attribution ich -> Attribution sch) ': fc)
+-- >     = '(lch , sch) ': SCh3 fc
+-- >   kn3 (ConsRec (TagField _ lch fch) fcr) (ConsCh pich icr)
+-- >    = let scr = kn3 fcr icr
+-- >          ich = unTaggedChAttr pich
+-- >      in ConsCh (TaggedChAttr lch
+-- >                 (fch ich)) scr
+
+-- > knit3 (rule :: CRule '[] prd (SCh3 fc) ip
+-- >               (EmptiesT (ChildrenLst prd)) '[] (ICh3 fc) sp)
+-- >               (fc :: Record fc) ip
+-- >   = let (Fam ic sp) = runCRule rule emptyCtx
+-- >                        (Fam sc ip) (emptyFam (Label @prd))
+-- >         sc          = kn3 fc ic
+-- >     in  sp
 
 
 
-> class Kn (fcr :: [((k, Type), ([(k, Type)], [(k, Type)]))]) where
->  type ICh fcr :: [((k, Type), [(k, Type)])]
->  type SCh fcr :: [((k, Type), [(k, Type)])]
->  kn :: FcRecord fcr -> ChAttsRec (ICh fcr) -> ChAttsRec (SCh fcr)
-
-> instance Kn '[] where
->  type ICh '[] = '[]
->  type SCh '[] = '[]
->  kn _ _ = emptyCh 
-
-> instance ( lch ~ '(l, t)
->          , LabelSet ('( '(l, t), inp) ': ICh fcs)
->          , LabelSet ('( '(l, t), out) ': SCh fcs)
->          , Kn fcs
->          )
->   => Kn ( '(lch, '(inp, out) ) ': fcs) where
->   type ICh ( '(lch, '(inp, out) ) ': fcs)
->     = '(lch, inp) ': ICh fcs
->   type SCh ( '(lch, '(inp, out) ) ': fcs)
->     = '(lch, out) ': SCh fcs
->   kn (ConsRec (TagField _ lch fch) fcr) (ConsCh pich icr)
->    = let scr = kn fcr icr
->          ich = unTaggedChAttr pich
->      in ConsCh (TaggedChAttr lch
->                 ((fch :: Attribution inp -> Attribution out)
->                  ich)) scr
-
-> knit :: ( Kn fc
->         , ReifyEmp (ChildrenLst prd)) =>
->   CRule '[] prd (SCh fc) ip (ReifyEmpR (ChildrenLst prd)) '[] (ICh fc) sp
->   -> FcRecord fc -> Attribution ip -> Attribution sp
-> knit (rule :: CRule '[] prd (SCh fc) ip
->               (ReifyEmpR (ChildrenLst prd)) '[] (ICh fc) sp)
->               (fc :: FcRecord fc) ip
->   = let (Fam ic sp) = runCRule rule emptyCtx
->                        (Fam sc ip) (emptyFam (Label @prd))
->         sc          = kn fc ic
->     in  sp
-
-
-> infixr 4 .=..
-
---> (.=..) :: Label l -> (Attribution ip -> Attribution sp)
--->                      -> TagField FcReco l '(ip, sp)
-
-> l .=.. v = TagField (Label @ FcReco) l v
-
-> class Kn3 (fcr :: [((k, Type), Type)]) where
->   type ICh3 fcr :: [((k, Type), [(k, Type)])]
->   type SCh3 fcr :: [((k, Type), [(k, Type)])]
->   kn3 :: Record fcr -> ChAttsRec (ICh3 fcr) -> ChAttsRec (SCh3 fcr)
-
-> instance Kn3 '[] where
->   type ICh3 '[] = '[]
->   type SCh3 '[] = '[] 
->   kn3 _ _ = emptyCh
-
-> instance ( lch ~ '(l, t)
->          , Kn3 fc
->          , LabelSet ('(lch, sch) : SCh3 fc)
->          , LabelSet ('(lch, ich) : ICh3 fc)
->  --        , WrapField FcReco (Attribution ich -> Attribution sch)
->  --          ~ (Attribution ich -> Attribution sch)
->          ) => 
->   Kn3 ( '(lch , Attribution ich -> Attribution sch) ': fc) where
->   type ICh3 ( '(lch , Attribution ich -> Attribution sch) ': fc)
->     = '(lch , ich) ': ICh3 fc
->   type SCh3 ( '(lch , Attribution ich -> Attribution sch) ': fc)
->     = '(lch , sch) ': SCh3 fc
->   kn3 (ConsRec (TagField _ lch fch) fcr) (ConsCh pich icr)
->    = let scr = kn3 fcr icr
->          ich = unTaggedChAttr pich
->      in ConsCh (TaggedChAttr lch
->                 (fch ich)) scr
-
-> knit3 (rule :: CRule '[] prd (SCh3 fc) ip
->               (EmptiesT (ChildrenLst prd)) '[] (ICh3 fc) sp)
->               (fc :: Record fc) ip
->   = let (Fam ic sp) = runCRule rule emptyCtx
->                        (Fam sc ip) (emptyFam (Label @prd))
->         sc          = kn3 fc ic
->     in  sp
 
 
 
-knit :: ( Empties fc
-        , Kn fc ) =>
-  Rule (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp
-     -> Record fc -> Attribution ip -> Attribution sp
-knit rule fc ip
-  = let ec          = empties fc
-        (Fam ic sp) = rule (Fam sc ip) (Fam ec emptyAtt)
-        sc          = kn fc ic
-    in  sp
+
+-- knit :: ( Empties fc
+--         , Kn fc ) =>
+--   Rule (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp
+--      -> Record fc -> Attribution ip -> Attribution sp
+-- knit rule fc ip
+--   = let ec          = empties fc
+--         (Fam ic sp) = rule (Fam sc ip) (Fam ec emptyAtt)
+--         sc          = kn fc ic
+--     in  sp
 
 
--- ------------------------------------------------------------------------------
+-- -- ------------------------------------------------------------------------------
 
-class Empties (fc :: [((k, Type),Type)]) where
+-- class Emp
+t ies (fc :: [((k, Type),Type)]) where
   type EmptiesR fc :: [((k, Type), [(k, Type)])] -- KnownBug, k = k' from here
   empties :: Record fc -> ChAttsRec (EmptiesR fc)
 
