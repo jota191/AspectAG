@@ -17,7 +17,7 @@ module Repmin where
 
 import System.Exit (exitFailure)
 import Language.Grammars.AspectAG2
---import Language.Grammars.AspectAG.Derive
+import Language.Grammars.AspectAG.Derive
 import Control.Monad
 import Data.Proxy
 import GHC.TypeLits
@@ -79,8 +79,8 @@ sem_Tree asp (Node l r) = knit3 ((asp .#. p_Node))$
                               (ch_l .=. sem_Tree asp l)
                          .*. ((ch_r .=. sem_Tree asp r)
                          .*.  EmptyRec)
---sem_Tree asp (Leaf i)   = knit (asp .#. p_Leaf)$
---                           ch_i .=.. sem_Lit i .*. EmptyRec
+sem_Tree asp (Leaf i)   = knit3 (asp .#. p_Leaf)$
+                          ch_i .=. sem_Lit i .*. EmptyRec
 
 -- sem_Root  asp (Root t) = knit (asp .#. p_Root)$
 --                          ch_tree .=.. sem_Tree asp t .*. EmptyRec
@@ -125,11 +125,17 @@ foo seml semr ic
 
 -- --f = lookupCtx' @Reco (Proxy @ '[] ) (asp_smin) p_Leaf
 
--- --node_smin (Fam chi par)
--- --  = syndef smin $ (chi .# ch_l #. smin) `min` (chi .# ch_r #. smin)
+node_smin = syndef smin p_Node
+  $(\Proxy fam -> ((chi fam .# ch_l #. smin) `min` (chi fam .# ch_r #. smin)))
 
+leaf_smin = syndef smin p_Leaf
+  $(\Proxy fam -> (chi fam .# ch_i #. lit @ Int)) 
 
+asp_smin =  p_Leaf .=. leaf_smin
+        .*. p_Node .=. node_smin
+        .*. emptyRecord
 
+minimo t = sem_Tree asp_smin t emptyAtt #. smin
 
 -- err inp  = snd (((smin1 `ext` smin2) inp (Fam EmptyRec EmptyRec)),
 --                ((smin1 `ext` smin2) inp))
@@ -169,13 +175,13 @@ foo seml semr ic
 
 -- asp_repmin = asp_smin  .+. asp_sres .+. asp_ival -- .+. asp_smin
 
--- examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
---                       (Node (Leaf 2) (Leaf 7))
---                     )
---                 (Node (Node (Leaf (5)) (Leaf (27)))
---                   (Leaf 6)
---                 )
---               )
+examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
+                      (Node (Leaf 2) (Leaf 7))
+                    )
+                (Node (Node (Leaf (5)) (Leaf (27)))
+                  (Leaf 6)
+                )
+              )
 
 
 -- exampleT 0 = examplet

@@ -143,14 +143,15 @@ syndef ::  Label att -> Label prd
 >  = CRule $ \ ctx input -> f ctx input . g ctx input
 
 > ext2 -- :: (Require (OpEqLabel prd prd 'True) (Text "prds" ': ctx))
->      :: CRule ctx prd sc ip ic sp ic' sp'
+>      :: (ReifyEmp (ChildrenLst prd)) => 
+>      CRule ctx prd sc ip ic sp ic' sp'
 >      -> CRule ctx prd
 >               sc ip
->               (EmptiesT (ChildrenLst prd)) ('[] :: [(k, Type)])
+>               (ReifyEmpR (ChildrenLst prd)) ('[] :: [(k, Type)])
 >               ic sp
 >      -> CRule ctx prd
 >               sc ip
->              (EmptiesT (ChildrenLst prd)) ( '[] :: [(k, Type)])
+>              (ReifyEmpR (ChildrenLst prd)) ( '[] :: [(k, Type)])
 >               ic' sp'
 > (f :: CRule ctx prd
 >               sc ip
@@ -191,9 +192,10 @@ syndef ::  Label att -> Label prd
 > pr2Lb Proxy = Label
 
 
-> emptyFam :: Label prd -> Fam (EmptiesT (ChildrenLst prd)) ('[] :: [(k, Type)])
+> -- emptyFam :: Label prd -> Fam (EmptiesT (ChildrenLst prd)) ('[] :: [(k, Type)])
 > emptyFam (Label :: Label prd)
->   = Fam (undefined :: ChAttsRec (EmptiesT (ChildrenLst prd))) EmptyAtt
+>   = Fam (rempties (Proxy @ (ChildrenLst prd)))
+>         EmptyAtt
 
 > type family ChildrenLst (prd :: k) :: [(k, Type)]
 
@@ -203,7 +205,37 @@ syndef ::  Label att -> Label prd
 >   EmptiesT ( '(chi, t) ': chn) = '( '(chi, t), '[] ) ': EmptiesT chn
 
 
+> class ReifyEmp (emp :: [(k, Type)]) where
+>   type ReifyEmpR emp :: [((k, Type),[(k, Type)])]
+>   rempties :: Proxy emp -> ChAttsRec (ReifyEmpR emp)
 
+> instance ReifyEmp '[] where
+>   type ReifyEmpR '[] = '[] 
+>   rempties _ = EmptyCh
+
+> instance
+>   ( ReifyEmp chs
+>   , LabelSet ('( '(l, t), '[]) : ReifyEmpR chs) )
+>   => ReifyEmp ( '(l, t) ': chs) where
+>   type ReifyEmpR( '(l, t) ': chs) = '( '(l, t), '[]) ': ReifyEmpR chs
+>   rempties _ = Label @ '(l, t) .= EmptyAtt .*. rempties (Proxy @ chs)
+
+> class Empties (fc :: [((k, Type),Type)]) where
+>   type EmptiesR fc :: [((k, Type), [(k, Type)])] -- KnownBug, k = k' from here
+>   empties :: Record fc -> ChAttsRec (EmptiesR fc)
+
+> instance Empties '[] where
+>   type EmptiesR '[] = '[]
+>   empties EmptyRec = emptyCh
+
+> instance (( Empties fcr
+>          , LabelSet ( '( '(lch, t), '[]) ': EmptiesR fcr)) )
+>   => Empties ( '( '(lch, t), Attribution e -> Attribution a) ': fcr) where
+>   type EmptiesR ( '( '(lch, t), Attribution e -> Attribution a) ': fcr)
+>      = '( '(lch, t), '[]) ': EmptiesR fcr
+>   empties (ConsRec pch fcr)
+>     = let lch = labelTChAtt pch
+>       in  (lch .= emptyAtt) .* (empties fcr)
 
 
 -- > inhdef
@@ -324,11 +356,11 @@ to attributions (sc). We put this at kind level:
 >                  ich)) scr
 
 > knit :: ( Kn fc
->         ) =>
->   CRule '[] prd (SCh fc) ip (EmptiesT (ChildrenLst prd)) '[] (ICh fc) sp
+>         , ReifyEmp (ChildrenLst prd)) =>
+>   CRule '[] prd (SCh fc) ip (ReifyEmpR (ChildrenLst prd)) '[] (ICh fc) sp
 >   -> FcRecord fc -> Attribution ip -> Attribution sp
 > knit (rule :: CRule '[] prd (SCh fc) ip
->               (EmptiesT (ChildrenLst prd)) '[] (ICh fc) sp)
+>               (ReifyEmpR (ChildrenLst prd)) '[] (ICh fc) sp)
 >               (fc :: FcRecord fc) ip
 >   = let (Fam ic sp) = runCRule rule emptyCtx
 >                        (Fam sc ip) (emptyFam (Label @prd))
@@ -401,16 +433,6 @@ class Empties (fc :: [((k, Type),Type)]) where
 instance Empties '[] where
   type EmptiesR '[] = '[]
   empties EmptyRec = emptyCh
-
-
--- instance (( Empties fcr
---          , LabelSet ( '( '(lch, t), '[]) ': EmptiesR fcr)) )
---   => Empties ( '( '(lch, t), Type) ': fcr) where
---   type EmptiesR ( '( '(lch, t), Type) ': fcr)
---      = '( '(lch, t), '[]) ': EmptiesR fcr
---   empties (ConsRec pch fcr)
---     = let lch = labelTChAtt pch
---       in  (lch .= emptyAtt) .* (empties fcr)
 
 instance (( Empties fcr
          , LabelSet ( '( '(lch, t), '[]) ': EmptiesR fcr)) )
