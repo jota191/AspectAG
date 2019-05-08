@@ -77,6 +77,8 @@ node_ival_l = inhdef ival p_Node ch_l (\_ fam -> par fam #. ival)
 node_ival_r = inhdef ival p_Node ch_r (\_ fam -> par fam #. ival)
 
 
+asp_Node = root_sres `ext2` node_smin --`ext` node_ival_l `ext` node_ival_r
+
 ---sem_Tree asp (Node l r) = knit3 ((asp .#. p_Node))$
 --                              (ch_l .=. sem_Tree asp l)
 --                         .*. ((ch_r .=. sem_Tree asp r)

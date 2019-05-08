@@ -191,6 +191,28 @@
 >  = CRule $ \ctx input -> f ctx input . g ctx input
 
 
+> data OpEqLabel prd1 prd2 where
+>   OpEqLabel :: Label prd1 -> Label prd2 -> OpEqLabel prd1 prd2
+
+> instance Require (OpEqLabel prd prd) ctx where
+>   type ReqR (OpEqLabel prd prd) = ()
+>   req = undefined
+
+
+> instance Require (OpError (Text "" :<>: ShowType prd1 :<>: Text " /= "
+>                             :<>: ShowType prd2)) ctx
+>   => Require (OpEqLabel prd1 prd2) ctx where
+>   type ReqR (OpEqLabel prd1 prd2) = ()
+>   req = undefined
+
+> ext2 :: (Require (OpEqLabel prd prd') (Text "ext":ctx), prd ~ prd')
+>      => CRule ctx prd sc ip ic sp ic' sp'
+>      -> CRule ctx prd' sc ip a b ic sp
+>      -> CRule ctx prd sc ip a b ic' sp'
+> ext2 = ext
+
+
+
 > class Kn3 (fcr :: [(Child, Type)]) (prd :: Prod) where
 >   type ICh3 fcr :: [(Child, [(Att, Type)])]
 >   type SCh3 fcr :: [(Child, [(Att, Type)])]

@@ -95,16 +95,19 @@ leaf_sres (Fam chi par)
 
 smin1 (Fam chi par) = syndef' smin (8 :: Int)
 smin2 (Fam chi par) = syndef' sres (1 :: Int)
-
+smin3 (Fam chi par) = syndef' ival (5 :: Int)
+{-
 err inp  = snd (((smin1 `ext` smin2) inp (Fam EmptyRec EmptyRec)),
                ((smin1 `ext` smin2) inp))
+-}
+err2  = smin1 `ext` smin1 
 
 err'= (req (Proxy @ '[Text "1"])
        (OpExtend @_ @Reco sres (1 :: Int)
        (req (Proxy @ '[Text "0"])
        (OpExtend @_ @Reco smin (0 :: Int) EmptyRec))))
        
-
+errR r = sres .=. 'a' .*. smin .=. 'b' .*. r
 
 node_smin (Fam chi par)
   = syndef' smin $ ((lookupCtx (Proxy @ '[Text "syndef smin"])chi ch_l) #. smin)
