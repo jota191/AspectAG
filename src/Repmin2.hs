@@ -17,7 +17,7 @@ module Repmin where
 
 import System.Exit (exitFailure)
 import Language.Grammars.AspectAG2
--- import Language.Grammars.AspectAG.Derive
+--import Language.Grammars.AspectAG.Derive
 import Control.Monad
 import Data.Proxy
 import GHC.TypeLits
@@ -30,82 +30,62 @@ data Tree = Leaf Int
 
 
 smin = Label @ ('Att "smin" Int)
-sres = Label @ ('Att "smin" Tree)
+sres = Label @ ('Att "sres" Tree)
 ival = Label @ ('Att "ival" Int)
 
-type P_Node = 'Prod "p_Node" ('NT "Tree")
+type P_Node = 'Prd "p_Node" ('NT "Tree")
 p_Node = Label @ P_Node
 
-type P_Leaf = 'Prod "p_Leaf" ('NT "Tree") -- ?
+type P_Leaf = 'Prd "p_Leaf" ('NT "Tree") -- ?
 p_Leaf = Label @ P_Leaf
 
-type P_Root = 'Prod "p_Root" ('NT "Root")
+type P_Root = 'Prd "p_Root" ('NT "Root")
 p_Root = Label @ P_Root
 
-ch_l = Label @ ('Child "ch_l" P_Node ('NT "Tree"))
-ch_r = Label @ ('Child "ch_r" P_Node ('NT "Tree"))
+ch_l    = Label @ ('Chi "ch_l"    P_Node ('NT "Tree"))
+ch_r    = Label @ ('Chi "ch_r"    P_Node ('NT "Tree"))
+ch_tree = Label @ ('Chi "ch_tree" P_Root ('NT "Root"))
+ch_i    = Label @ ('Chi "ch_i"    P_Node ('T Int))
 
-node_smin = syndef smin p_Node $(\_ fam -> ((chi fam .# ch_l #. smin)
-                                             `min`
-                                            (chi fam .# ch_r #. smin)))
+node_smin =
+  syndef smin p_Node
+  $(\_ fam ->
+      ((chi fam .# ch_l #. smin) `min` (chi fam .# ch_r #. smin))
+   )
 
+leaf_smin
+  = syndef smin p_Leaf
+  $(\_ fam ->
+      (chi fam .# ch_i #. lit @ Int)
+   )
 
--- ch_tree = Label @ ('Child "ch_tree" )
+node_sres
+  = syndef sres p_Node
+  $(\_ fam ->
+      ((chi fam .# ch_l #. sres) `Node` (chi fam .# ch_r #. sres))
+   )
 
+leaf_sres = syndef sres p_Leaf $
+  \_ fam -> Leaf (par fam #. ival)
 
--- -- Labels for children
--- data Ch_tree -- root
--- data Ch_r    -- node
--- data Ch_l    -- node
--- data Ch_i    -- leaf
-
--- ch_tree = Label :: Label '(Ch_tree, Tree)
--- ch_r    = Label :: Label '(Ch_r, Tree)
--- ch_l    = Label :: Label '(Ch_l, Tree)
--- ch_i    = Label :: Label '(Ch_i, Int)
-
-
--- ----non terminals
--- nt_Root = undefined :: Label Root
--- nt_Tree = undefined :: Label Tree
-
--- data P_Root; p_Root = Label :: Label (P_Root)
--- data P_Node; p_Node = Label :: Label (P_Node)
--- data P_Leaf; p_Leaf = Label :: Label (P_Leaf)  
-
--- --type instance ChildrenLst P_Node = '[ '(Ch_l, Tree), '(Ch_r, Tree)]--
--- --type instance ChildrenLst P_Root = '[ '(Ch_tree, Tree)]
--- --type instance ChildrenLst P_Leaf = '[ '(Ch_i, Int)]
+root_sres = syndef sres p_Root $
+ \_ fam -> chi fam .# ch_tree #. sres
 
 
--- smin1  = syndef sres p_Leaf (\_ fam -> (3::Int))
--- smin2  = syndef smin p_Node (\_ fam -> (3::Int))
--- smin3  = syndef ival p_Node (\_ fam -> (3::Int))
--- smin3' = syndef ival p_Node (\_ fam -> (3::Int))
+root_ival   = inhdef ival p_Root ch_tree (\_ fam -> chi fam .# ch_tree #. smin)
+node_ival_l = inhdef ival p_Node ch_l (\_ fam -> par fam #. ival)
+node_ival_r = inhdef ival p_Node ch_r (\_ fam -> par fam #. ival)
 
 
--- sem_Tree asp (Node l r) = knit3 ((asp .#. p_Node))$
---                               (ch_l .=. sem_Tree asp l)
---                          .*. ((ch_r .=. sem_Tree asp r)
---                          .*.  EmptyRec)
+---sem_Tree asp (Node l r) = knit3 ((asp .#. p_Node))$
+--                              (ch_l .=. sem_Tree asp l)
+--                         .*. ((ch_r .=. sem_Tree asp r)
+--                         .*.  EmptyRec)
 -- sem_Tree asp (Leaf i)   = knit3 (asp .#. p_Leaf)$
 --                           ch_i .=. sem_Lit i .*. EmptyRec
 -- sem_Root asp (Root r)   = knit3 (asp .#. p_Root)$
 --                           ch_tree .=. sem_Tree asp r .*. EmptyRec
 
--- foo seml semr ic
---    = kn3 ((TagField (Label @ Reco) ch_l seml)
---       .*. TagField (Label @ Reco) ch_r semr
---       .*.  EmptyRec) ic
-
-
-
---                          {-- --}                         {-- --}
-
-
-
--- leaf_smin = syndef smin p_Leaf
---   $(\_ fam -> (chi fam .# ch_i #. lit @ Int)) 
 
 -- asp_smin =  p_Leaf .=. leaf_smin
 --         .*. p_Node .=. node_smin
@@ -141,13 +121,13 @@ node_smin = syndef smin p_Node $(\_ fam -> ((chi fam .# ch_l #. smin)
 --   .*. p_Node .=. node_sres `ext2` node_smin `ext2` node_ival_l `ext2` node_ival_r
 --   .*. emptyRecord
 
--- examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
---                       (Node (Leaf 2) (Leaf 7))
---                     )
---                 (Node (Node (Leaf (5)) (Leaf (27)))
---                   (Leaf 6)
---                 )
---               )
+examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
+                      (Node (Leaf 2) (Leaf 7))
+                    )
+                (Node (Node (Leaf (5)) (Leaf (27)))
+                  (Leaf 6)
+                )
+              )
 
 
 

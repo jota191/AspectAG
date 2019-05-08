@@ -60,13 +60,14 @@ import GHC.TypeLits
 -- this allows us to recover pattern matching
 pattern EmptyCh :: ChAttsRec prd '[]
 pattern EmptyCh = EmptyRec
-pattern ConsCh :: (LabelSet ( '( '(l, t), v) ': xs)) =>
-  TaggedChAttr prd '(l,t) v -> ChAttsRec prd xs -> ChAttsRec prd ( '( '(l,t),v) ': xs)
+pattern ConsCh :: (LabelSet ( '( 'Chi ch prd nt, v) ': xs)) =>
+  TaggedChAttr prd ( 'Chi ch prd nt) v -> ChAttsRec prd xs
+                         -> ChAttsRec prd ( '( 'Chi ch prd nt,v) ': xs)
 pattern ConsCh h t = ConsRec h t
 
 -- | Pretty constructors
 infixr 2 .*
-(.*) :: LabelSet ('(ch, attrib) ': attribs) =>
+(.*) :: LabelSet ('(ch, attrib) ':  attribs) =>
   TaggedChAttr prd ch attrib -> ChAttsRec prd attribs
     -> ChAttsRec prd ('(ch, attrib) ': attribs)
 (.*) = ConsRec

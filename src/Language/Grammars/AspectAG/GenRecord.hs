@@ -76,8 +76,11 @@ type instance  WrapField Reco    (v :: Type) = v
 type instance  WrapField AttReco  (v :: Type) = v
 type instance  WrapField (ChiReco prd)  (v :: [(k, Type)]) = Attribution v
 
+data Prod  = Prd Symbol NT
+data Child = Chi Symbol Prod NT
+data NT    = NT Symbol | T Type
 
-data ChiReco (prd :: k); data AttReco; data Reco
+data ChiReco (prd :: Prod); data AttReco; data Reco
 
 type Attribution = Rec AttReco
 type ChAttsRec prd  = Rec (ChiReco prd)
