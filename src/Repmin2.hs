@@ -30,6 +30,7 @@ data Tree = Leaf Int
 
 
 smin = Label @ ('Att "smin" Int)
+savg = Label @ ('Att "savg" Int)
 sres = Label @ ('Att "sres" Tree)
 ival = Label @ ('Att "ival" Int)
 
@@ -42,39 +43,33 @@ p_Leaf = Label @ P_Leaf
 type P_Root = 'Prd "p_Root" ('NT "Root")
 p_Root = Label @ P_Root
 
-ch_l    = Label @ ('Chi "ch_l"    P_Node ('NT "Tree"))
-ch_r    = Label @ ('Chi "ch_r"    P_Node ('NT "Tree"))
-ch_tree = Label @ ('Chi "ch_tree" P_Root ('NT "Root"))
-ch_i    = Label @ ('Chi "ch_i"    P_Leaf ('T Int))
+type Nt_Tree = 'NT "Tree"
+
+ch_l    = Label @ ('Chi "ch_l"    P_Node ('Left Nt_Tree))
+ch_r    = Label @ ('Chi "ch_r"    P_Node ('Left Nt_Tree))
+ch_tree = Label @ ('Chi "ch_tree" P_Root ('Left Nt_Tree))
+ch_i    = Label @ ('Chi "ch_i"    P_Leaf ('Right ('T Bool)))
 
 node_smin =
-  syndef smin p_Node
-  $(\_ fam ->
-      ((chi fam .# ch_l #. smin) `min` (chi fam .# ch_r #. smin))
-   )
+  syndefM smin p_Node $ min <$> at ch_l smin <*> at ch_r savg-- smin
 
 leaf_smin
-  = syndef smin p_Leaf
-  $(\_ fam ->
-      (chi fam .# ch_i #. lit @ Int)
-   )
+  = syndefM smin p_Leaf $ at ch_i lit
 
 node_sres
-  = syndef sres p_Node
-  $(\_ fam ->
-      ((chi fam .# ch_l #. sres) `Node` (chi fam .# ch_r #. sres))
-   )
+  = syndefM sres p_Node $ Node <$> at ch_l sres <*> at ch_r sres
 
-leaf_sres = syndef sres p_Leaf $
-  \_ fam -> Leaf (par fam #. ival)
+leaf_sres = syndefM sres p_Leaf $ Leaf <$> at lhs ival
 
-root_sres = syndef sres p_Root $
- \_ fam -> chi fam .# ch_tree #. sres
+root_sres = syndefM sres p_Root $ at ch_tree sres
 
 
-root_ival   = inhdef ival p_Root ch_tree (\_ fam -> chi fam .# ch_tree #. smin)
-node_ival_l = inhdef ival p_Node ch_l (\_ fam -> par fam #. ival)
-node_ival_r = inhdef ival p_Node ch_r (\_ fam -> par fam #. ival)
+root_ival = inhdefM ival p_Root ch_tree $ at ch_tree smin
+
+
+node_ival_l = inhdefM ival p_Node ch_l $ at lhs ival
+
+node_ival_r = inhdefM ival p_Node ch_r $ at lhs ival
 
 
 sem_Tree asp (Node l r) = knit ((asp .#. p_Node))$
@@ -87,20 +82,19 @@ sem_Root asp (Root r)   = knit (asp .#. p_Root)$
                           ch_tree .=. sem_Tree asp r .*. EmptyRec
 
 
-asp_Node = node_sres `ext2` node_smin `ext2` node_ival_l `ext2` node_ival_r
+asp_Node = node_smin `ext` node_smin `ext` node_ival_l `ext` node_ival_r
 
 
 asp_smin =   p_Leaf .=. leaf_smin
-        .*.
-             p_Node .=. node_smin
+        .*.  p_Node .=. node_smin
         .*. emptyRecord
 
 minimo t = sem_Tree asp_smin t emptyAtt #. smin
 
 asp_repmin
-   =  p_Root .=. (root_sres `ext2` root_ival)
-  .*. p_Leaf .=. (leaf_sres `ext2` leaf_smin)
-  .*. p_Node .=. node_sres `ext2` node_smin `ext2` node_ival_l `ext2` node_ival_r
+   =  p_Root .=. (root_sres `ext` root_ival)
+  .*. p_Leaf .=. (leaf_sres `ext` leaf_smin)
+  .*. p_Node .=. node_sres `ext` node_smin `ext` node_ival_l `ext` node_ival_r
   .*. emptyRecord
 
 examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
@@ -110,8 +104,6 @@ examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
                   (Leaf 6)
                 )
               )
-
-
 
 exampleT 0 = examplet
 exampleT n = Node (exampleT (n-1)) (exampleT (n-1))

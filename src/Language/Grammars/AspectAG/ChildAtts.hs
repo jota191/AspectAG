@@ -154,15 +154,23 @@ unTaggedChAttr (TaggedChAttr _ a) = a
 --c .# l = lookupByChildF l c
 
 infixl 8 .#
-(.#)
-  :: Require (OpLookup (ChiReco prd) w r) '[] =>
-     Rec (ChiReco prd) r -> Label w -> ReqR (OpLookup (ChiReco prd) w r)
-(chi :: Rec (ChiReco prd) r) .# l = req (Proxy @ '[]) (OpLookup @_ @(ChiReco prd) l chi)
+(.#) ::
+  (  c ~ ('Chi ch prd nt)
+  ,  ctx ~ '[Text "looking up " :<>: ShowType c :$$:
+            Text "on " :<>: ShowType r :$$:
+            Text "producion: " :<>: ShowType prd
+           ]
+  , Require (OpLookup (ChiReco prd) c r) ctx
+  ) =>
+     Rec (ChiReco prd) r -> Label c -> ReqR (OpLookup (ChiReco prd) c r)
+(chi :: Rec (ChiReco prd) r) .# (l :: Label c)
+  = let prctx = Proxy @ '[Text "looking up " :<>: ShowType c :$$:
+                          Text "on " :<>: ShowType r :$$:
+                          Text "producion: " :<>: ShowType prd
+                         ]
+    in req prctx (OpLookup @_ @(ChiReco prd) l chi)
 
--- lookupCtx
---   :: Require (OpLookup ChiReco w r) ctx =>
---      Proxy ctx -> Rec ChiReco r -> Label w -> ReqR (OpLookup ChiReco w r)
---lookupCtx (p :: Proxy ctx) chi l = req p (OpLookup @_ @ChiReco l chi)
+
 
 -- |* Update
 

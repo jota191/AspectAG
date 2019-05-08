@@ -78,8 +78,9 @@ type instance  WrapField (ChiReco prd)  (v :: [(k, Type)]) = Attribution v
 
 data Att   = Att Symbol Type
 data Prod  = Prd Symbol NT
-data Child = Chi Symbol Prod NT
-data NT    = NT Symbol | T Type
+data Child = Chi Symbol Prod (Either NT T)
+data NT    = NT Symbol
+data T     = T Type
 
 data ChiReco (prd :: Prod); data AttReco; data Reco
 
@@ -199,11 +200,14 @@ type family ShowCTX (ctx :: [ErrorMessage]) :: ErrorMessage where
 type family ShowEM (m :: ErrorMessage) :: ErrorMessage
 
 
-instance Require (OpError (Text "field not Found on " :<>: Text (ShowRec c)
-                           :$$: Text "looking up the " :<>: Text (ShowField c)
+instance
+  Require (OpError (Text "field not Found on " :<>: Text (ShowRec c)
+                     :$$: Text "looking up the " :<>: Text (ShowField c)
                            :<>: ShowType l
                           )) ctx
-  => Require (OpLookup c l '[]) ctx where {}
+  => Require (OpLookup c l ( '[] :: [(k,k')])) ctx where
+  type ReqR (OpLookup c l ('[] :: [(k,k')])  ) = ()
+  req = undefined
 
 type family ShowRec c :: Symbol
 type instance ShowRec (ChiReco a)  = "children map"
@@ -358,7 +362,7 @@ instance (LabelSetF ( '(l, v) ': r) ~ 'True)
 
 --instance (LabelSetF ( '(l, v) ': r) ~ False)
 --  => Require (OpExtend' False  c l v r) ctx
-  
+
 instance ( LabelSetF ( '(l, v) ':  r) ~ b
          , Require (OpExtend' b c l v r) ctx)
   => Require (OpExtend c l v r) ctx where
@@ -373,8 +377,8 @@ instance Require (OpError (Text "Duplicated Labels on " :<>: Text (ShowRec c)
                            :<>: ShowType l
                           )) ctx
   => Require (OpExtend' False c l v (r :: [(k, k')])) ctx where
-  type ReqR (OpExtend' False c l v r) = Rec c ('[] :: [(k, k')])
-  --req ctx (OpExtend' p l v r) = undefined
+  type ReqR (OpExtend' False c l v r) = Rec c (r :: [(k, k')])
+  req ctx (OpExtend' p l v r) = undefined
 
 -- instance (LabelSet ( '(l, v) ': r))
 --   => Require (OpExtend c l v r) ctx where

@@ -168,10 +168,22 @@ lookupByLabelAttF' :: Proxy 'True -> Label l -> Attribution ( '(l, v) ': r)
 
 -- | Pretty lookup
 infixl 7 #.
-(#.)  :: (HasFieldAttF l r)
-   => Attribution r -> Label l -> LookupByLabelAttFR l r
-c #. l = lookupByLabelAttF l c
+-- (#.)  :: (HasFieldAttF l r)
+--    => Attribution r -> Label l -> LookupByLabelAttFR l r
+-- c #. l = lookupByLabelAttF l c
 
+(#.) ::
+  ( msg ~ '[Text "looking up attribute " :<>: ShowType l :$$:
+            Text "on " :<>: ShowType r
+           ]
+  , Require (OpLookup AttReco l r) msg
+  )
+  => Rec AttReco r -> Label l -> ReqR (OpLookup AttReco l r)
+(attr :: Attribution r) #. (l :: Label l)
+  = let prctx = Proxy @ '[Text "looking up attribute " :<>: ShowType l :$$:
+                          Text "on " :<>: ShowType r
+                         ]
+    in req prctx (OpLookup @_ @(AttReco) l attr)
 
 -- | Update an attribution at a Label, putting an attribute v.
 --Note that not only the value but also the type at the position could
