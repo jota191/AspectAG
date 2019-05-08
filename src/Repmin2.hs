@@ -79,14 +79,15 @@ node_ival_r = inhdef ival p_Node ch_r (\_ fam -> par fam #. ival)
 
 asp_Node = root_sres `ext2` node_smin --`ext` node_ival_l `ext` node_ival_r
 
----sem_Tree asp (Node l r) = knit3 ((asp .#. p_Node))$
---                              (ch_l .=. sem_Tree asp l)
---                         .*. ((ch_r .=. sem_Tree asp r)
---                         .*.  EmptyRec)
--- sem_Tree asp (Leaf i)   = knit3 (asp .#. p_Leaf)$
---                           ch_i .=. sem_Lit i .*. EmptyRec
--- sem_Root asp (Root r)   = knit3 (asp .#. p_Root)$
---                           ch_tree .=. sem_Tree asp r .*. EmptyRec
+sem_Tree asp (Node l r) = knit ((asp .#. p_Node))$
+                             (ch_l .=. sem_Tree asp l)
+                        .*. ((ch_r .=. sem_Tree asp r)
+                        .*.  EmptyRec)
+sem_Tree asp (Leaf i)   = knit (asp .#. p_Leaf)$
+                         ch_i .=. sem_Lit i .*. EmptyRec
+sem_Root asp (Root r)   = knit (asp .#. p_Root)$
+                          ch_tree .=. sem_Tree asp r .*. EmptyRec
+
 
 
 -- asp_smin =  p_Leaf .=. leaf_smin

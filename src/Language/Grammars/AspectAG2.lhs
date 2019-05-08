@@ -266,10 +266,15 @@
 >   type EmptiesR '[] = '[]
 >   empties _ = emptyCh
 
-> --instance (Empties fcr prd)
-> --  => Empties (
-> -- )
-
+> instance ( Empties fcr prd
+>          , chi ~ 'Chi ch prd nt
+>          , LabelSet ( '(chi, '[]) ': EmptiesR fcr))
+>  => Empties ( '(chi, Attribution e -> Attribution a) ': fcr) prd where
+>   type EmptiesR ( '(chi, Attribution e -> Attribution a) ': fcr)
+>     = '(chi, '[]) ': EmptiesR fcr
+>   empties (ConsRec pch fcr)
+>     = let lch = labelTChAtt pch
+>       in  (lch .= emptyAtt) .* (empties fcr)
 
 
 -- > consCtx :: Proxy ctx -> Proxy a -> Proxy (a ': ctx)
