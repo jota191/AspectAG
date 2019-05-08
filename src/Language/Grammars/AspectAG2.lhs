@@ -63,7 +63,7 @@
 > import Data.Maybe
 > import GHC.Types
 > import Data.Type.Equality
-
+> import Control.Monad.Reader
 
 > class SemLit a where
 >   sem_Lit :: a -> Attribution e -> Attribution '[ '(a, a)]
@@ -210,6 +210,26 @@
 >      -> CRule ctx prd' sc ip a b ic sp
 >      -> CRule ctx prd sc ip a b ic' sp'
 > ext2 = ext
+
+> data Lhs
+> lhs :: Label Lhs
+> lhs = Label
+>
+> class At l m  where
+>  type ResAt l m
+>  at :: Label l -> m (ResAt l m)
+
+> instance ( Require (OpLookup (ChiReco prd) ('Chi ch prd nt) chi) ctx
+>          , ReqR (OpLookup (ChiReco prd) ('Chi ch prd nt) chi) ~ Rec AttReco r ) 
+>       => At ('Chi ch prd nt) (Reader (Fam prd chi par, Proxy ctx))  where
+>  type ResAt ('Chi ch prd nt) (Reader (Fam prd chi par, Proxy ctx))
+>          = ReqR (OpLookup (ChiReco prd) ('Chi ch prd nt) chi)
+>  at (ch :: Label ('Chi ch prd nt)) = liftM (\((Fam chi _, ctx) :: (Fam prd chi par, Proxy ctx))
+>                                              -> req (Proxy @ ctx) (OpLookup @('Chi ch prd nt) @(ChiReco prd) ch chi)) ask
+
+-- > instance MonadReader (Fam l ho chi par) m
+-- >       => At (Proxy Lhs) m par where
+-- >  at _ = liftM (\(Fam _ _ _ par) -> par) ask
 
 
 

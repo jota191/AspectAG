@@ -77,8 +77,8 @@ node_ival_l = inhdef ival p_Node ch_l (\_ fam -> par fam #. ival)
 node_ival_r = inhdef ival p_Node ch_r (\_ fam -> par fam #. ival)
 
 
-asp_Node = root_sres `ext2` node_smin --`ext` node_ival_l `ext` node_ival_r
-
+asp_Node = node_sres `ext2` node_smin `ext2` node_ival_l `ext2` node_ival_r
+{-
 sem_Tree asp (Node l r) = knit ((asp .#. p_Node))$
                              (ch_l .=. sem_Tree asp l)
                         .*. ((ch_r .=. sem_Tree asp r)
@@ -89,7 +89,7 @@ sem_Root asp (Root r)   = knit (asp .#. p_Root)$
                           ch_tree .=. sem_Tree asp r .*. EmptyRec
 
 
-
+-}
 -- asp_smin =  p_Leaf .=. leaf_smin
 --         .*. p_Node .=. node_smin
 --         .*. emptyRecord
