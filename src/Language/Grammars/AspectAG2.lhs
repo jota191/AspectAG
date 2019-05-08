@@ -66,18 +66,18 @@
 > import Control.Monad.Reader
 
 > class SemLit a where
->   sem_Lit :: a -> Attribution e -> Attribution '[ '(a, a)]
->   lit     :: Label a
+>   sem_Lit :: a -> Attribution ('[] :: [(Att,Type)])
+>                -> Attribution '[ '( 'Att "term" a , a)]
+>   lit     :: Label ('Att "term" a)
 > instance SemLit a where
 >   sem_Lit a _ = (Label =. a) *. emptyAtt
->   lit         = Label 
+>   lit         = Label @ ('Att "term" a)
 
 
 < data NT    = NT Symbol | T Type -- terminal, TODO: change name?
 < data Prod  = Prd Symbol NT
 < data Child = Chi Symbol Prod NT
 
-> data Att   = Att Symbol Type
 
 
 > data Fam (prd :: Prod)
@@ -126,7 +126,9 @@
 >      -> Label prd
 >      -> (Proxy ctx' -> Fam prd sc ip -> t)
 >      -> CRule ctx prd sc ip ic sp ic sp'
-> syndef (att :: Label ('Att att t)) (prd :: Label prd) (f :: Proxy ctx' -> Fam prd sc ip -> t)
+> syndef (att :: Label ('Att att t))
+>        (prd :: Label prd)
+>        (f :: Proxy ctx' -> Fam prd sc ip -> t)
 >   = CRule $ \(ctx :: Proxy ctx) inp (Fam ic sp)
 >    -> let nctx = Proxy @ ((Text "syndef::"
 >                            :<>: ShowType ('Att att t)
