@@ -13,7 +13,7 @@
 #-}
 
 
-module Repmin where
+module Main where
 
 import System.Exit (exitFailure)
 import Language.Grammars.AspectAG2
@@ -30,7 +30,6 @@ data Tree = Leaf Int
 
 
 smin = Label @ ('Att "smin" Int)
-savg = Label @ ('Att "savg" Int)
 sres = Label @ ('Att "sres" Tree)
 ival = Label @ ('Att "ival" Int)
 
@@ -51,7 +50,7 @@ ch_tree = Label @ ('Chi "ch_tree" P_Root ('Left Nt_Tree))
 ch_i    = Label @ ('Chi "ch_i"    P_Leaf ('Right ('T Bool)))
 
 node_smin =
-  syndefM smin p_Node $ min <$> at ch_l smin <*> at ch_r savg-- smin
+  syndefM smin p_Node $ min <$> at ch_l smin <*> at ch_r smin
 
 leaf_smin
   = syndefM smin p_Leaf $ at ch_i lit
@@ -89,6 +88,9 @@ asp_smin =   p_Leaf .=. leaf_smin
         .*.  p_Node .=. node_smin
         .*. emptyRecord
 
+
+asp_smin' = node_smin .+: leaf_smin .+: emptyAspect
+
 minimo t = sem_Tree asp_smin t emptyAtt #. smin
 
 asp_repmin
@@ -109,3 +111,26 @@ exampleT 0 = examplet
 exampleT n = Node (exampleT (n-1)) (exampleT (n-1))
 
 repmin t = sem_Root asp_repmin (Root t) emptyAtt #. sres
+
+
+ssiz = Label @ ('Att "ssiz" Int)
+ssum = Label @ ('Att "ssum" Int)
+
+asp_ssiz =
+      p_Node .=. syndefM ssiz p_Node ((+) <$> at ch_l ssiz
+                                          <*> at ch_r ssiz)
+  .*. p_Leaf .=. syndefM ssiz p_Leaf (pure 1)
+  .*. p_Root .=. syndefM ssiz p_Root (at ch_tree ssiz)
+  .*. emptyRecord
+
+size t = sem_Root asp_ssiz (Root t) emptyAtt #. ssiz
+
+asp_sum =
+      p_Node .=. syndefM ssum p_Node ((+) <$> at ch_l ssum <*> at ch_r ssum)
+  .*. p_Leaf .=. syndefM ssum p_Leaf (at ch_i lit)
+  .*. p_Root .=. syndefM ssum p_Root (at ch_tree ssum)
+  .*. emptyRecord
+
+
+size' (Leaf _) = 1
+size' (Node l r) = size' l + size' r

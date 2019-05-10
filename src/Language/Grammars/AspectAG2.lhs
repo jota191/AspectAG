@@ -74,11 +74,6 @@
 >   lit         = Label @ ('Att "term" a)
 
 
-< data NT    = NT Symbol | T Type -- terminal, TODO: change name?
-< data Prod  = Prd Symbol NT
-< data Child = Chi Symbol Prod NT
-
-
 
 > data Fam (prd :: Prod)
 >          (c :: [(Child, [(Att, Type)])])
@@ -92,9 +87,6 @@
 > par :: Fam prd c p -> Attribution p
 > par (Fam c p) = p
 
--- > -- | Rules, aka definition of attribution computations
--- > --Rules are defined as a mapping from an input family to an output family,
--- > --the added arity is for make them composable
 
 > type Rule
 >   (prd  :: Prod)
@@ -107,8 +99,134 @@
 >   = Fam prd sc ip -> Fam prd ic sp -> Fam prd ic' sp'
 
 > newtype CRule (ctx :: [ErrorMessage]) prd sc ip ic sp ic' sp'
->  = CRule { runCRule :: (Proxy ctx -> Rule prd sc ip ic sp ic' sp')}
+>  = CRule { mkRule :: (Proxy ctx -> Rule prd sc ip ic sp ic' sp')}
 
+> newtype CAspect (ctx :: [ErrorMessage]) (asp :: [(Prod, Type)] )
+>   = CAspect { mkAspect :: Proxy ctx -> Aspect asp}
+
+> emptyAspect :: CAspect ctx '[]
+> emptyAspect  = CAspect $ const EmptyRec
+
+> comAspect ::
+>  ( Require (OpComAsp al ar) ctx
+>  , ReqR (OpComAsp al ar) ~ Rec PrdReco asp)
+>  =>  CAspect ctx al -> CAspect ctx ar -> CAspect ctx asp
+> comAspect al ar
+>   = CAspect $ \ctx -> req ctx (OpComAsp (mkAspect al ctx) (mkAspect ar ctx))
+
+
+> extAspect
+>   :: (Require
+>         (OpComRA ctx prd sc ip ic sp ic' sp' a)
+>         ('Text "extAspect" : ctx),
+>       ReqR (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a)
+>       ~ Rec PrdReco asp) =>
+>      CRule ctx prd sc ip ic sp ic' sp'
+>      -> CAspect ('Text "extAspect" : ctx) a -> CAspect ctx asp
+> extAspect rule (CAspect fasp)
+>   = CAspect $ \(ctx :: Proxy ctx)
+>     -> let ctx' = Proxy @ ( Text "extAspect" ': ctx)
+>        in req ctx' (OpComRA rule (fasp ctx'))
+
+> (.+:) = extAspect
+> infixr 4 .+:
+
+> (.:+:) = comAspect
+> infixr 3 .:+:
+
+> data OpComAsp  (al :: [(Prod, Type)])
+>                (ar :: [(Prod, Type)]) where
+>   OpComAsp :: Aspect al -> Aspect ar -> OpComAsp al ar
+
+> instance Require (OpComAsp al '[]) ctx where
+>   type ReqR (OpComAsp al '[]) = Aspect al
+>   req ctx (OpComAsp al _) = al
+
+> instance
+>   ( Require (OpComAsp al ar) ctx
+>   , Require (OpComRA ctx prd sc ip ic sp ic' sp' ar') ctx
+>   , Rec PrdReco ar' ~ ReqR (OpComAsp al ar)
+>   )
+>   => Require (OpComAsp al
+>        ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar)) ctx where
+>   type ReqR (OpComAsp al
+>        ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar))
+>     = ReqR (OpComRA ctx prd sc ip ic sp ic' sp'
+>             (UnWrap (ReqR (OpComAsp al ar))))
+>   req ctx (OpComAsp al (ConsRec
+>             (prdrule :: TagField PrdReco prd (CRule ctx prd sc ip ic sp ic' sp')) ar))
+>    = let resar = req ctx (OpComAsp al ar) :: Aspect ar'
+>      in req ctx (OpComRA (untagField prdrule) resar)
+
+
+> data OpComRA  (ctx  :: [ErrorMessage])
+>               (prd  :: Prod)
+>               (sc   :: [(Child, [(Att, Type)])])
+>               (ip   :: [(Att, Type)])
+>               (ic   :: [(Child, [(Att, Type)])])
+>               (sp   :: [(Att, Type)])
+>               (ic'  :: [(Child, [(Att, Type)])])
+>               (sp'  :: [(Att, Type)])
+>               (a     :: [(Prod, Type)])  where
+>   OpComRA :: CRule ctx prd sc ip ic sp ic' sp'
+>           -> Aspect a -> OpComRA ctx prd sc ip ic sp ic' sp' a
+
+> data OpComRA' (b :: Bool)
+>               (ctx  :: [ErrorMessage])
+>               (prd  :: Prod)
+>               (sc   :: [(Child, [(Att, Type)])])
+>               (ip   :: [(Att, Type)])
+>               (ic   :: [(Child, [(Att, Type)])])
+>               (sp   :: [(Att, Type)])
+>               (ic'  :: [(Child, [(Att, Type)])])
+>               (sp'  :: [(Att, Type)])
+>               (a     :: [(Prod, Type)])  where
+>   OpComRA' :: Proxy b -> CRule ctx prd sc ip ic sp ic' sp'
+>           -> Aspect a -> OpComRA' b ctx  prd sc ip ic sp ic' sp' a
+
+
+> instance
+>  (Require (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a) ctx)
+>   => Require (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx where
+>   type ReqR (OpComRA ctx prd sc ip ic sp ic' sp' a)
+>      = ReqR (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a)
+>   req ctx (OpComRA (rule :: CRule ctx prd sc ip ic sp ic' sp') (a :: Aspect a))
+>      = req ctx (OpComRA' (Proxy @ (HasLabel prd a)) rule a)
+
+> instance
+>   (Require (OpExtend PrdReco prd (CRule ctx prd sc ip ic sp ic' sp') a)) ctx
+>   => Require (OpComRA' 'False ctx prd sc ip ic sp ic' sp' a) ctx where
+>   type ReqR (OpComRA' 'False ctx prd sc ip ic sp ic' sp' a)
+>     = ReqR (OpExtend PrdReco prd (CRule ctx prd sc ip ic sp ic' sp') a)
+>   req ctx (OpComRA' _ (rule :: CRule ctx prd sc ip ic sp ic' sp') asp)
+>     = req ctx (OpExtend (Label @ prd) rule asp)
+
+> instance
+>  ( Require (OpExtend PrdReco prd (CRule ctx prd sc ip ic sp ic'' sp'') a) ctx
+>  , Require (OpLookup PrdReco prd a) ctx
+>  , ReqR (OpLookup PrdReco prd a) ~ (CRule ctx prd sc ip ic sp ic' sp')
+>  , (IC (ReqR (OpLookup PrdReco prd a))) ~ ic
+>  , (SP (ReqR (OpLookup PrdReco prd a))) ~ sp
+>  ) =>
+>   Require (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a) ctx where
+>   type ReqR (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a)
+>     = ReqR (OpExtend PrdReco prd
+>            (CRule ctx prd sc ip
+>              (IC (ReqR (OpLookup PrdReco prd a)))
+>              (SP (ReqR (OpLookup PrdReco prd a)))
+>             ic'' sp'') a)
+>   req ctx (OpComRA' _ (rule :: CRule ctx prd sc ip ic' sp' ic'' sp'' ) asp)
+>     = let prd     = Label @ prd
+>           oldRule = req ctx (OpLookup prd asp)
+>           newRule = rule `ext` oldRule
+>       in  req ctx (OpExtend prd newRule asp)
+
+
+
+> type family IC (rule :: Type) where
+>   IC (Rule prd sc ip ic sp ic' sp') = ic
+> type family SP (rule :: Type) where
+>   SP (Rule prd sc ip ic sp ic' sp') = sp
 
 
 > syndef
@@ -143,7 +261,7 @@
 > inhdef
 >   :: ( Require (OpEq t t') ctx'
 >      , t ~ t'
->      , ntch ~ 'Left n ---- {- TODO -}
+>      , ntch ~ 'Left n ---- {- TODO :-}
 >      , Require (OpExtend' (LabelSetF ('( ('Att att t), t) : r))
 >                AttReco ('Att att t) t r) ctx,
 >       Require (OpUpdate (ChiReco ('Prd prd nt))
@@ -200,18 +318,19 @@
 > (CRule f) `ext'` (CRule g)
 >  = CRule $ \ctx input -> f ctx input . g ctx input
 
-> ext ::  RequireEq prd prd' (Text "ext":ctx) -- (Require (OpEq prd prd') (Text "ext":ctx), prd ~ prd')
+> ext ::  RequireEq prd prd' (Text "ext":ctx) 
 >      => CRule ctx prd sc ip ic sp ic' sp'
 >      -> CRule ctx prd' sc ip a b ic sp
 >      -> CRule ctx prd sc ip a b ic' sp'
 > ext = ext'
 
+> infixr 6 .+.
+> (.+.) = ext
 
 > type family RequireEq (t1 :: k )(t2 :: k) (ctx:: [ErrorMessage])
 >    :: Constraint where
 >   RequireEq t1 t2 ctx
 >     = (Require (OpEq t1 t2) ctx, t1 ~ t2)
-
 
 > data OpEq prd1 prd2
 
@@ -318,7 +437,7 @@ instance MonadReader (Fam l ho chi par) m
 > knit (rule :: CRule '[] prd (SCh fc) ip
 >               (EmptiesR fc) '[] (ICh fc) sp)
 >               (fc :: Record fc) ip
->   = let (Fam ic sp) = runCRule rule emptyCtx
+>   = let (Fam ic sp) = mkRule rule emptyCtx
 >                        (Fam sc ip) (Fam ec emptyAtt)
 >         sc          = kn fc ic
 >         ec          = empties fc

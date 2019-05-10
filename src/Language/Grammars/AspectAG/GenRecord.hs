@@ -75,6 +75,7 @@ type family    WrapField (c :: k')  (v :: k) -- = ftype | ftype c -> v
 type instance  WrapField Reco    (v :: Type) = v
 type instance  WrapField AttReco  (v :: Type) = v
 type instance  WrapField (ChiReco prd)  (v :: [(k, Type)]) = Attribution v
+type instance  WrapField PrdReco  (rule :: Type) = rule
 
 data Att   = Att Symbol Type
 data Prod  = Prd Symbol NT
@@ -82,12 +83,13 @@ data Child = Chi Symbol Prod (Either NT T)
 data NT    = NT Symbol
 data T     = T Type
 
-data ChiReco (prd :: Prod); data AttReco; data Reco
+data ChiReco (prd :: Prod); data AttReco; data Reco; data PrdReco
 
-type Attribution = Rec AttReco
-type ChAttsRec prd  = Rec (ChiReco prd)
-type Record      = Rec Reco
+type Attribution   = Rec AttReco
+type ChAttsRec prd = Rec (ChiReco prd)
+type Record        = Rec Reco
 
+type Aspect (asp :: [(Prod, Type)]) = Rec PrdReco asp
 
 type Attribute     = TagField AttReco
 type TaggedChAttr prd = TagField (ChiReco prd)
@@ -244,7 +246,7 @@ data OpUpdate' (b  :: Bool)
                (l  :: k)
                (v  :: k')
                (r  :: [(k, k')]) :: Type where
-  OpUpdate' :: Proxy p -> Label l {- -> Proxy v-}-> WrapField c v ->  Rec c r
+  OpUpdate' :: Proxy p -> Label l -> WrapField c v ->  Rec c r
            -> OpUpdate' b c l v r
 
 {- Look at the comment above, WrapField c v is not enough to recover
@@ -360,8 +362,6 @@ instance (LabelSetF ( '(l, v) ': r) ~ 'True)
   type ReqR (OpExtend' True c l v r) = Rec c ( '(l, v) ': r)
   req ctx (OpExtend' _ l f r) = ConsRec (TagField (Label @c) l f) r
 
---instance (LabelSetF ( '(l, v) ': r) ~ False)
---  => Require (OpExtend' False  c l v r) ctx
 
 instance ( LabelSetF ( '(l, v) ':  r) ~ b
          , Require (OpExtend' b c l v r) ctx)
@@ -380,13 +380,15 @@ instance Require (OpError (Text "Duplicated Labels on " :<>: Text (ShowRec c)
   type ReqR (OpExtend' False c l v r) = Rec c (r :: [(k, k')])
   req ctx (OpExtend' p l v r) = undefined
 
--- instance (LabelSet ( '(l, v) ': r))
---   => Require (OpExtend c l v r) ctx where
---   type ReqR (OpExtend c l v r) = Rec c ( '(l, v) ': r)
---   req ctx (OpExtend l f r) = ConsRec (TagField (Label @c) l f) r
-
 
 lookupCtx'
   :: Require (OpLookup c w r) ctx =>
      Proxy ctx -> Rec c r -> Label w -> ReqR (OpLookup c w r)
 lookupCtx' (p :: Proxy ctx) chi l = req p (OpLookup @_ l chi)
+
+
+
+type family HasLabel (l :: k) (r :: [(k, k')]) :: Bool where
+  HasLabel l '[] = False
+  HasLabel l ( '(l', v) ': r) = Or (l == l') (HasLabel l r)
+
