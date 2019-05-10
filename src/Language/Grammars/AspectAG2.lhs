@@ -114,7 +114,7 @@
 > comAspect al ar
 >   = CAspect $ \ctx -> req ctx (OpComAsp (mkAspect al ctx) (mkAspect ar ctx))
 
-
+> {-
 > extAspect
 >   :: (Require
 >         (OpComRA ('Text "extAspect" : ctx) prd sc ip ic sp ic' sp' a)
@@ -123,10 +123,19 @@
 >       ~ Rec PrdReco asp) =>
 >      CRule ('Text "extAspect" : ctx) prd sc ip ic sp ic' sp'
 >      -> CAspect ('Text "extAspect" : ctx) a -> CAspect ctx asp
+> -}
+> extAspect
+>   :: (Require
+>         (OpComRA ctx prd sc ip ic sp ic' sp' a)
+>         ctx,
+>       ReqR (OpComRA ctx prd sc ip ic sp ic' sp' a)
+>       ~ Rec PrdReco asp) =>
+>      CRule ctx prd sc ip ic sp ic' sp'
+>      -> CAspect ctx a -> CAspect ctx asp
 > extAspect rule (CAspect fasp)
 >   = CAspect $ \(ctx :: Proxy ctx)
->     -> let ctx' = Proxy @ ( Text "extAspect" ': ctx)
->        in req ctx' (OpComRA rule (fasp ctx'))
+>     -> -- let ctx' = Proxy @ ( Text "extAspect" ': ctx)
+>        req ctx (OpComRA rule (fasp ctx))
 
 > (.+:) = extAspect
 > infixr 4 .+:
@@ -323,6 +332,7 @@
 >      -> CRule ctx prd' sc ip a b ic sp
 >      -> CRule ctx prd sc ip a b ic' sp'
 > ext = ext'
+
 
 > infixr 6 .+.
 > (.+.) = ext
