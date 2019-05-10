@@ -13,7 +13,7 @@
 #-}
 
 
-module Main where
+module Repmin where
 
 import System.Exit (exitFailure)
 import Language.Grammars.AspectAG2
@@ -81,7 +81,7 @@ sem_Root asp (Root r)   = knit (asp .#. p_Root)$
                           ch_tree .=. sem_Tree asp r .*. EmptyRec
 
 
-asp_Node = node_smin `ext` node_smin `ext` node_ival_l `ext` node_ival_r
+asp_Node = node_sres `ext` node_smin `ext` node_ival_l `ext` node_ival_r
 
 
 asp_smin =   p_Leaf .=. leaf_smin
@@ -89,8 +89,8 @@ asp_smin =   p_Leaf .=. leaf_smin
         .*. emptyRecord
 
 
-asp_smin' = node_smin .+: leaf_smin .+: emptyAspect
-
+asp_smin' = node_smin .+: node_smin .+: leaf_sres .+: leaf_smin .+: emptyAspect
+{-
 minimo t = sem_Tree asp_smin t emptyAtt #. smin
 
 asp_repmin
@@ -134,3 +134,5 @@ asp_sum =
 
 size' (Leaf _) = 1
 size' (Node l r) = size' l + size' r
+
+-}

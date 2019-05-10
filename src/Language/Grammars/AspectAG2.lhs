@@ -117,11 +117,11 @@
 
 > extAspect
 >   :: (Require
->         (OpComRA ctx prd sc ip ic sp ic' sp' a)
+>         (OpComRA ('Text "extAspect" : ctx) prd sc ip ic sp ic' sp' a)
 >         ('Text "extAspect" : ctx),
->       ReqR (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a)
+>       ReqR (OpComRA ('Text "extAspect" : ctx) prd sc ip ic sp ic' sp' a)
 >       ~ Rec PrdReco asp) =>
->      CRule ctx prd sc ip ic sp ic' sp'
+>      CRule ('Text "extAspect" : ctx) prd sc ip ic sp ic' sp'
 >      -> CAspect ('Text "extAspect" : ctx) a -> CAspect ctx asp
 > extAspect rule (CAspect fasp)
 >   = CAspect $ \(ctx :: Proxy ctx)
