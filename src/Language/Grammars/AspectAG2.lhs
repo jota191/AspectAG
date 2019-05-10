@@ -234,9 +234,10 @@
 
 > type family IC (rule :: Type) where
 >   IC (Rule prd sc ip ic sp ic' sp') = ic
+>   IC (CRule ctx prd sc ip ic sp ic' sp') = ic
 > type family SP (rule :: Type) where
 >   SP (Rule prd sc ip ic sp ic' sp') = sp
-
+>   SP (CRule ctx prd sc ip ic sp ic' sp') = sp
 
 > syndef
 >   :: ( Require (OpEq t t') ctx'
@@ -440,11 +441,11 @@ instance MonadReader (Fam l ho chi par) m
 
 > emptyCtx = Proxy @ '[]
 
-> knit :: ( Kn fc prd
+> knit' :: ( Kn fc prd
 >         , Empties fc prd)
 >  => CRule '[] prd (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp
 >   -> Record fc -> Attribution ip -> Attribution sp
-> knit (rule :: CRule '[] prd (SCh fc) ip
+> knit' (rule :: CRule '[] prd (SCh fc) ip
 >               (EmptiesR fc) '[] (ICh fc) sp)
 >               (fc :: Record fc) ip
 >   = let (Fam ic sp) = mkRule rule emptyCtx
@@ -472,3 +473,16 @@ instance MonadReader (Fam l ho chi par) m
 >     = let lch = labelTChAtt pch
 >       in  (lch .= emptyAtt) .* (empties fcr)
 
+> knit (ctx  :: Proxy ctx)
+>      (rule :: CRule ctx prd (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp)
+>      (fc   :: Record fc)
+>      (ip   :: Attribution ip)
+>   = let (Fam ic sp) = mkRule rule ctx
+>                        (Fam sc ip) (Fam ec emptyAtt)
+>         sc          = kn fc ic
+>         ec          = empties fc
+>     in  sp
+
+> -- knitAspect :: Proxy ctx -> CAspect r 
+> knitAspect ctx prd (CAspect fasp) fc ip
+>   = knit ctx (req ctx (OpLookup prd (fasp ctx))) fc ip
