@@ -89,7 +89,7 @@ asp_smin =   p_Leaf .=. leaf_smin
         .*. emptyRecord
 
 
-asp_smin' = node_smin .+: node_smin .+: leaf_sres .+: leaf_smin .+: emptyAspect
+asp_smin' = node_sres .+: node_smin .+: leaf_smin .+: emptyAspect
 {-
 minimo t = sem_Tree asp_smin t emptyAtt #. smin
 

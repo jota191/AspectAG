@@ -78,7 +78,7 @@ type instance  WrapField (ChiReco prd)  (v :: [(k, Type)]) = Attribution v
 type instance  WrapField PrdReco  (rule :: Type) = rule
 
 data Att   = Att Symbol Type
-data Prod  = Prd Symbol NT
+data Prod  = Prd Symbol NT 
 data Child = Chi Symbol Prod (Either NT T)
 data NT    = NT Symbol
 data T     = T Type
@@ -212,14 +212,16 @@ instance
   req = undefined
 
 type family ShowRec c :: Symbol
-type instance ShowRec (ChiReco a)  = "children map"
-type instance ShowRec AttReco  = "Attribution"
-type instance ShowRec Reco     = "Record"
+type instance ShowRec (ChiReco a)  = "Children Map"
+type instance ShowRec AttReco      = "Attribution"
+type instance ShowRec Reco         = "Record"
+type instance ShowRec PrdReco      = "Aspect"
 
 type family ShowField c :: Symbol
-type instance ShowField (ChiReco a)   = "children labelled "
-type instance ShowField AttReco   = "attribute named "
-type instance ShowField Reco      = "field named "
+type instance ShowField (ChiReco a)   = "child labelled "
+type instance ShowField AttReco       = "attribute named "
+type instance ShowField Reco          = "field named "
+type instance ShowField PrdReco       = "production named "
 
 
 -- TODO

@@ -201,16 +201,16 @@
 >   req ctx (OpComRA' _ (rule :: CRule ctx prd sc ip ic sp ic' sp') asp)
 >     = req ctx (OpExtend (Label @ prd) rule asp)
 
-> instance
->  ( Require (OpExtend PrdReco prd (CRule ctx prd sc ip ic sp ic'' sp'') a) ctx
+> instance 
+>  ( Require (OpUpdate PrdReco prd (CRule ctx prd sc ip ic sp ic'' sp'') a) ctx
 >  , Require (OpLookup PrdReco prd a) ctx
->  , ReqR (OpLookup PrdReco prd a) ~ (CRule ctx prd sc ip ic sp ic' sp')
+>  ,  ReqR (OpLookup PrdReco prd a) ~ (CRule ctx prd sc ip ic sp ic' sp') 
 >  , (IC (ReqR (OpLookup PrdReco prd a))) ~ ic
 >  , (SP (ReqR (OpLookup PrdReco prd a))) ~ sp
->  ) =>
+>  ) => 
 >   Require (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a) ctx where
 >   type ReqR (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a)
->     = ReqR (OpExtend PrdReco prd
+>     = ReqR (OpUpdate PrdReco prd
 >            (CRule ctx prd sc ip
 >              (IC (ReqR (OpLookup PrdReco prd a)))
 >              (SP (ReqR (OpLookup PrdReco prd a)))
@@ -219,7 +219,7 @@
 >     = let prd     = Label @ prd
 >           oldRule = req ctx (OpLookup prd asp)
 >           newRule = rule `ext` oldRule
->       in  req ctx (OpExtend prd newRule asp)
+>       in  req ctx (OpUpdate prd newRule asp)
 
 
 
