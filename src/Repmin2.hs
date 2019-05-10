@@ -19,6 +19,7 @@ import System.Exit (exitFailure)
 import Language.Grammars.AspectAG2
 --import Language.Grammars.AspectAG.Derive
 import Control.Monad
+import Control.Applicative
 import Data.Proxy
 import GHC.TypeLits
 
@@ -28,6 +29,13 @@ data Tree = Leaf Int
           | Node Tree Tree
           deriving (Show, Eq)
 
+examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
+                      (Node (Leaf 2) (Leaf 7))
+                    )
+                (Node (Node (Leaf (5)) (Leaf (27)))
+                  (Leaf 6)
+                )
+              )
 
 smin = Label @ ('Att "smin" Int)
 sres = Label @ ('Att "sres" Tree)
@@ -102,68 +110,62 @@ node_ival_r
 
 -- | Aspects
 
-asp_smin = node_smin .+: leaf_smin .+: emptyAspect
-asp_sres = node_sres .+: leaf_sres .+: root_sres .+: emptyAspect
-asp_ival = node_ival_l .+: node_ival_r .+: root_ival .+: emptyAspect
+asp_smin
+  =   node_smin
+  .+: leaf_smin
+  .+: emptyAspect
+asp_sres
+  =   node_sres
+  .+: leaf_sres
+  .+: root_sres
+  .+: emptyAspect
+asp_ival
+  =   node_ival_l
+  .+: node_ival_r
+  .+: root_ival
+  .+: emptyAspect
 
-asp_rep = node_smin .+: leaf_smin .+: node_sres .+: leaf_sres .+: root_sres .+: node_ival_l .+: node_ival_r .+: root_ival .+: emptyAspect
+asp_repmin
+   =  asp_smin
+ .:+: asp_sres
+ .:+: asp_ival
 
-asp_repmin = asp_smin .:+: asp_sres .:+: asp_ival
+repmin t
+  = sem_Root asp_repmin (Root t) emptyAtt #. sres
 
---repmin t = (sem_Root asp_repmin (Root t) emptyAtt) #. sres
+minimo t
+  = sem_Tree asp_smin t emptyAtt #. smin
 
+ssiz = Label @ ('Att "ssiz" Int)
 
--- asp_smin =   p_Leaf .=. leaf_smin
---         .*.  p_Node .=. node_smin
---         .*. emptyRecord
+asp_ssiz =   syndefM ssiz p_Leaf (pure 1)
+        .+: (syndefM ssiz p_Node
+             (at ch_l ssiz <**> pure (+) <*> at ch_r ssiz))
+        .+: emptyAspect
 
--- asp_smin' = node_smin .+: leaf_smin .+: emptyAspect
+size t = sem_Tree asp_ssiz t emptyAtt #. ssiz
 
-
--- minimo t = sem_Tree asp_smin' t emptyAtt #. smin
-
-asp_repmin'
-   =  p_Root .=. (root_sres `ext` root_ival)
-  .*. p_Leaf .=. (leaf_sres `ext` leaf_smin)
-  .*. p_Node .=. node_sres `ext` node_smin `ext` node_ival_l `ext` node_ival_r
-  .*. emptyRecord
-
-examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
-                      (Node (Leaf 2) (Leaf 7))
-                    )
-                (Node (Node (Leaf (5)) (Leaf (27)))
-                  (Leaf 6)
-                )
-              )
-
-exampleT 0 = examplet
-exampleT n = Node (exampleT (n-1)) (exampleT (n-1))
-
--- repmin t = sem_Root' asp_repmin (Root t) emptyAtt #. sres
-
-
--- ssiz = Label @ ('Att "ssiz" Int)
--- ssum = Label @ ('Att "ssum" Int)
-
--- asp_ssiz =
---       p_Node .=. syndefM ssiz p_Node ((+) <$> at ch_l ssiz
---                                           <*> at ch_r ssiz)
---   .*. p_Leaf .=. syndefM ssiz p_Leaf (pure 1)
---   .*. p_Root .=. syndefM ssiz p_Root (at ch_tree ssiz)
---   .*. emptyRecord
-
--- size t = sem_Root' asp_ssiz (Root t) emptyAtt #. ssiz
-
--- asp_sum =
---       p_Node .=. syndefM ssum p_Node ((+) <$> at ch_l ssum <*> at ch_r ssum)
---   .*. p_Leaf .=. syndefM ssum p_Leaf (at ch_i lit)
---   .*. p_Root .=. syndefM ssum p_Root (at ch_tree ssum)
---   .*. emptyRecord
+ssum = Label @ ('Att "ssum" Int)
+asp_ssum
+  =  syndefM ssum p_Node (at ch_l ssum <**> pure (+) <*> at ch_r ssum)
+ .+: syndefM ssum p_Leaf (at ch_i lit)
+ .+: emptyAspect
 
 
--- size' (Leaf _) = 1
--- size' (Node l r) = size' l + size' r
+-- defines ival in another way
+root_avg = inhdefM ival p_Root ch_tree
+ $ do zi <- at ch_tree ssiz
+      su <- at ch_tree ssum
+      pure $ su `div` zi
 
--- sumT t = sem_Root' asp_sum (Root t) emptyAtt #. ssum
+repavg t = sem_Root repavg (Root t) emptyAtt #. sres
+  where repavg =  node_ival_l
+              .+: node_ival_r
+              .+: root_avg
+              .+: asp_ssiz .:+: asp_sres .:+: asp_ssum
 
+spoly :: Proxy a -> Label ('Att "spoly" a)
+spoly _ = Label
 
+getProxy :: a -> Proxy a
+getProxy _ = Proxy
