@@ -114,6 +114,11 @@
 > comAspect al ar
 >   = CAspect $ \ctx -> req ctx (OpComAsp (mkAspect al ctx) (mkAspect ar ctx))
 
+
+> updCAspect (_ :: Label (l::k)) (CAspect fasp) 
+>  = CAspect $ \(_ :: Proxy ctx) ->
+>                 fasp (Proxy @ ((Text "aspect ":<>: ShowType l) : ctx))
+
 > {-
 > extAspect
 >   :: (Require
@@ -126,11 +131,11 @@
 > -}
 > extAspect
 >   :: (Require
->         (OpComRA ctx prd sc ip ic sp ic' sp' a)
+>         (OpComRA ctx' prd sc ip ic sp ic' sp' a)
 >         ctx,
->       ReqR (OpComRA ctx prd sc ip ic sp ic' sp' a)
+>       ReqR (OpComRA ctx' prd sc ip ic sp ic' sp' a)
 >       ~ Rec PrdReco asp) =>
->      CRule ctx prd sc ip ic sp ic' sp'
+>      CRule ctx' prd sc ip ic sp ic' sp'
 >      -> CAspect ctx a -> CAspect ctx asp
 > extAspect rule (CAspect fasp)
 >   = CAspect $ \(ctx :: Proxy ctx)
@@ -153,17 +158,17 @@
 
 > instance
 >   ( Require (OpComAsp al ar) ctx
->   , Require (OpComRA ctx prd sc ip ic sp ic' sp' ar') ctx
+>   , Require (OpComRA ctx' prd sc ip ic sp ic' sp' ar') ctx
 >   , Rec PrdReco ar' ~ ReqR (OpComAsp al ar)
 >   )
 >   => Require (OpComAsp al
->        ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar)) ctx where
+>        ( '(prd, CRule ctx' prd sc ip ic sp ic' sp') ': ar)) ctx where
 >   type ReqR (OpComAsp al
->        ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar))
->     = ReqR (OpComRA ctx prd sc ip ic sp ic' sp'
+>        ( '(prd, CRule ctx' prd sc ip ic sp ic' sp') ': ar))
+>     = ReqR (OpComRA ctx' prd sc ip ic sp ic' sp'
 >             (UnWrap (ReqR (OpComAsp al ar))))
 >   req ctx (OpComAsp al (ConsRec
->             (prdrule :: TagField PrdReco prd (CRule ctx prd sc ip ic sp ic' sp')) ar))
+>             (prdrule :: TagField PrdReco prd (CRule ctx' prd sc ip ic sp ic' sp')) ar))
 >    = let resar = req ctx (OpComAsp al ar) :: Aspect ar'
 >      in req ctx (OpComRA (untagField prdrule) resar)
 
@@ -195,29 +200,29 @@
 
 
 > instance
->  (Require (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a) ctx)
->   => Require (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx where
+>  (Require (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a) ctx')
+>   => Require (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx' where
 >   type ReqR (OpComRA ctx prd sc ip ic sp ic' sp' a)
 >      = ReqR (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a)
 >   req ctx (OpComRA (rule :: CRule ctx prd sc ip ic sp ic' sp') (a :: Aspect a))
 >      = req ctx (OpComRA' (Proxy @ (HasLabel prd a)) rule a)
 
 > instance
->   (Require (OpExtend PrdReco prd (CRule ctx prd sc ip ic sp ic' sp') a)) ctx
->   => Require (OpComRA' 'False ctx prd sc ip ic sp ic' sp' a) ctx where
+>   (Require (OpExtend PrdReco prd (CRule ctx prd sc ip ic sp ic' sp') a)) ctx'
+>   => Require (OpComRA' 'False ctx prd sc ip ic sp ic' sp' a) ctx' where
 >   type ReqR (OpComRA' 'False ctx prd sc ip ic sp ic' sp' a)
 >     = ReqR (OpExtend PrdReco prd (CRule ctx prd sc ip ic sp ic' sp') a)
 >   req ctx (OpComRA' _ (rule :: CRule ctx prd sc ip ic sp ic' sp') asp)
 >     = req ctx (OpExtend (Label @ prd) rule asp)
 
 > instance 
->  ( Require (OpUpdate PrdReco prd (CRule ctx prd sc ip ic sp ic'' sp'') a) ctx
->  , Require (OpLookup PrdReco prd a) ctx
+>  ( Require (OpUpdate PrdReco prd (CRule ctx prd sc ip ic sp ic'' sp'') a) ctx'
+>  , Require (OpLookup PrdReco prd a) ctx'
 >  ,  ReqR (OpLookup PrdReco prd a) ~ (CRule ctx prd sc ip ic sp ic' sp') 
 >  , (IC (ReqR (OpLookup PrdReco prd a))) ~ ic
 >  , (SP (ReqR (OpLookup PrdReco prd a))) ~ sp
 >  ) => 
->   Require (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a) ctx where
+>   Require (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a) ctx' where
 >   type ReqR (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a)
 >     = ReqR (OpUpdate PrdReco prd
 >            (CRule ctx prd sc ip

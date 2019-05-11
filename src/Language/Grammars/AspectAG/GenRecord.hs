@@ -224,13 +224,12 @@ type instance ShowField Reco          = "field named "
 type instance ShowField PrdReco       = "production named "
 
 
--- TODO
-instance (TypeError (Text "field not Found on Record,"
-                    :<>: Text "updating the label: " :<>: ShowType l
-                    :$$: Text "from the use of " :<>: ShowCTX ctx))
-  => Require (OpUpdate c l v '[]) ctx where {}
-
-
+instance (Require (OpError (Text "field not Found on " :<>: Text (ShowRec c)
+                    :$$: Text "updating the " :<>: Text (ShowField c)
+                     :<>: ShowType l)) ctx)
+  => Require (OpUpdate c l v '[]) ctx where 
+  type ReqR (OpUpdate c l v ('[] )  ) = '[]
+  req = undefined
 
 
 

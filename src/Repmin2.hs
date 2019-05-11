@@ -67,10 +67,10 @@ sem_Root' asp (Root r)   = knit' (asp .#. p_Root)$
                            ch_tree .=. sem_Tree' asp r .*. EmptyRec
 
 
-sem_Tree asp (Node l r) = knitAspect (Proxy @ '[Text "sem"]) p_Node asp$
-                          (ch_l .=. sem_Tree asp l)
-                          .*. ((ch_r .=. sem_Tree asp r)
-                          .*.  EmptyRec)
+sem_Tree asp (Node l r) = knitAspect (Proxy @ '[Text "sem"]) p_Node asp
+                           $  ch_l .=. sem_Tree asp l
+                          .*. ch_r .=. sem_Tree asp r
+                          .*.  EmptyRec
 sem_Tree asp (Leaf i)   = knitAspect (Proxy @ '[Text "sem"]) p_Leaf asp$
                           ch_i .=. sem_Lit i .*. EmptyRec
 sem_Root asp (Root r)   = knitAspect (Proxy @ '[Text "sem"]) p_Root asp$
@@ -91,7 +91,7 @@ node_smin
   = syndefM smin p_Node $ min <$> at ch_l smin <*> at ch_r smin
 leaf_smin
   = syndefM smin p_Leaf $ at ch_i lit
-
+  
 -- | rules for sres
 node_sres
   = syndefM sres p_Node $ Node <$> at ch_l sres <*> at ch_r sres
@@ -110,24 +110,26 @@ node_ival_r
 
 -- | Aspects
 
-asp_smin
-  =   node_smin
+  
+asp_smin = updCAspect smin  
+  $   node_smin
   .+: leaf_smin
   .+: emptyAspect
-asp_sres
-  =   node_sres
+asp_sres = updCAspect sres
+  $   node_sres
   .+: leaf_sres
   .+: root_sres
   .+: emptyAspect
-asp_ival
-  =   node_ival_l
+
+asp_ival = updCAspect ival
+  $   node_ival_l
   .+: node_ival_r
   .+: root_ival
   .+: emptyAspect
 
 asp_repmin
    =  asp_smin
- .:+: asp_sres
+ .:+: asp_sres 
  .:+: asp_ival
 
 repmin t
@@ -135,7 +137,7 @@ repmin t
 
 minimo t
   = sem_Tree asp_smin t emptyAtt #. smin
-
+{-
 ssiz = Label @ ('Att "ssiz" Int)
 
 asp_ssiz =   syndefM ssiz p_Leaf (pure 1)
@@ -169,3 +171,4 @@ spoly _ = Label
 
 getProxy :: a -> Proxy a
 getProxy _ = Proxy
+-}
