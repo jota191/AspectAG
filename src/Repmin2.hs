@@ -67,24 +67,15 @@ sem_Root' asp (Root r)   = knit' (asp .#. p_Root)$
                            ch_tree .=. sem_Tree' asp r .*. EmptyRec
 
 
-sem_Tree asp (Node l r) = knitAspect (Proxy @ '[Text "sem"]) p_Node asp
+sem_Tree asp (Node l r) = knitAspect p_Node asp
                            $  ch_l .=. sem_Tree asp l
                           .*. ch_r .=. sem_Tree asp r
                           .*.  EmptyRec
-sem_Tree asp (Leaf i)   = knitAspect (Proxy @ '[Text "sem"]) p_Leaf asp$
+sem_Tree asp (Leaf i)   = knitAspect p_Leaf asp$
                           ch_i .=. sem_Lit i .*. EmptyRec
-sem_Root asp (Root r)   = knitAspect (Proxy @ '[Text "sem"]) p_Root asp$
+sem_Root asp (Root r)   = knitAspect p_Root asp$
                           ch_tree .=. sem_Tree asp r .*. EmptyRec
 
-sem_Tree_Node asp fsemL fsemR
-  = knitAspect (Proxy @ '[Text "sem_Tree_Node"]) p_Node asp$
-      (ch_l .=. fsemL)
-  .*. ((ch_r .=. fsemR)
-  .*.  EmptyRec)
-
-sem_Tree_Leaf asp semL
-  = knitAspect (Proxy @ '[Text "sem_Tree_Leaf"]) p_Leaf asp$
-    ch_i .=. semL .*. EmptyRec
 
 -- | rules for smin
 node_smin
@@ -111,32 +102,36 @@ node_ival_r
 -- | Aspects
 
   
-asp_smin = updCAspect smin  
-  $   node_smin
-  .+: leaf_smin
-  .+: emptyAspect
-asp_sres = updCAspect sres
-  $   node_sres
-  .+: leaf_sres
-  .+: root_sres
-  .+: emptyAspect
+asp_smin = updCAspect (Proxy @ ('Text "smin"))   
+   $   node_smin
+  .+:  leaf_smin
+  .+:  emptyAspect
+ 
+asp_sres = updCAspect (Proxy @ ('Text "sres"))
+   $   node_sres
+  .+:  leaf_sres
+  .+:  root_sres
+  .+:  emptyAspect
 
-asp_ival = updCAspect ival
-  $   node_ival_l
-  .+: node_ival_r
-  .+: root_ival
-  .+: emptyAspect
+asp_ival = updCAspect (Proxy @ ('Text "ival"))
+   $   node_ival_l
+  .+:  node_ival_r
+  .+:  root_ival
+  .+:  emptyAspect
 
-asp_repmin
-   =  asp_smin
- .:+: asp_sres 
- .:+: asp_ival
+
+
+asp_repmin = updCAspect (Proxy @ ('Text "repmin"))
+    $   asp_smin
+  .:+:  asp_sres 
+  .:+:  asp_ival
 
 repmin t
   = sem_Root asp_repmin (Root t) emptyAtt #. sres
 
 minimo t
   = sem_Tree asp_smin t emptyAtt #. smin
+
 {-
 ssiz = Label @ ('Att "ssiz" Int)
 
