@@ -55,16 +55,16 @@ instance HMember t (t' ': ts) where
 
 -- | HMember' is a test membership function.
 -- But looking up in a list of Labels
-class HMember' (t :: Type) (l :: [Type]) where
+class HMember' (t :: k) (l :: [k]) where
   type HMemberRes' t l :: Bool
-  hMember' :: Label t -> HList l -> Proxy (HMemberRes' t l)
+  hMember' :: f t -> KList l -> Proxy (HMemberRes' t l)
 
 instance HMember' t '[] where
   type HMemberRes' t '[] = 'False
   hMember' _ _ = Proxy
 
 instance HMember' t (t' ': ts) where
-  type HMemberRes' t (t' ': ts) = Or ((Label t) == t') (HMemberRes' t ts)
+  type HMemberRes' t (t' ': ts) = Or (t == t') (HMemberRes' t ts)
   hMember' _ _ = Proxy
 
 
@@ -73,3 +73,8 @@ instance HMember' t (t' ': ts) where
 infixr 2 .:
 (.:) = HCons
 ε = HNil
+
+-- | a polykinded heteogeneous list
+data KList (l :: [k]) :: Type where
+  KNil :: KList '[]
+  KCons :: f h -> KList l -> KList (h ': l)

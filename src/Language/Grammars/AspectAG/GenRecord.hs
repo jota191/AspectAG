@@ -78,7 +78,7 @@ type instance  WrapField (ChiReco prd)  (v :: [(k, Type)]) = Attribution v
 type instance  WrapField PrdReco  (rule :: Type) = rule
 
 data Att   = Att Symbol Type
-data Prod  = Prd Symbol NT 
+data Prod  = Prd Symbol NT
 data Child = Chi Symbol Prod (Either NT T)
 data NT    = NT Symbol
 data T     = T Type

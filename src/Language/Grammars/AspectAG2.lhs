@@ -159,10 +159,10 @@
 >        -> req ctx (OpComRA rule (fasp ctx))
 
 > (.+:) = extAspect
-> infixr 4 .+:
+> infixr 3 .+:
 
 > (.:+:) = comAspect
-> infixr 3 .:+:
+> infixr 4 .:+:
 
 > data OpComAsp  (al :: [(Prod, Type)])
 >                (ar :: [(Prod, Type)]) where
@@ -280,7 +280,7 @@
 >      -> CRule ctx prd sc ip ic sp ic sp'
 > syndef (att :: Label ('Att att t))
 >        (prd :: Label prd)
->         f 
+>         f
 >   = CRule $ \(ctx :: Proxy ctx) inp (Fam ic sp)
 >    -> let nctx = Proxy @ ((Text "syndef::"
 >                            :<>: ShowType ('Att att t)
@@ -289,12 +289,36 @@
 
 > syndefM att prd = syndef att prd . def
 
+
+
+> synmod
+>   :: (Require (OpUpdate AttReco ('Att att t) t r) ctx,
+>       ReqR (OpUpdate AttReco ('Att att t) t r) ~ Rec AttReco sp') =>
+>      Label ('Att att t)
+>      -> Label prd
+>      -> (Proxy
+>            ((('Text "synmod::" ':<>: 'ShowType ('Att att t))
+>              ':<>: 'ShowType prd)
+>               : ctx)
+>          -> Fam prd sc ip -> t)
+>      -> CRule ctx prd sc ip ic' r ic' sp'
+
+> synmod (att :: Label ('Att att t))
+>        (prd :: Label prd)
+>         f
+>   = CRule $ \(ctx :: Proxy ctx) inp (Fam ic sp)
+>    -> let nctx = Proxy @ ((Text "synmod::"
+>                            :<>: ShowType ('Att att t)
+>                            :<>: ShowType prd) ': ctx)
+>       in  Fam ic $ req ctx (OpUpdate @_ @AttReco @t att (f nctx inp) sp)
+
+> synmodM att prd = synmod att prd . def
+
 > inhdef
 >   :: ( Require (OpEq t t') ctx'
 >      , t ~ t'
->      , ntch ~ 'Left n ---- {- TODO :-}
->      , Require (OpExtend' (LabelSetF ('( ('Att att t), t) : r))
->                AttReco ('Att att t) t r) ctx,
+>      , ntch ~ 'Left n
+>      , Require (OpExtend AttReco ('Att att t) t r) ctx,
 >       Require (OpUpdate (ChiReco ('Prd prd nt))
 >                 ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx,
 >       Require (OpLookup (ChiReco ('Prd prd nt))
@@ -305,8 +329,7 @@
 >       ReqR (OpUpdate (ChiReco ('Prd prd nt))
 >             ('Chi chi ('Prd prd nt) ntch) v2 ic)
 >        ~ Rec (ChiReco ('Prd prd nt)) ic',
->       ReqR (OpExtend' (LabelSetF ('( ('Att att t), t) : r))
->               AttReco ('Att att t) t r)
+>       ReqR (OpExtend AttReco ('Att att t) t r)
 >       ~ Rec AttReco v2
 >      , ctx' ~ ((Text "inhdef::"
 >                 :<>: ShowType ('Att att t) :<>: ShowType ('Prd prd nt)
@@ -342,6 +365,61 @@
 >           in  Fam ic' sp
 
 > inhdefM att prd chi = inhdef att prd chi . def
+
+
+
+
+> inhmod
+>   :: ( Require (OpEq t t') ctx'
+>      , t ~ t'
+>      , ntch ~ 'Left n
+>      , Require (OpUpdate  AttReco ('Att att t) t r) ctx,
+>       Require (OpUpdate (ChiReco ('Prd prd nt))
+>                 ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx,
+>       Require (OpLookup (ChiReco ('Prd prd nt))
+>                ('Chi chi ('Prd prd nt) ntch) ic) ctx,
+>       ReqR (OpLookup (ChiReco ('Prd prd nt))
+>             ('Chi chi ('Prd prd nt) ntch) ic)
+>        ~ Rec AttReco r,
+>       ReqR (OpUpdate (ChiReco ('Prd prd nt))
+>             ('Chi chi ('Prd prd nt) ntch) v2 ic)
+>        ~ Rec (ChiReco ('Prd prd nt)) ic',
+>       ReqR (OpUpdate AttReco ('Att att t) t r)
+>       ~ Rec AttReco v2
+>      , ctx' ~ ((Text "inhmod::"
+>                 :<>: ShowType ('Att att t) :<>: ShowType ('Prd prd nt)
+>                 :<>: ShowType ('Chi chi ('Prd prd nt) ntch)) ': ctx))
+>      =>
+>      Label ('Att att t)
+>      -> Label ('Prd prd nt)
+>      -> Label ('Chi chi ('Prd prd nt) ntch)
+>      -> (Proxy ctx' -> Fam ('Prd prd nt) sc ip -> t')
+>      -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
+> inhmod (att :: Label ('Att att t))
+>        (prd :: Label ('Prd prd nt))
+>        (chi :: Label ('Chi chi ('Prd prd nt) ntch))
+>         f
+>   = CRule $ \(ctx :: Proxy ctx)
+>               inp
+>              (Fam ic sp :: Fam ('Prd prd nt) ic sp)
+>        -> let
+>         ic'   = req (Proxy @ ctx)
+>               (OpUpdate @('Chi chi ('Prd prd nt) ntch)
+>                         @(ChiReco ('Prd prd nt)) chi catts' ic)
+>         catts = req (Proxy @ ctx)
+>               (OpLookup @('Chi chi ('Prd prd nt) ntch)
+>                         @(ChiReco ('Prd prd nt)) @ic chi ic)
+>         catts'= req (Proxy @ ctx)
+>               (OpUpdate @('Att att t)
+>                         @AttReco @t att (f nctx inp) catts)
+>         nctx  = Proxy @ ((Text "inhmod::"
+>                          :<>: ShowType ('Att att t)
+>                          :<>: ShowType ('Prd prd nt)
+>                          :<>: ShowType ('Chi chi ('Prd prd nt) ntch))
+>                          ': ctx)
+>           in  Fam ic' sp
+
+> inhmodM att prd chi = inhmod att prd chi . def
 
 > ext' :: CRule ctx prd sc ip ic sp ic' sp'
 >     -> CRule ctx prd sc ip a b ic sp
@@ -509,3 +587,55 @@ instance MonadReader (Fam l ho chi par) m
 >   = let ctx  = Proxy @ '[]
 >         ctx' = Proxy @ '[Text "knit" :<>: ShowType prd]
 >     in  knit ctx (req ctx' (OpLookup prd ((mkAspect asp) ctx))) fc ip
+
+
+> class Use (att :: Att) (prd :: Prod) (nts :: [NT]) (a :: Type) sc
+>  where
+>   usechi :: Label att -> Label prd -> KList nts -> (a -> a -> a) -> ChAttsRec prd sc
+>          -> Maybe a
+
+> class Use' (mnts :: Bool) (att :: Att) (prd :: Prod) (nts :: [NT])
+>            (a :: Type) sc
+>  where
+>   usechi' :: Proxy mnts -> Label att -> Label prd -> KList nts
+>    -> (a -> a -> a)
+>    -> ChAttsRec prd sc -> Maybe a
+
+> instance Use prd att nts a '[] where
+>   usechi _ _ _ _ _ = Nothing
+
+> instance( HMember' nt nts
+>         , HMemberRes' nt nts ~ mnts
+>         , Use' mnts att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs))
+>   => Use att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs) where
+>   usechi att prd nts op ch
+>     = usechi' (Proxy @ mnts) att prd nts op ch
+
+> instance ( LabelSet ( '( 'Chi ch prd ('Left nt), attr) : cs)
+>          , Use att prd nts a cs)
+>   => Use' False att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs)
+>  where
+>   usechi' _ att prd nts op (ConsCh _ cs) = usechi att prd nts op cs
+
+> instance ( Require (OpLookup AttReco att attr)
+>            '[('Text "looking up attribute " ':<>: 'ShowType att)
+>               ':$$: ('Text "on " ':<>: 'ShowType attr)]
+>          , ReqR (OpLookup AttReco att attr) ~ a
+>          , Use att prd nts a cs
+>          , LabelSet ( '( 'Chi ch prd ('Left nt), attr) : cs)
+>          , WrapField (ChiReco prd) attr ~ Attribution attr)  --ayudín
+>   => Use' True att prd nts a ( '( 'Chi ch prd ('Left nt), attr) : cs) where
+>   usechi' _ att prd nts op (ConsCh lattr scr)
+>     = let attr = unTaggedChAttr lattr
+>           val  = attr #. att
+>       in  Just $ maybe val (op val) $ usechi att prd nts op scr
+
+
+> --use :: (Use att prd nts a sc, LabelSet ( '( att, a) ': sp)) =>
+> --    Label att -> Label prd-> KList nts -> (a -> a -> a) -> a
+> --           -> CRule ctx prd sc ip ic sp ic ( '( att, a) ': sp)
+
+> use att prd nts op unit
+>    -- let res = usechi att prd nts op sc
+>     -- in  syndef att prd $ maybe unit id res
+>   = syndef att prd $ \_ fam -> maybe unit id (usechi att prd nts op $ chi fam)
