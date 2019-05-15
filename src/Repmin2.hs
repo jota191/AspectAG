@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE 
+
+{-# LANGUAGE
              TypeFamilies,
              FlexibleContexts,
              ScopedTypeVariables,
@@ -17,7 +18,6 @@ module Repmin where
 
 import System.Exit (exitFailure)
 import Language.Grammars.AspectAG2
---import Language.Grammars.AspectAG.Derive
 import Control.Monad
 import Control.Applicative
 import Data.Proxy
@@ -57,15 +57,19 @@ ch_r    = Label @ ('Chi "ch_r"    P_Node ('Left Nt_Tree))
 ch_tree = Label @ ('Chi "ch_tree" P_Root ('Left Nt_Tree))
 ch_i    = Label @ ('Chi "ch_i"    P_Leaf ('Right ('T Int)))
 
-sem_Tree' asp (Node l r) = knit' ((asp .#. p_Node))$
-                             (ch_l .=. sem_Tree' asp l)
-                        .*. ((ch_r .=. sem_Tree' asp r)
-                        .*.  EmptyRec)
-sem_Tree' asp (Leaf i)   = knit' (asp .#. p_Leaf)$
-                          ch_i .=. sem_Lit i .*. EmptyRec
-sem_Root' asp (Root r)   = knit' (asp .#. p_Root)$
-                           ch_tree .=. sem_Tree' asp r .*. EmptyRec
-
+sem_Tree' asp (Node l r)
+  = knit' (asp .#. p_Node)
+      $   ch_l  .=. sem_Tree' asp l
+     .*.  ch_r  .=. sem_Tree' asp r
+     .*.  EmptyRec
+sem_Tree' asp (Leaf i)
+  = knit' (asp .#. p_Leaf)
+      $   ch_i  .=. sem_Lit i
+     .*.  EmptyRec
+sem_Root' asp (Root r)
+  = knit' (asp .#. p_Root)
+      $   ch_tree  .=. sem_Tree' asp r
+     .*.  EmptyRec
 
 sem_Tree asp (Node l r) = knitAspect p_Node asp
                            $  ch_l .=. sem_Tree asp l
@@ -78,11 +82,14 @@ sem_Root asp (Root r)   = knitAspect p_Root asp$
 
 
 -- | rules for smin
+--node_smin
+--  = syndefM smin p_Node $ min <$> at ch_l smin <*> at ch_r smin
+
 node_smin
-  = syndefM smin p_Node $ min <$> at ch_l smin <*> at ch_r smin
+  = use smin p_Node (KCons (Proxy @ Nt_Tree) KNil) min 0
 leaf_smin
   = syndefM smin p_Leaf $ at ch_i lit
-  
+
 -- | rules for sres
 node_sres
   = syndefM sres p_Node $ Node <$> at ch_l sres <*> at ch_r sres
@@ -101,29 +108,30 @@ node_ival_r
 
 -- | Aspects
 
-  
-asp_smin = updCAspect (Proxy @ ('Text "smin"))   
-   $   node_smin
-  .+:  leaf_smin
-  .+:  emptyAspect
- 
+
+asp_smin = updCAspect (Proxy @ ('Text "smin"))
+    $   node_smin
+   .+:  leaf_smin
+   .+:  emptyAspect
+
 asp_sres = updCAspect (Proxy @ ('Text "sres"))
-   $   node_sres
-  .+:  leaf_sres
-  .+:  root_sres
-  .+:  emptyAspect
+    $   node_sres
+   .+:  leaf_sres
+   .+:  root_sres
+   .+:  emptyAspect
 
 asp_ival = updCAspect (Proxy @ ('Text "ival"))
-   $   node_ival_l
-  .+:  node_ival_r
-  .+:  root_ival
-  .+:  emptyAspect
+    $   node_ival_l
+   .+:  node_ival_r
+   .+:  root_ival
+   .+:  emptyAspect
 
-
+node_smin'
+  = synmodM smin p_Node $ max <$> at ch_l smin <*> at ch_r smin
 
 asp_repmin = updCAspect (Proxy @ ('Text "repmin"))
     $   asp_smin
-  .:+:  asp_sres 
+  .:+:  asp_sres
   .:+:  asp_ival
 
 repmin t
@@ -132,14 +140,26 @@ repmin t
 minimo t
   = sem_Tree asp_smin t emptyAtt #. smin
 
-{-
+
+
 ssiz = Label @ ('Att "ssiz" Int)
 
 asp_ssiz =   syndefM ssiz p_Leaf (pure 1)
-        .+: (syndefM ssiz p_Node
-             (at ch_l ssiz <**> pure (+) <*> at ch_r ssiz))
+        .+: (syndefM ssiz p_Node (at ch_l ssiz <**> pure (+) <*> at ch_r ssiz))
         .+: emptyAspect
 
+repavg t = sem_Root asp_repavg (Root t) emptyAtt #. sres
+  where asp_repavg  = ival' .+: asp_ssiz .:+: asp_ssum .:+: asp_repmin
+        ival'       = inhmodM ival p_Root ch_tree
+            $ div <$> at ch_tree ssum <*> at ch_tree ssiz
+
+ssum = Label @ ('Att "ssum" Int)
+asp_ssum
+  =  syndefM ssum p_Node (at ch_l ssum <**> pure (+) <*> at ch_r ssum)
+ .+: syndefM ssum p_Leaf (at ch_i lit)
+ .+: emptyAspect
+
+{-
 size t = sem_Tree asp_ssiz t emptyAtt #. ssiz
 
 ssum = Label @ ('Att "ssum" Int)
