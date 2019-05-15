@@ -1,0 +1,91 @@
+dnl
+dnl Generic Haskell configure script
+dnl
+
+# Is it there?
+AC_INIT(lhs2tex,1.22)
+
+VERSION="1.22"
+SHORTVERSION="1.22"
+NUMVERSION=122
+PRE=1
+AC_SUBST(VERSION)
+AC_SUBST(SHORTVERSION)
+AC_SUBST(NUMVERSION)
+AC_SUBST(PRE)
+
+# check for Haskell compiler
+AC_PATH_PROG(GHC,ghc)
+# check for Hugs (only for documentation)
+AC_PATH_PROG(HUGS,hugs)
+
+# install command
+AC_PROG_INSTALL
+
+# symbolic links
+AC_PROG_LN_S()
+
+# other programs
+AC_PATH_PROG(BASH,bash)
+AC_PATH_PROG(MV,mv)
+AC_PATH_PROG(CP,cp)
+AC_PATH_PROG(RM,rm)
+AC_PATH_PROG(MKDIR,mkdir)
+AC_PATH_PROG(TOUCH,touch)
+AC_PATH_PROG(DIFF,diff)
+AC_PATH_PROG(GREP,grep)
+AC_PATH_PROG(SED,sed)
+AC_PATH_PROG(SORT,sort)
+AC_PATH_PROG(UNIQ,uniq)
+AC_PATH_PROG(FIND,find)
+AC_PATH_PROG(LATEX,latex)
+AC_PATH_PROG(PDFLATEX,pdflatex)
+AC_PATH_PROG(XDVI,xdvi)
+AC_PATH_PROG(GV,gv)
+AC_PATH_PROG(DVIPS,dvips)
+
+# texmf tree
+AC_CHECK_TEXMF
+AC_ARG_ENABLE(polytable,
+[  --disable-polytable     do not install polytable TeX package],
+[POLYTABLE_INSTALL=$enableval],
+[POLYTABLE_INSTALL=yes])
+if test "z$POLYTABLE_INSTALL" = "zyes"; then
+  AC_CHECK_POLYTABLE
+  # does polytable need to be installed?
+  AC_MSG_CHECKING([whether polytable needs to be installed])
+  POLYTABLE_INSTALL=no
+  if test -n $POLYTABLE; then
+    FPTOOLS_PROG_CHECK_VERSION([$POLYTABLE_VERSION],-lt,[0.8.2],
+      [POLYTABLE_INSTALL=yes])
+  else
+    POLYTABLE_INSTALL=yes
+  fi
+  AC_MSG_RESULT($POLYTABLE_INSTALL)
+fi
+AC_SUBST(POLYTABLE_INSTALL)
+AC_PATH_PROG(MKTEXLSR,mktexlsr)
+
+# docdir and expansion
+docdir="$datadir/doc/$PACKAGE_TARNAME-$PACKAGE_VERSION"
+AC_SUBST(docdir)
+stydir="$datadir/$PACKAGE_TARNAME-$PACKAGE_VERSION"
+AC_SUBST(stydir)
+
+# lhs2TeX binary path relative to docdir
+LHS2TEX="../lhs2TeX"
+AC_SUBST(LHS2TEX)
+
+# search path separator
+SEP=":"
+AC_SUBST(SEP)
+
+AC_CONFIG_FILES(config.mk src/Version.lhs lhs2TeX.1 doc/InteractiveHugs.lhs doc/InteractivePre.lhs)
+AC_OUTPUT
+
+echo "Configuration succesfully completed."
+echo "Say"
+echo "     make               to compile and build documentation"
+echo "     make bin           to compile the binary only"
+echo "     make install       to (compile and) install"
+

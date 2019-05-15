@@ -1,0 +1,58 @@
+Known bugs or problems
+======================
+
+*  --> is an operator, not a comment
+   (reported by Neil Mitchell)
+   [ Fixed on 15 Nov 2007. ]
+
+*  catcode of @ is wrong after including standard files 
+   (reported by Jeremy Gibbons)
+   [ Hopefully fixed on 15 Nov 2007. ]
+
+*  backquotes in operators don't render nicely and should at least
+   be configurable
+   [ Made configurable 15 Nov 2007, behaviour unchanged though. ]
+
+*  special characters in string literals are formatted in a way
+   that assumes the font used is tt; same holds for verbatim; make
+   configurable
+
+*  \perform { ... } (with space) doesn't seem to work
+
+*  opening %{ parenthesis without closing %} 
+   causes (Fail: Main.lhs:186: Non-exhaustive patterns in lambda)
+   [ I think this is fixed. ]
+
+*  document command line options more systematically
+   - for instance, document --path=:bla and --path=bla:
+   [ This is at least in the manpage now. ]
+
+*  add @@ and || quoting with typical errors as FAQ
+
+*  operator sections involving `infix` operators don't render nicely
+
+*  "default" style, i.e. if no style is selected, seems to be --tt;
+   this isn't a good choice -- should there be a default style at all?
+   [ This is --poly now. ]
+
+*  in --tt mode, the <- is formatted as the \in-symbol of the tt
+   symbol font, where the \leftarrow would seem more appropriate;
+   maybe the default should be changed to \char''30 for <-, but
+   compatibility is also worth a thing.
+
+*  the manual does not explain how ' is treated in TeX strings, such
+   as occur in formatting statements.
+
+*  the manual and most of all INSTALL should mention the texmf-tree
+   location procedure and the --with-texmf as well as the
+   --disable-polytable flag ...
+
+*  there is some bad interaction between parametrized formatting
+   directives and directly connecting alignment columns; an example
+   is in Experiments/FormatAlign.lhs.
+
+*  there are hardcoded maximum sizes in TeX parser for commands and
+   environments; this should at least be mentioned, better be made
+   configurable, best be removed somehow
+
+*  improperly nested parentheses can still lead to non-displayed code

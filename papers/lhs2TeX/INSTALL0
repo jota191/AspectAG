@@ -1,0 +1,49 @@
+There are two possibilities to install lhs2TeX:
+
+(A) Using Cabal.
+(B) Classic configure/make.
+
+=====================================================================
+
+(A) Using Cabal to install lhs2TeX (preferred):
+
+This requires Cabal 1.6 or later. The process is then as usual:
+
+cabal install
+
+if you have cabal-install (included in the Haskell Platform) or
+
+runghc Setup configure
+runghc Setup build
+runghc Setup install
+
+The third step requires write access to the installation location and
+the LaTeX filename database.
+
+=====================================================================
+
+(B) configure/make (might be removed in the future):
+
+The following instructions apply to Unix-like environments.  However,
+lhs2TeX does run on Windows systems, too. (If you would like to add
+installation instructions or facilitate the installation procedure for
+Windows systems, please contact the authors.)
+
+Unpack the archive. Assume that it has been unpacked into directory
+"/somewhere". Then say
+
+cd /somewhere/lhs2TeX-@ProgramVersion@
+./configure
+make
+make install
+
+You might need administrator permissions to perform the "make install"
+step. Alternatively, you can select your own installation location by
+passing the "--prefix" argument to @configure@:
+
+./configure --prefix=/my/local/programs
+
+With lhs2TeX come a couple of library files (containing basic
+lhs2TeX formatting directives) that need to be found by the
+lhs2TeX binary. The default search path is as follows:
+
