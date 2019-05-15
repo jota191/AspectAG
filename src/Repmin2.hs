@@ -92,7 +92,8 @@ leaf_smin
 
 -- | rules for sres
 node_sres
-  = syndefM sres p_Node $ Node <$> at ch_l sres <*> at ch_r sres
+  = traceRule (Proxy @ ('Text "node_sres"))
+  $ syndefM sres p_Node $ Node <$> at ch_l sres <*> at ch_r sres
 leaf_sres
   = syndefM sres p_Leaf $ Leaf <$> at lhs ival
 root_sres
@@ -109,18 +110,18 @@ node_ival_r
 -- | Aspects
 
 
-asp_smin = updCAspect (Proxy @ ('Text "smin"))
+asp_smin = traceAspect (Proxy @ ('Text "smin"))
     $   node_smin
    .+:  leaf_smin
    .+:  emptyAspect
 
-asp_sres = updCAspect (Proxy @ ('Text "sres"))
+asp_sres = traceAspect (Proxy @ ('Text "sres"))
     $   node_sres
    .+:  leaf_sres
    .+:  root_sres
    .+:  emptyAspect
 
-asp_ival = updCAspect (Proxy @ ('Text "ival"))
+asp_ival = traceAspect (Proxy @ ('Text "ival"))
     $   node_ival_l
    .+:  node_ival_r
    .+:  root_ival
@@ -129,7 +130,7 @@ asp_ival = updCAspect (Proxy @ ('Text "ival"))
 node_smin'
   = synmodM smin p_Node $ max <$> at ch_l smin <*> at ch_r smin
 
-asp_repmin = updCAspect (Proxy @ ('Text "repmin"))
+asp_repmin = traceAspect (Proxy @ ('Text "repmin"))
     $   asp_smin
   .:+:  asp_sres
   .:+:  asp_ival

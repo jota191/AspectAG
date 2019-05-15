@@ -156,17 +156,17 @@ unTaggedChAttr (TaggedChAttr _ a) = a
 infixl 8 .#
 (.#) ::
   (  c ~ ('Chi ch prd nt)
-  ,  ctx ~ '[Text "looking up " :<>: ShowType c :$$:
-            Text "on " :<>: ShowType r :$$:
-            Text "producion: " :<>: ShowType prd
+  ,  ctx ~ '[Text "looking up " :<>: ShowT c :$$:
+            Text "on " :<>: ShowT r :$$:
+            Text "producion: " :<>: ShowT prd
            ]
   , Require (OpLookup (ChiReco prd) c r) ctx
   ) =>
      Rec (ChiReco prd) r -> Label c -> ReqR (OpLookup (ChiReco prd) c r)
 (chi :: Rec (ChiReco prd) r) .# (l :: Label c)
-  = let prctx = Proxy @ '[Text "looking up " :<>: ShowType c :$$:
-                          Text "on " :<>: ShowType r :$$:
-                          Text "producion: " :<>: ShowType prd
+  = let prctx = Proxy @ '[Text "looking up " :<>: ShowT c :$$:
+                          Text "on " :<>: ShowT r :$$:
+                          Text "producion: " :<>: ShowT prd
                          ]
     in req prctx (OpLookup @_ @(ChiReco prd) l chi)
 

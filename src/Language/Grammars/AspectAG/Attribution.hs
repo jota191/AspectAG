@@ -143,7 +143,7 @@ instance (HasFieldAttF l r)
 type family LookupByLabelAttFR (l::k) (r ::[(k,Type)]) :: Type where
   LookupByLabelAttFR l '[]
     = TypeError (Text "No attribution named " :$$:
-                  ShowType l :$$: Text " found")
+                  ShowT l :$$: Text " found")
   LookupByLabelAttFR l ( '(m, t) ': xs)
     = If (l == m) t (LookupByLabelAttFR l xs)
 
@@ -173,15 +173,15 @@ infixl 7 #.
 -- c #. l = lookupByLabelAttF l c
 
 (#.) ::
-  ( msg ~ '[Text "looking up attribute " :<>: ShowType l :$$:
-            Text "on " :<>: ShowType r
+  ( msg ~ '[Text "looking up attribute " :<>: ShowT l :$$:
+            Text "on " :<>: ShowT r
            ]
   , Require (OpLookup AttReco l r) msg
   )
   => Rec AttReco r -> Label l -> ReqR (OpLookup AttReco l r)
 (attr :: Attribution r) #. (l :: Label l)
-  = let prctx = Proxy @ '[Text "looking up attribute " :<>: ShowType l :$$:
-                          Text "on " :<>: ShowType r
+  = let prctx = Proxy @ '[Text "looking up attribute " :<>: ShowT l :$$:
+                          Text "on " :<>: ShowT r
                          ]
     in req prctx (OpLookup @_ @(AttReco) l attr)
 

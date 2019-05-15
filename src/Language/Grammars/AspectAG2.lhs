@@ -87,6 +87,9 @@
 > par :: Fam prd c p -> Attribution p
 > par (Fam c p) = p
 
+> prd :: Fam prd c p -> Label prd
+> prd (Fam c p) = Label
+
 
 > type Rule
 >   (prd  :: Prod)
@@ -104,19 +107,24 @@
 > newtype CAspect (ctx :: [ErrorMessage]) (asp :: [(Prod, Type)] )
 >   = CAspect { mkAspect :: Proxy ctx -> Aspect asp}
 
+
+
 > emptyAspect :: CAspect ctx '[]
 > emptyAspect  = CAspect $ const EmptyRec
 
 > comAspect ::
->  ( Require (OpComAsp al ar) ctx
->  , ReqR (OpComAsp al ar) ~ Rec PrdReco asp)
+>  (Require (OpComAsp al ar) ctx, ReqR (OpComAsp al ar) ~ Rec PrdReco asp)
 >  =>  CAspect ctx al -> CAspect ctx ar -> CAspect ctx asp
 > comAspect al ar
 >   = CAspect $ \ctx -> req ctx (OpComAsp (mkAspect al ctx) (mkAspect ar ctx))
 
 
-> updCAspect (_ :: Proxy (e::ErrorMessage))
->  = mapCAspect $ \(_ :: Proxy ctx) -> Proxy @ ((Text "aspect ":<>: e) : ctx)
+> traceAspect (_ :: Proxy (e::ErrorMessage))
+>   = mapCAspect $ \(_ :: Proxy ctx) -> Proxy @ ((Text "aspect ":<>: e) : ctx)
+
+> traceRule (_ :: Proxy (e::ErrorMessage))
+>   = mapCRule $ \(_ :: Proxy ctx) -> Proxy @ ((Text "rule ":<>: e) : ctx)
+
 
 > mapCRule :: (Proxy ctx -> Proxy ctx')
 >           -> CRule ctx' prd sc ip ic sp ic' sp'
@@ -126,9 +134,11 @@
 > mapCAspect fctx (CAspect fasp) = CAspect $ 
 >        mapCtxRec fctx . fasp . fctx
 
-> class MapCtxAsp (r :: [(Prod,Type)]) (ctx :: [ErrorMessage]) (ctx' :: [ErrorMessage])  where
+> class MapCtxAsp (r :: [(Prod,Type)]) (ctx :: [ErrorMessage])
+>                                      (ctx' :: [ErrorMessage])  where
 >   type ResMapCtx r ctx ctx' :: [(Prod,Type)]
->   mapCtxRec :: (Proxy ctx -> Proxy ctx') -> Aspect r -> Aspect (ResMapCtx r ctx ctx')
+>   mapCtxRec :: (Proxy ctx -> Proxy ctx')
+>             -> Aspect r -> Aspect (ResMapCtx r ctx ctx')
 
 > instance ( MapCtxAsp r ctx ctx' 
 >          , ResMapCtx r ctx ctx' ~ r'
@@ -147,16 +157,12 @@
 >   mapCtxRec _ EmptyRec = EmptyRec
 
 > extAspect
->   :: (Require
->         (OpComRA ctx prd sc ip ic sp ic' sp' a)
->         ctx,
->       ReqR (OpComRA ctx prd sc ip ic sp ic' sp' a)
->       ~ Rec PrdReco asp) =>
->      CRule ctx prd sc ip ic sp ic' sp'
+>   :: ( Require (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx
+>      , ReqR (OpComRA ctx prd sc ip ic sp ic' sp' a) ~ Rec PrdReco asp)
+>   => CRule ctx prd sc ip ic sp ic' sp'
 >      -> CAspect ctx a -> CAspect ctx asp
 > extAspect rule (CAspect fasp)
->   = CAspect $ \(ctx :: Proxy ctx)
->        -> req ctx (OpComRA rule (fasp ctx))
+>   = CAspect $ \ctx -> req ctx (OpComRA rule (fasp ctx))
 
 > (.+:) = extAspect
 > infixr 3 .+:
@@ -173,9 +179,8 @@
 >   req ctx (OpComAsp al _) = al
 
 > instance
->   ( Require (OpComAsp al ar) ctx
+>   ( Require (OpComAsp al ar) ctx, ReqR (OpComAsp al ar) ~  Rec PrdReco ar'
 >   , Require (OpComRA ctx prd sc ip ic sp ic' sp' ar') ctx
->   , Rec PrdReco ar' ~ ReqR (OpComAsp al ar)
 >   )
 >   => Require (OpComAsp al
 >        ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar)) ctx where
@@ -183,10 +188,9 @@
 >        ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar))
 >     = ReqR (OpComRA ctx prd sc ip ic sp ic' sp'
 >             (UnWrap (ReqR (OpComAsp al ar))))
->   req ctx (OpComAsp al (ConsRec
->             (prdrule :: TagField PrdReco prd (CRule ctx prd sc ip ic sp ic' sp')) ar))
->    = let resar = req ctx (OpComAsp al ar) :: Aspect ar'
->      in req ctx (OpComRA (untagField prdrule) resar)
+>   req ctx (OpComAsp al (ConsRec prdrule ar))
+>    = req ctx (OpComRA (untagField prdrule)
+>                       (req ctx (OpComAsp al ar)))
 
 
 > data OpComRA  (ctx  :: [ErrorMessage])
@@ -220,7 +224,7 @@
 >   => Require (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx where
 >   type ReqR (OpComRA ctx prd sc ip ic sp ic' sp' a)
 >      = ReqR (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a)
->   req ctx (OpComRA (rule :: CRule ctx prd sc ip ic sp ic' sp') (a :: Aspect a))
+>   req ctx (OpComRA rule a)
 >      = req ctx (OpComRA' (Proxy @ (HasLabel prd a)) rule a)
 
 > instance
@@ -245,7 +249,7 @@
 >              (IC (ReqR (OpLookup PrdReco prd a)))
 >              (SP (ReqR (OpLookup PrdReco prd a)))
 >             ic'' sp'') a)
->   req ctx (OpComRA' _ (rule :: CRule ctx prd sc ip ic' sp' ic'' sp'' ) asp)
+>   req ctx (OpComRA' _ rule asp)
 >     = let prd     = Label @ prd
 >           oldRule = req ctx (OpLookup prd asp)
 >           newRule = rule `ext` oldRule
@@ -261,107 +265,78 @@
 >   SP (CRule ctx prd sc ip ic sp ic' sp') = sp
 
 > syndef
->   :: ( Require (OpEq t t') ctx'
+>   :: ( RequireEq t t' ctx'
 >      , Require
 >          (OpExtend' (LabelSetF ('( 'Att att t, t) : sp))
 >                      AttReco ('Att att t) t sp) ctx
->      , ReqR (OpExtend' (LabelSetF ('( ('Att att t), t) : sp))
->           AttReco ('Att att t) t sp)
+>      , ReqR
+>          (OpExtend' (LabelSetF ('( 'Att att t, t) : sp))
+>                      AttReco ('Att att t) t sp)
 >          ~ Rec AttReco sp'
 >      , ctx'
 >          ~ ((Text "syndef::"
->              :<>: ShowType ('Att att t)
->              :<>: ShowType prd) ': ctx)
->       , t ~ t'
+>              :<>: ShowT ('Att att t)
+>              :<>: ShowT prd) ': ctx)
 >      )
 >      => Label ('Att att t)
 >      -> Label prd
 >      -> (Proxy ctx' -> Fam prd sc ip -> t')
 >      -> CRule ctx prd sc ip ic sp ic sp'
-> syndef (att :: Label ('Att att t))
->        (prd :: Label prd)
->         f
->   = CRule $ \(ctx :: Proxy ctx) inp (Fam ic sp)
->    -> let nctx = Proxy @ ((Text "syndef::"
->                            :<>: ShowType ('Att att t)
->                            :<>: ShowType prd) ': ctx)
->       in  Fam ic $ req ctx (OpExtend @_ @AttReco @t att (f nctx inp) sp)
+> syndef att prd f
+>   = CRule $ \ctx inp (Fam ic sp)
+>    ->  Fam ic $ req ctx (OpExtend att (f Proxy inp) sp)
 
 > syndefM att prd = syndef att prd . def
 
 
 
 > synmod
->   :: (Require (OpUpdate AttReco ('Att att t) t r) ctx,
->       ReqR (OpUpdate AttReco ('Att att t) t r) ~ Rec AttReco sp') =>
->      Label ('Att att t)
+>   :: (  Require (OpUpdate AttReco ('Att att t) t r) ctx
+>      ,  ReqR (OpUpdate AttReco ('Att att t) t r) ~ Rec AttReco sp')
+>   => Label ('Att att t)
 >      -> Label prd
 >      -> (Proxy
->            ((('Text "synmod::" ':<>: 'ShowType ('Att att t))
->              ':<>: 'ShowType prd)
+>            ((('Text "synmod::" ':<>: ShowT ('Att att t))
+>              ':<>: ShowT prd)
 >               : ctx)
 >          -> Fam prd sc ip -> t)
 >      -> CRule ctx prd sc ip ic' r ic' sp'
 
-> synmod (att :: Label ('Att att t))
->        (prd :: Label prd)
->         f
->   = CRule $ \(ctx :: Proxy ctx) inp (Fam ic sp)
->    -> let nctx = Proxy @ ((Text "synmod::"
->                            :<>: ShowType ('Att att t)
->                            :<>: ShowType prd) ': ctx)
->       in  Fam ic $ req ctx (OpUpdate @_ @AttReco @t att (f nctx inp) sp)
+> synmod att prd f
+>   = CRule $ \ctx  inp (Fam ic sp)
+>            -> Fam ic $ req ctx (OpUpdate att (f Proxy inp) sp)
 
 > synmodM att prd = synmod att prd . def
 
 > inhdef
->   :: ( Require (OpEq t t') ctx'
->      , t ~ t'
+>   :: ( RequireEq t t' ctx'
 >      , ntch ~ 'Left n
->      , Require (OpExtend AttReco ('Att att t) t r) ctx,
->       Require (OpUpdate (ChiReco ('Prd prd nt))
->                 ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx,
->       Require (OpLookup (ChiReco ('Prd prd nt))
->                ('Chi chi ('Prd prd nt) ntch) ic) ctx,
->       ReqR (OpLookup (ChiReco ('Prd prd nt))
->             ('Chi chi ('Prd prd nt) ntch) ic)
->        ~ Rec AttReco r,
->       ReqR (OpUpdate (ChiReco ('Prd prd nt))
->             ('Chi chi ('Prd prd nt) ntch) v2 ic)
->        ~ Rec (ChiReco ('Prd prd nt)) ic',
->       ReqR (OpExtend AttReco ('Att att t) t r)
->       ~ Rec AttReco v2
+>      , Require  (OpExtend AttReco ('Att att t) t r) ctx
+>      , ReqR  (OpExtend AttReco ('Att att t) t r)  ~ (Rec AttReco v2)
+>      , Require  (OpUpdate (ChiReco ('Prd prd nt))
+>                 ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
+>      , ReqR     (OpUpdate (ChiReco ('Prd prd nt))
+>                 ('Chi chi ('Prd prd nt) ntch) v2 ic)
+>               ~ (Rec (ChiReco ('Prd prd nt)) ic')
+>      , Require  (OpLookup (ChiReco ('Prd prd nt))
+>                 ('Chi chi ('Prd prd nt) ntch) ic) ctx
+>      , ReqR     (OpLookup (ChiReco ('Prd prd nt))
+>                 ('Chi chi ('Prd prd nt) ntch) ic) 
+>               ~ (Rec AttReco r)
 >      , ctx' ~ ((Text "inhdef::"
->                 :<>: ShowType ('Att att t) :<>: ShowType ('Prd prd nt)
->                 :<>: ShowType ('Chi chi ('Prd prd nt) ntch)) ': ctx))
+>                 :<>: ShowT ('Att att t) :<>: ShowT ('Prd prd nt)
+>                 :<>: ShowT ('Chi chi ('Prd prd nt) ntch)) ': ctx))
 >      =>
 >      Label ('Att att t)
 >      -> Label ('Prd prd nt)
 >      -> Label ('Chi chi ('Prd prd nt) ntch)
 >      -> (Proxy ctx' -> Fam ('Prd prd nt) sc ip -> t')
 >      -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
-> inhdef (att :: Label ('Att att t))
->        (prd :: Label ('Prd prd nt))
->        (chi :: Label ('Chi chi ('Prd prd nt) ntch))
->         f
->   = CRule $ \(ctx :: Proxy ctx)
->               inp
->              (Fam ic sp :: Fam ('Prd prd nt) ic sp)
->        -> let
->         ic'   = req (Proxy @ ctx)
->               (OpUpdate @('Chi chi ('Prd prd nt) ntch)
->                         @(ChiReco ('Prd prd nt)) chi catts' ic)
->         catts = req (Proxy @ ctx)
->               (OpLookup @('Chi chi ('Prd prd nt) ntch)
->                         @(ChiReco ('Prd prd nt)) @ic chi ic)
->         catts'= req (Proxy @ ctx)
->               (OpExtend @('Att att t)
->                         @AttReco @t att (f nctx inp) catts)
->         nctx  = Proxy @ ((Text "inhdef::"
->                          :<>: ShowType ('Att att t)
->                          :<>: ShowType ('Prd prd nt)
->                          :<>: ShowType ('Chi chi ('Prd prd nt) ntch))
->                          ': ctx)
+> inhdef  att prd chi f
+>   = CRule $ \ctx inp (Fam ic sp)
+>        -> let ic'   = req ctx (OpUpdate chi catts' ic)
+>               catts = req ctx (OpLookup chi ic)
+>               catts'= req ctx (OpExtend  att (f Proxy inp) catts)
 >           in  Fam ic' sp
 
 > inhdefM att prd chi = inhdef att prd chi . def
@@ -373,57 +348,40 @@
 >   :: ( Require (OpEq t t') ctx'
 >      , t ~ t'
 >      , ntch ~ 'Left n
->      , Require (OpUpdate  AttReco ('Att att t) t r) ctx,
->       Require (OpUpdate (ChiReco ('Prd prd nt))
->                 ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx,
->       Require (OpLookup (ChiReco ('Prd prd nt))
->                ('Chi chi ('Prd prd nt) ntch) ic) ctx,
->       ReqR (OpLookup (ChiReco ('Prd prd nt))
->             ('Chi chi ('Prd prd nt) ntch) ic)
->        ~ Rec AttReco r,
->       ReqR (OpUpdate (ChiReco ('Prd prd nt))
->             ('Chi chi ('Prd prd nt) ntch) v2 ic)
->        ~ Rec (ChiReco ('Prd prd nt)) ic',
->       ReqR (OpUpdate AttReco ('Att att t) t r)
->       ~ Rec AttReco v2
+>      , Require (OpUpdate AttReco ('Att att t) t r) ctx
+>      , ReqR    (OpUpdate AttReco ('Att att t) t r)
+>        ~ Rec AttReco v2
+>      , Require (OpUpdate (ChiReco ('Prd prd nt))
+>                ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
+>      , ReqR    (OpUpdate (ChiReco ('Prd prd nt))
+>                ('Chi chi ('Prd prd nt) ntch) v2 ic)
+>        ~ Rec (ChiReco ('Prd prd nt)) ic'
+>      , Require (OpLookup (ChiReco ('Prd prd nt))
+>                ('Chi chi ('Prd prd nt) ntch) ic) ctx
+>      , ReqR    (OpLookup (ChiReco ('Prd prd nt))
+>                ('Chi chi ('Prd prd nt) ntch) ic)
+>        ~ Rec AttReco r
 >      , ctx' ~ ((Text "inhmod::"
->                 :<>: ShowType ('Att att t) :<>: ShowType ('Prd prd nt)
->                 :<>: ShowType ('Chi chi ('Prd prd nt) ntch)) ': ctx))
+>                 :<>: ShowT ('Att att t) :<>: ShowT ('Prd prd nt)
+>                 :<>: ShowT ('Chi chi ('Prd prd nt) ntch)) ': ctx))
 >      =>
 >      Label ('Att att t)
 >      -> Label ('Prd prd nt)
 >      -> Label ('Chi chi ('Prd prd nt) ntch)
 >      -> (Proxy ctx' -> Fam ('Prd prd nt) sc ip -> t')
 >      -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
-> inhmod (att :: Label ('Att att t))
->        (prd :: Label ('Prd prd nt))
->        (chi :: Label ('Chi chi ('Prd prd nt) ntch))
->         f
->   = CRule $ \(ctx :: Proxy ctx)
->               inp
->              (Fam ic sp :: Fam ('Prd prd nt) ic sp)
->        -> let
->         ic'   = req (Proxy @ ctx)
->               (OpUpdate @('Chi chi ('Prd prd nt) ntch)
->                         @(ChiReco ('Prd prd nt)) chi catts' ic)
->         catts = req (Proxy @ ctx)
->               (OpLookup @('Chi chi ('Prd prd nt) ntch)
->                         @(ChiReco ('Prd prd nt)) @ic chi ic)
->         catts'= req (Proxy @ ctx)
->               (OpUpdate @('Att att t)
->                         @AttReco @t att (f nctx inp) catts)
->         nctx  = Proxy @ ((Text "inhmod::"
->                          :<>: ShowType ('Att att t)
->                          :<>: ShowType ('Prd prd nt)
->                          :<>: ShowType ('Chi chi ('Prd prd nt) ntch))
->                          ': ctx)
+> inhmod att prd chi f
+>   = CRule $ \ctx inp (Fam ic sp)
+>        -> let ic'   = req ctx (OpUpdate chi catts' ic)
+>               catts = req ctx (OpLookup  chi ic)
+>               catts'= req ctx (OpUpdate  att (f Proxy inp) catts)
 >           in  Fam ic' sp
 
 > inhmodM att prd chi = inhmod att prd chi . def
 
-> ext' :: CRule ctx prd sc ip ic sp ic' sp'
->     -> CRule ctx prd sc ip a b ic sp
->     -> CRule ctx prd sc ip a b ic' sp'
+> ext' ::  CRule ctx prd sc ip ic sp ic' sp'
+>      ->  CRule ctx prd sc ip a b ic sp
+>      ->  CRule ctx prd sc ip a b ic' sp'
 > (CRule f) `ext'` (CRule g)
 >  = CRule $ \ctx input -> f ctx input . g ctx input
 
@@ -450,8 +408,8 @@
 >   req = undefined
 
 
-> instance Require (OpError (Text "" :<>: ShowType prd1 :<>: Text " /= "
->                             :<>: ShowType prd2)) ctx
+> instance Require (OpError (Text "" :<>: ShowT prd1 :<>: Text " /= "
+>                             :<>: ShowT prd2)) ctx
 >   => Require (OpEq prd1 prd2) ctx where
 >   type ReqR (OpEq prd1 prd2) = ()
 >   req = undefined
@@ -480,11 +438,9 @@
 >  type ResAt ('Chi ch prd nt) ('Att att t) (Reader (Proxy ctx, Fam prd' chi par))
 >          = t -- ReqR (OpLookup (ChiReco prd) ('Chi ch prd nt) chi)
 >  at (ch :: Label ('Chi ch prd nt)) (att :: Label ('Att att t))
->   = liftM (\((ctx, Fam chi _) :: (Proxy ctx, Fam prd' chi par))
->      -> let atts = req (Proxy @ ctx) (OpLookup @('Chi ch prd' nt)
->                                       @(ChiReco prd') ch chi)
->         in  req (Proxy @ ctx) (OpLookup @('Att att t)
->                                     @AttReco att atts)) ask
+>   = liftM (\(ctx, Fam chi _)  -> let atts = req ctx (OpLookup ch chi)
+>                                  in  req ctx (OpLookup att atts))
+>           ask
 
 > instance
 >          ( Require (OpLookup AttReco ('Att att t) par) ctx
@@ -496,9 +452,7 @@
 >  type ResAt Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))
 >     = t
 >  at lhs att
->   = liftM (\((ctx, Fam _ par) :: (Proxy ctx, Fam prd chi par))
->            -> req (Proxy @ ctx) (OpLookup @('Att att t)
->                                     @AttReco att par)) ask
+>   = liftM (\(ctx, Fam _ par) -> req ctx (OpLookup att par)) ask
 
 > def :: Reader (Proxy ctx, Fam prd chi par) a
 >     -> (Proxy ctx -> (Fam prd chi par) -> a)
@@ -585,7 +539,7 @@ instance MonadReader (Fam l ho chi par) m
 
 > knitAspect (prd :: Label prd) asp fc ip
 >   = let ctx  = Proxy @ '[]
->         ctx' = Proxy @ '[Text "knit" :<>: ShowType prd]
+>         ctx' = Proxy @ '[Text "knit" :<>: ShowT prd]
 >     in  knit ctx (req ctx' (OpLookup prd ((mkAspect asp) ctx))) fc ip
 
 
@@ -618,8 +572,8 @@ instance MonadReader (Fam l ho chi par) m
 >   usechi' _ att prd nts op (ConsCh _ cs) = usechi att prd nts op cs
 
 > instance ( Require (OpLookup AttReco att attr)
->            '[('Text "looking up attribute " ':<>: 'ShowType att)
->               ':$$: ('Text "on " ':<>: 'ShowType attr)]
+>            '[('Text "looking up attribute " ':<>: ShowT att)
+>               ':$$: ('Text "on " ':<>: ShowT attr)]
 >          , ReqR (OpLookup AttReco att attr) ~ a
 >          , Use att prd nts a cs
 >          , LabelSet ( '( 'Chi ch prd ('Left nt), attr) : cs)
