@@ -205,7 +205,7 @@ type family ShowEM (m :: ErrorMessage) :: ErrorMessage
 instance
   Require (OpError (Text "field not Found on " :<>: Text (ShowRec c)
                      :$$: Text "looking up the " :<>: Text (ShowField c)
-                           :<>: ShowType l
+                           :<>: ShowT l
                           )) ctx
   => Require (OpLookup c l ( '[] :: [(k,k')])) ctx where
   type ReqR (OpLookup c l ('[] :: [(k,k')])  ) = ()
@@ -226,13 +226,24 @@ type instance ShowField PrdReco       = "production named "
 
 instance (Require (OpError (Text "field not Found on " :<>: Text (ShowRec c)
                     :$$: Text "updating the " :<>: Text (ShowField c)
-                     :<>: ShowType l)) ctx)
+                     :<>: ShowT l)) ctx)
   => Require (OpUpdate c l v '[]) ctx where 
   type ReqR (OpUpdate c l v ('[] )  ) = '[]
   req = undefined
 
 
+type family ShowT (t :: k) :: ErrorMessage  where
+  ShowT ('Att l t)   = ShowT t :<>: Text  "::Attribute " :<>: Text l
+  ShowT ('Prd l nt)  = ShowT nt :<>: Text "::Production " :<>: Text l
+  ShowT ('Chi l p s) = ShowT p :<>:  Text "::Child " :<>: Text l 
+                                     :<>:  Text ":" :<>: ShowT s
+  ShowT ('NT l)      = Text "Non-Terminal " :<>: Text l
+  ShowT ('T  l)      = Text "Terminal " :<>: ShowT l
+  ShowT t            = ShowType t
 
+
+
+  
 -- | update
 
 data OpUpdate (c  :: Type)
@@ -375,7 +386,7 @@ instance ( LabelSetF ( '(l, v) ':  r) ~ b
 
 instance Require (OpError (Text "Duplicated Labels on " :<>: Text (ShowRec c)
                           :$$: Text "on the " :<>: Text (ShowField c)
-                           :<>: ShowType l
+                           :<>: ShowT l
                           )) ctx
   => Require (OpExtend' False c l v (r :: [(k, k')])) ctx where
   type ReqR (OpExtend' False c l v r) = Rec c (r :: [(k, k')])
