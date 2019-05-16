@@ -132,13 +132,12 @@ sem_Expr' asp (Var' v)   = knitAspect var asp
                           $ vname .=. sem_Lit v .*. EmptyRec
 
 sem_Expr' asp (Let v e b) = knitAspect elet asp
-                          $    vlet     .=. sem_Lit v
+                           $   vlet     .=. sem_Lit v
                           .*.  exprLet  .=. sem_Expr' asp e
                           .*.  bodyLet  .=. sem_Expr' asp b
                           .*.  EmptyRec
 
-evalExpr' e m = sem_Expr' asp2 e ((TagField (Label @ AttReco) env m)
-                               .*. emptyAtt) #. eval 
+evalExpr' e m = sem_Expr' asp2 e (env =. m .*. emptyAtt) #. eval 
 
 exampleExpr' =  Add' (Val' (-9))
                      (Add' (Var' "x") (Let "x" (Val' 2)
@@ -152,8 +151,7 @@ val_eval'  =  synmodM eval val  $ abs <$> ter ival
 
 
 evalExpr'' e m = sem_Expr' (val_eval' .+: asp2) e
-                           ((TagField (Label @ AttReco) env m)
-                               .*. emptyAtt) #. eval 
+                           (env =. m *. emptyAtt) #. eval 
 exampleEval'' =  evalExpr'' exampleExpr'
                             (insert "x" 5 Data.Map.empty)
 
