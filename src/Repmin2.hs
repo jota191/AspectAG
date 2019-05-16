@@ -37,9 +37,9 @@ examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
                 )
               )
 
-smin = Label @ ('Att "smin" Int)
-sres = Label @ ('Att "sres" Tree)
-ival = Label @ ('Att "ival" Int)
+smin = Label @ ( 'Att "smin" Int)
+sres = Label @ ( 'Att "sres" Tree)
+ival = Label @ ( 'Att "ival" Int)
 
 type P_Node = 'Prd "p_Node" ('NT "Tree")
 p_Node = Label @ P_Node
