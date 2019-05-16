@@ -37,26 +37,25 @@ examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
                 )
               )
 
-smin = Label @ ('Att "smin" Int)
-sres = Label @ ('Att "sres" Tree)
-ival = Label @ ('Att "ival" Int)
+type Nt_Tree = 'NT "Tree"
 
-type P_Node = 'Prd "p_Node" ('NT "Tree")
+
+type P_Node = 'Prd "p_Node" Nt_Tree
 p_Node = Label @ P_Node
 
-type P_Leaf = 'Prd "p_Leaf" ('NT "Tree")
+type P_Leaf = 'Prd "p_Leaf" Nt_Tree
 p_Leaf = Label @ P_Leaf
 
-type P_Root = 'Prd "p_Root" ('NT "Root")
+type P_Root = 'Prd "p_Root" Nt_Tree
 p_Root = Label @ P_Root
 
-type Nt_Tree = 'NT "Tree"
 
 ch_l    = Label @ ('Chi "ch_l"    P_Node ('Left Nt_Tree))
 ch_r    = Label @ ('Chi "ch_r"    P_Node ('Left Nt_Tree))
 ch_tree = Label @ ('Chi "ch_tree" P_Root ('Left Nt_Tree))
 ch_i    = Label @ ('Chi "ch_i"    P_Leaf ('Right ('T Int)))
 
+{-
 sem_Tree' asp (Node l r)
   = knit' (asp .#. p_Node)
       $   ch_l  .=. sem_Tree' asp l
@@ -70,6 +69,7 @@ sem_Root' asp (Root r)
   = knit' (asp .#. p_Root)
       $   ch_tree  .=. sem_Tree' asp r
      .*.  EmptyRec
+-}
 
 sem_Tree asp (Node l r) = knitAspect p_Node asp
                            $  ch_l .=. sem_Tree asp l
@@ -80,6 +80,10 @@ sem_Tree asp (Leaf i)   = knitAspect p_Leaf asp$
 sem_Root asp (Root r)   = knitAspect p_Root asp$
                           ch_tree .=. sem_Tree asp r .*. EmptyRec
 
+
+smin = Label @ ('Att "smin" Int)
+sres = Label @ ('Att "sres" Tree)
+ival = Label @ ('Att "ival" Int)
 
 -- | rules for smin
 --node_smin
@@ -99,6 +103,7 @@ leaf_sres
 root_sres
   = syndefM sres p_Root $ at ch_tree sres
 
+
 -- | rules for ival
 root_ival
   = inhdefM ival p_Root ch_tree $ at ch_tree smin
@@ -106,6 +111,8 @@ node_ival_l
   = inhdefM ival p_Node ch_l $ at lhs ival
 node_ival_r
   = inhdefM ival p_Node ch_r $ at lhs ival
+
+
 
 -- | Aspects
 
@@ -160,31 +167,3 @@ asp_ssum
  .+: syndefM ssum p_Leaf (at ch_i lit)
  .+: emptyAspect
 
-{-
-size t = sem_Tree asp_ssiz t emptyAtt #. ssiz
-
-ssum = Label @ ('Att "ssum" Int)
-asp_ssum
-  =  syndefM ssum p_Node (at ch_l ssum <**> pure (+) <*> at ch_r ssum)
- .+: syndefM ssum p_Leaf (at ch_i lit)
- .+: emptyAspect
-
-
--- defines ival in another way
-root_avg = inhdefM ival p_Root ch_tree
- $ do zi <- at ch_tree ssiz
-      su <- at ch_tree ssum
-      pure $ su `div` zi
-
-repavg t = sem_Root repavg (Root t) emptyAtt #. sres
-  where repavg =  node_ival_l
-              .+: node_ival_r
-              .+: root_avg
-              .+: asp_ssiz .:+: asp_sres .:+: asp_ssum
-
-spoly :: Proxy a -> Label ('Att "spoly" a)
-spoly _ = Label
-
-getProxy :: a -> Proxy a
-getProxy _ = Proxy
--}
