@@ -458,6 +458,9 @@
 >     -> (Proxy ctx -> (Fam prd chi par) -> a)
 > def = curry . runReader
 
+> ter :: ( At pos ('Att "term" a) m, pos ~ 'Chi ch prd (Right ('T a)) )
+>     =>  Label pos -> m (ResAt pos ('Att "term" a) m) 
+> ter (ch :: Label ('Chi ch prd (Right ('T a))))  = at ch (lit @ a)
 
 instance MonadReader (Fam l ho chi par) m
        => At (Proxy Lhs) m par where

@@ -25,6 +25,7 @@
 %format at      = "@ \!\!"
 
 
+
 %
 % \BibTeX command to typeset BibTeX logo in the docs
 \AtBeginDocument{%
@@ -71,7 +72,6 @@
 
 \usepackage {amssymb}
 
-
 \setlength{\mathindent}{0.3cm}
 
 \begin{document}
@@ -83,9 +83,8 @@
 % authors and their affiliations. Of note is the shared affiliation of the first
 % two authors, and the "authornote" and "authornotemark" commands used to denote
 % shared contribution to the research.
-\author{Juan García Garland}
 
-
+\author{Juan Garcia Garland}
 \affiliation{%
   \institution{Instituto de Computación\\Universidad de la República}
   \streetaddress{P.O. Box 1212}
@@ -93,18 +92,18 @@
   \state{Uruguay}
   \postcode{43017-6221}
 }
+
 \author{Alberto Pardo}
-
-
 \affiliation{%
   \institution{Instituto de Computación\\Universidad de la República}
   \streetaddress{P.O. Box 1212}
   \city{Montevideo}
   \state{Uruguay}
   \postcode{43017-6221}
-}\author{Marcos Viera}
+}
 
 
+\author{Marcos Viera}
 \affiliation{%
   \institution{Instituto de Computación\\Universidad de la República}
   \streetaddress{P.O. Box 1212}
