@@ -4,6 +4,26 @@
 \documentclass[sigconf]{acmart}
 %include polycode.fmt
 
+%format asp_smin  = "asp_{smin}"
+%format asp_sres  = "asp_{sres}"
+%format asp_ival  = "asp_{ival}"
+
+%format p_Root  = "p_{Root}"
+%format p_Leaf  = "p_{Leaf}"
+%format p_Node  = "p_{Node}"
+
+%format ch_i     = "ch_{i}"
+%format ch_l     = "ch_{l}"
+%format ch_r     = "ch_{r}"
+%format ch_tree  = "ch_{tree}"
+
+%format <$>      = "<\!\!\$\!\!\!>"
+%format <*>      = "\oast"
+%format .+:      = "\triangleleft"
+%format .:+:      = "\bowtie"
+
+%format at      = "@ \!\!"
+
 
 %
 % \BibTeX command to typeset BibTeX logo in the docs
