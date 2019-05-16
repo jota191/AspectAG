@@ -10,7 +10,8 @@
              UnicodeSyntax,
              DataKinds,
              TypeApplications,
-             PartialTypeSignatures
+             PartialTypeSignatures,
+             AllowAmbiguousTypes
 #-}
 
 
@@ -85,7 +86,7 @@ sem_Expr asp (Var v)   = knitAspect var asp$
 evalExpr e m = sem_Expr asp e ((TagField (Label @ AttReco) env m)
                               .*. emptyAtt) #. eval 
 
-exampleExpr =  Add (Val 9) (Add (Var "x") (Val 2))
+exampleExpr =  Add (Val (-9)) (Add (Var "x") (Val 2))
 exampleEval =  evalExpr exampleExpr (insert "x" 5 Data.Map.empty)
 
 
@@ -139,17 +140,20 @@ sem_Expr' asp (Let v e b) = knitAspect elet asp
 evalExpr' e m = sem_Expr' asp2 e ((TagField (Label @ AttReco) env m)
                                .*. emptyAtt) #. eval 
 
-exampleExpr' =  Add' (Val' 9)
+exampleExpr' =  Add' (Val' (-9))
                      (Add' (Var' "x") (Let "x" (Val' 2)
                                                (Var' "x")))
 exampleEval' =  evalExpr' exampleExpr'
                           (insert "x" 5 Data.Map.empty)
 
 
-{-
+
 val_eval'  =  synmodM eval val  $ abs <$> ter ival
 
-evalExpr'' e m = sem_Expr' (val_eval' .*: asp2) e
+
+evalExpr'' e m = sem_Expr' (val_eval' .+: asp2) e
                            ((TagField (Label @ AttReco) env m)
                                .*. emptyAtt) #. eval 
--}
+exampleEval'' =  evalExpr'' exampleExpr'
+                            (insert "x" 5 Data.Map.empty)
+

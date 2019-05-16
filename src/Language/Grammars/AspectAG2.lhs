@@ -113,7 +113,8 @@
 > emptyAspect  = CAspect $ const EmptyRec
 
 > comAspect ::
->  (Require (OpComAsp al ar) ctx, ReqR (OpComAsp al ar) ~ Rec PrdReco asp)
+>  ( Require (OpComAsp al ar) ctx
+>  , ReqR (OpComAsp al ar) ~ Rec PrdReco asp)
 >  =>  CAspect ctx al -> CAspect ctx ar -> CAspect ctx asp
 > comAspect al ar
 >   = CAspect $ \ctx -> req ctx (OpComAsp (mkAspect al ctx) (mkAspect ar ctx))
