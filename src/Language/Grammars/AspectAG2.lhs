@@ -114,7 +114,7 @@
 
 > comAspect ::
 >  ( Require (OpComAsp al ar) ctx
->  , ReqR (OpComAsp al ar) ~ Rec PrdReco asp)
+>  , ReqR (OpComAsp al ar) ~ Aspect asp)
 >  =>  CAspect ctx al -> CAspect ctx ar -> CAspect ctx asp
 > comAspect al ar
 >   = CAspect $ \ctx -> req ctx (OpComAsp (mkAspect al ctx) (mkAspect ar ctx))
@@ -159,7 +159,7 @@
 
 > extAspect
 >   :: ( Require (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx
->      , ReqR (OpComRA ctx prd sc ip ic sp ic' sp' a) ~ Rec PrdReco asp)
+>      , ReqR (OpComRA ctx prd sc ip ic sp ic' sp' a) ~ Aspect asp)
 >   => CRule ctx prd sc ip ic sp ic' sp'
 >      -> CAspect ctx a -> CAspect ctx asp
 > extAspect rule (CAspect fasp)
@@ -180,7 +180,7 @@
 >   req ctx (OpComAsp al _) = al
 
 > instance
->   ( Require (OpComAsp al ar) ctx, ReqR (OpComAsp al ar) ~  Rec PrdReco ar'
+>   ( Require (OpComAsp al ar) ctx, ReqR (OpComAsp al ar) ~  Aspect ar'
 >   , Require (OpComRA ctx prd sc ip ic sp ic' sp' ar') ctx
 >   )
 >   => Require (OpComAsp al
@@ -273,7 +273,7 @@
 >      , ReqR
 >          (OpExtend' (LabelSetF ('( 'Att att t, t) : sp))
 >                      AttReco ('Att att t) t sp)
->          ~ Rec AttReco sp'
+>          ~ Attribution sp'
 >      , ctx'
 >          ~ ((Text "syndef::"
 >              :<>: ShowT ('Att att t)
@@ -293,7 +293,7 @@
 
 > synmod
 >   :: (  Require (OpUpdate AttReco ('Att att t) t r) ctx
->      ,  ReqR (OpUpdate AttReco ('Att att t) t r) ~ Rec AttReco sp')
+>      ,  ReqR (OpUpdate AttReco ('Att att t) t r) ~ Attribution sp')
 >   => Label ('Att att t)
 >      -> Label prd
 >      -> (Proxy
@@ -313,17 +313,17 @@
 >   :: ( RequireEq t t' ctx'
 >      , ntch ~ 'Left n
 >      , Require  (OpExtend AttReco ('Att att t) t r) ctx
->      , ReqR  (OpExtend AttReco ('Att att t) t r)  ~ (Rec AttReco v2)
+>      , ReqR  (OpExtend AttReco ('Att att t) t r)  ~ Attribution v2
 >      , Require  (OpUpdate (ChiReco ('Prd prd nt))
 >                 ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
 >      , ReqR     (OpUpdate (ChiReco ('Prd prd nt))
 >                 ('Chi chi ('Prd prd nt) ntch) v2 ic)
->               ~ (Rec (ChiReco ('Prd prd nt)) ic')
+>               ~ ChAttsRec ('Prd prd nt) ic'
 >      , Require  (OpLookup (ChiReco ('Prd prd nt))
 >                 ('Chi chi ('Prd prd nt) ntch) ic) ctx
 >      , ReqR     (OpLookup (ChiReco ('Prd prd nt))
 >                 ('Chi chi ('Prd prd nt) ntch) ic) 
->               ~ (Rec AttReco r)
+>               ~ Attribution r
 >      , ctx' ~ ((Text "inhdef::"
 >                 :<>: ShowT ('Att att t) :<>: ShowT ('Prd prd nt)
 >                 :<>: ShowT ('Chi chi ('Prd prd nt) ntch)) ': ctx))
@@ -351,17 +351,17 @@
 >      , ntch ~ 'Left n
 >      , Require (OpUpdate AttReco ('Att att t) t r) ctx
 >      , ReqR    (OpUpdate AttReco ('Att att t) t r)
->        ~ Rec AttReco v2
+>        ~ Attribution v2
 >      , Require (OpUpdate (ChiReco ('Prd prd nt))
 >                ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
 >      , ReqR    (OpUpdate (ChiReco ('Prd prd nt))
 >                ('Chi chi ('Prd prd nt) ntch) v2 ic)
->        ~ Rec (ChiReco ('Prd prd nt)) ic'
+>        ~ ChAttsRec ('Prd prd nt) ic'
 >      , Require (OpLookup (ChiReco ('Prd prd nt))
 >                ('Chi chi ('Prd prd nt) ntch) ic) ctx
 >      , ReqR    (OpLookup (ChiReco ('Prd prd nt))
 >                ('Chi chi ('Prd prd nt) ntch) ic)
->        ~ Rec AttReco r
+>        ~ Attribution r
 >      , ctx' ~ ((Text "inhmod::"
 >                 :<>: ShowT ('Att att t) :<>: ShowT ('Prd prd nt)
 >                 :<>: ShowT ('Chi chi ('Prd prd nt) ntch)) ': ctx))
@@ -426,18 +426,17 @@
 
 
 > instance ( Require (OpLookup (ChiReco prd) ('Chi ch prd nt) chi) ctx
->          , ReqR (OpLookup (ChiReco prd) ('Chi ch prd nt) chi) ~ Rec AttReco r
+>          , ReqR (OpLookup (ChiReco prd) ('Chi ch prd nt) chi)
+>            ~ Attribution r
 >          , Require (OpLookup AttReco ('Att att t) r) ctx
 >          , ReqR (OpLookup AttReco ('Att att t) r) ~ t'
->          , prd ~ prd'
->          , Require (OpEq prd prd') ctx
->          , t ~ t'
->          , Require (OpEq t t') ctx 
+>          , RequireEq prd prd' ctx
+>          , RequireEq t t' ctx 
 >          )
 >       => At ('Chi ch prd nt) ('Att att t)
 >             (Reader (Proxy ctx, Fam prd' chi par))  where
 >  type ResAt ('Chi ch prd nt) ('Att att t) (Reader (Proxy ctx, Fam prd' chi par))
->          = t -- ReqR (OpLookup (ChiReco prd) ('Chi ch prd nt) chi)
+>          = t 
 >  at (ch :: Label ('Chi ch prd nt)) (att :: Label ('Att att t))
 >   = liftM (\(ctx, Fam chi _)  -> let atts = req ctx (OpLookup ch chi)
 >                                  in  req ctx (OpLookup att atts))
@@ -446,8 +445,7 @@
 > instance
 >          ( Require (OpLookup AttReco ('Att att t) par) ctx
 >          , ReqR (OpLookup AttReco ('Att att t) par) ~ t'
->          , t ~ t'
->          , Require (OpEq t t') ctx
+>          , RequireEq t t' ctx
 >          )
 >  => At Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))  where
 >  type ResAt Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))
