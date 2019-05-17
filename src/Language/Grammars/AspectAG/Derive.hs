@@ -293,12 +293,3 @@ getCs n = undefined
   --       return lc
 
 
-
-
-class SemLit a where
-  sem_Lit :: a -> Attribution e -> Attribution '[ '(a, a)]
-  lit     :: Label a
-instance SemLit a where
-  sem_Lit a _ = (Label =. a) *. emptyAtt
-  lit         = Label 
-

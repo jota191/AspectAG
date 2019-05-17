@@ -10,7 +10,7 @@ name:                AspectAG
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.4
+version:             0.5
 
 -- A short (one-line) description of the package.
 synopsis:            A library of strongly typed Attribute Grammars implemented using type-level programming
@@ -59,17 +59,10 @@ library
   -- Modules exported by the library.
   exposed-modules:     Language.Grammars.AspectAG,
                        Language.Grammars.AspectAG.HList,
-                       Language.Grammars.AspectAG.InternalTest,
-                       Language.Grammars.AspectAG.Attribute,
-                       Language.Grammars.AspectAG.ChildAtts,
-                       Language.Grammars.AspectAG.Record,
-                       Language.Grammars.AspectAG.TagUtils,
-                       Language.Grammars.AspectAG.Attribution,
-                       Language.Grammars.AspectAG.TPrelude
-                       Language.Grammars.AspectAG.Derive
-  -- Modules included in this library but not exported.
-  -- other-modules:
-                       Language.Grammars.AspectAG.GenRecord
+                       Language.Grammars.AspectAG.TPrelude,
+                       Language.Grammars.AspectAG.Derive,
+                       Language.Grammars.AspectAG.GenRecord,
+                       Language.Grammars.AspectAG.Require
   -- LANGUAGE extensions used by modules in this package.
   other-extensions:    TypeInType,
                        TypeFamilies,
@@ -95,14 +88,14 @@ library
                        InstanceSigs
 
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.11 && <4.12,
-                       tagged >=0.8 && <0.9,
+  build-depends:       base >=4.11,
+                       tagged >=0.8,
                        containers >= 0.5,
                        template-haskell >= 2.13,
                        th-strict-compat >= 0.1,
                        mtl >= 2.0,
                        ghc-prim >= 0.5
-                       
+ 
 
   -- Directories containing source files.
   hs-source-dirs:      src, test

@@ -7,15 +7,39 @@
 %format asp_smin  = "asp_{smin}"
 %format asp_sres  = "asp_{sres}"
 %format asp_ival  = "asp_{ival}"
+%format asp_repmin  = "asp_{repmin}"
+%format asp_repavg  = "asp_{repavg}"
+%format asp_ssiz  = "asp_{ssiz}"
+%format asp_smax  = "asp_{smax}"
 
 %format p_Root  = "p_{Root}"
 %format p_Leaf  = "p_{Leaf}"
 %format p_Node  = "p_{Node}"
 
+%format P_Root  = "P_{Root}"
+%format P_Leaf  = "P_{Leaf}"
+%format P_Node  = "P_{Node}"
+
 %format ch_i     = "ch_{i}"
 %format ch_l     = "ch_{l}"
 %format ch_r     = "ch_{r}"
 %format ch_tree  = "ch_{tree}"
+
+%format node_smin  = "node_{smin}"
+%format leaf_smin  = "leaf_{smin}"
+%format root_sres  = "root_{sres}"
+%format leaf_sres  = "leaf_{sres}"
+%format node_sres  = "node_{sres}"
+%format root_ival  = "root_{ival}"
+%format node_ival  = "node_{ival}"
+%format node_ival_l = "node_{ival,l}"
+%format node_ival_r = "node_{ival,r}"
+
+%format Nt_Tree    = "Nt_{Tree}"
+%format Nt_Root    = "Nt_{Root}"
+
+%format sem_Tree   = "sem_{Tree}"
+%format sem_Root   = "sem_{Root}"
 
 %format <$>      = "<\!\!\$\!\!\!>"
 %format <*>      = "\oast"
@@ -77,7 +101,8 @@
 \begin{document}
 % The "title" command has an optional parameter, allowing the author to define a
 % "short title" to be used in page headers.
-\title{First Class Strongly Kinded Attribute Grammars in Haskell}
+\title{Attribute Grammars Fly First-class... Safer!\\
+Dealing with DSL errors in type-level programming}
 
 % The "author" command and its associated commands are used to define the
 % authors and their affiliations. Of note is the shared affiliation of the first
@@ -188,7 +213,7 @@ messages.
 
 % Keywords. The author(s) should pick words that accurately describe the work
 % being presented. Separate the keywords with commas.
-\keywords{datasets, neural networks, gaze detection, text tagging}
+\keywords{}
 
 % This command processes the author and affiliation and title information and
 % builds the first part of the formatted document.

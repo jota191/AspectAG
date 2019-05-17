@@ -31,6 +31,9 @@ import Data.Type.Equality
 import GHC.TypeLits
 import Data.Proxy
 
+
+data Label l = Label
+
 -- | If construction, purely computed at type level
 type family If (cond:: Bool) (thn :: k) (els :: k) :: k where
   If 'True  thn els = thn
@@ -124,3 +127,7 @@ type family TPair (a :: k) b where
 type family LabelsOf (r :: [(k, k')]) :: [k] where
   LabelsOf '[] = '[]
   LabelsOf ( '(k, ks) ': ls) = k ': LabelsOf ls
+
+type family HasLabel (l :: k) (r :: [(k, k')]) :: Bool where
+  HasLabel l '[] = False
+  HasLabel l ( '(l', v) ': r) = Or (l == l') (HasLabel l r)

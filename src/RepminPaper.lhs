@@ -95,9 +95,9 @@ In our library, we use the notion of |Label|. Each Attribute has
 a label identifying it. For example, this are the definitions for
 |smin|, |sres|, |ival|:
 
-> smin = Label @ ( 'Att "smin" Int)
-> sres = Label @ ( 'Att "sres" Tree)
-> ival = Label @ ( 'Att "ival" Int)
+> smin  = Label @ ( 'Att "smin" Int)
+> sres  = Label @ ( 'Att "sres" Tree)
+> ival  = Label @ ( 'Att "ival" Int)
 
 Labels are actually Proxies -with a domain specific name-.
 We provide utilities to derive them using Template Haskell[REF].
@@ -111,46 +111,138 @@ type level but also this information is well-typed (lets say, well-kinded).
 We use other kinds of labels. For productions, and in this example
 we have |p_Root|, |p_Leaf|, |p_Node|. And for children (blah).
 
-> type P_Node = 'Prd "p_Node" ('NT "Tree")
-> p_Node = Label @ P_Node
 
-> type P_Leaf = 'Prd "p_Leaf" ('NT "Tree")
-> p_Leaf = Label @ P_Leaf
 
-> type P_Root = 'Prd "p_Root" ('NT "Root")
-> p_Root = Label @ P_Root
+> type Nt_Tree  = 'NT "Tree"; type Nt_Root = 'NT "Root"
+> type P_Node   = 'Prd "p_Node" Nt_Tree
+> type P_Leaf   = 'Prd "p_Leaf" Nt_Tree
+> type P_Root   = 'Prd "p_Root" Nt_Root
 
-> type Nt_Tree = 'NT "Tree"
+> p_Root  = Label @ P_Root
+> p_Node  = Label @ P_Node
+> p_Leaf  = Label @ P_Leaf
 
-> ch_l    = Label @ ('Chi "ch_l"    P_Node ('Left Nt_Tree))
-> ch_r    = Label @ ('Chi "ch_r"    P_Node ('Left Nt_Tree))
-> ch_tree = Label @ ('Chi "ch_tree" P_Root ('Left Nt_Tree))
-> ch_i    = Label @ ('Chi "ch_i"    P_Leaf ('Right ('T Int)))
+
+
+And also for children.
+
+> ch_l     = Label @ ('Chi "ch_l"    P_Node ('Left Nt_Tree))
+> ch_r     = Label @ ('Chi "ch_r"    P_Node ('Left Nt_Tree))
+> ch_tree  = Label @ ('Chi "ch_tree" P_Root ('Left Nt_Tree))
+> ch_i     = Label @ ('Chi "ch_i"    P_Leaf ('Right ('T Int)))
 
 
 \subsection{Rule definitions}
 
-Lets define some rules. To compute |smin|, the attribute denoting the
-local minimum, in a node production,
-we take the minimum of each subtree, wich corresponds to the |smin|
-attribute on each children (note that we compute in terms of children,
-  since |smin| is a synthesized attribute).
+Lets define some rules. To compute |smin|, the attribute denoting the local
+ minimum, in a node production, we take the minimum of each subtree, wich
+ corresponds to the |smin| attribute on each children (note that we compute in
+ terms of children, since |smin| is a synthesized attribute). For a leaf,
+the value is simply the |Int| contained.
 
 > node_smin
 >   =  syndefM smin p_Node
->   $  pure min  <*>  at ch_l smin  <*>  at ch_r smin
-
-|syndefM| is simply a combinator. This definition must be read as:
-  define the attribute |smin|
-
-Note that we need to have the |Root| wrapper toas a starting
-
-
-
+>   $  min  <$>  at ch_l smin  <*>  at ch_r smin
 
 > leaf_smin
->
-> = syndefM smin p_Leaf $ at ch_i lit
+>   = syndefM smin p_Leaf $ at ch_i lit
+
+
+The former definition express that we build
+a synthesized attibute (|syndefM|) called |smin| on the production |p_Node|.
+|syndefM| is the monadic version of the combinator, so the last parameter
+(the proper definition for |smin| on |p_Node|) is monadic, here we use its
+|Applicative| interface. We take the attribute |smin| at children |ch_l|
+and |ch_r| and combine them with the function |min|.
+
+The later definition means that we define |smin| on |p_Leaf|, taking the
+terminal value at |ch_i|. In our EDSL |lit| is a reserved keyword, and denotes
+the name of the attribute that any terminal has, with the proper value of the
+terminal symbol.
+
+Now we can combine both definitions as an \emph{Aspect}. 
+
+> asp_smin = updCAspect (Proxy @ ('Text "smin"))
+>     $   node_smin
+>    .+:  leaf_smin
+>    .+:  emptyAspect
+
+Actually the expression $node_smin .+: leaf_smin .+: emptyAspect$ is already an
+aspect. The |(.+:)| combinator extends aspects with new rules (with right
+associativity). |updCAspect| tags the current definition with a context. The
+user of the library is free to include tags or not, but it is encouraged to use
+them to have better error messages, as we will see later.
+
+$asp_{smin}$ is already an useful aspect by itself, to compute the minimum value
+ of a tree.
+
+
+
+The definition of rules for compute |sres| are encoded as:
+
+> root_sres
+>   = syndefM sres p_Root
+>   $ at ch_tree sres
+> node_sres
+>   =  syndefM sres p_Node
+>   $  Node <$> at ch_l sres <*> at ch_r sres
+> leaf_sres
+>   =  syndefM sres p_Leaf
+>   $  Leaf <$> at lhs ival
+
+Recall that the type of |sres| is a |Tree|. We combine subtrees with |Node|
+and simply take the constructed subtree at |Root|.
+On the definition of |leaf_sres|, the expression |at lhs ival| denotes the value
+of the inherited attribute |ival|. Again, |lhs| is a reserverd word.
+
+Again, we group them in an aspect
+
+> asp_sres = updCAspect (Proxy @ ('Text "sres"))
+>     $   node_sres
+>    .+:  leaf_sres
+>    .+:  root_sres
+>    .+:  emptyAspect
+
+
+Finally, the inherited attribute |ival|
+
+> root_ival
+>   =  inhdefM ival p_Root ch_tree
+>   $  at ch_tree smin
+> node_ival_l
+>   =  inhdefM ival p_Node ch_l
+>   $  at lhs ival
+> node_ival_r
+>   =  inhdefM ival p_Node ch_r
+>   $  at lhs ival
+
+> asp_ival = updCAspect (Proxy @ ('Text "ival"))
+>     $   node_ival_l
+>    .+:  node_ival_r
+>    .+:  root_ival
+>    .+:  emptyAspect
+
+
+Note that we need to have the |Root| wrapper as a starting symbol of the
+ grammar, to know where we must stop computing |smin| and pass |ival| down. This
+ is common when programming using attributte grammars. Usually the functional
+ programmer does not see difference between the root tree and a subtree, using
+ the same datatype. From the grammar perspective there is clearly a difference
+ between the startinf symbol |Root| and the inner non-terminal |Tree|, and wee
+ need to have a way to distinguish them.
+
+
+> asp_repmin = updCAspect (Proxy @ ('Text "repmin"))
+>     $   asp_smin
+>   .:+:  asp_sres
+>   .:+:  asp_ival
+
+> repmin t
+>   = sem_Root asp_repmin (Root t) emptyAtt #. sres
+
+
+
+
 
 %if False
 

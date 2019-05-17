@@ -18,7 +18,7 @@
 module Expr where
 
 import System.Exit (exitFailure)
-import Language.Grammars.AspectAG2
+import Language.Grammars.AspectAG
 import Control.Monad
 import Control.Applicative
 import Data.Proxy
@@ -54,7 +54,7 @@ var_eval  =  syndefM eval var  $ slookup <$> ter vname <*> at lhs env
 
 aspEval   =  traceAspect (Proxy @ ('Text "eval"))
           $  add_eval .+: val_eval .+: var_eval .+: emptyAspect
-  
+
 slookup nm = fromJust . Data.Map.lookup nm
 
 add_leftAdd_env  = inhdefM env add leftAdd  $ at lhs env
