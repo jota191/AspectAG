@@ -62,7 +62,7 @@ type instance  WrapField Reco     (v :: Type) = v
 
 -- | Type level show utilities
 type instance ShowRec Reco         = "Record"
-type instance ShowField Reco          = "field named "
+type instance ShowField Reco       = "field named "
 
 
 
@@ -186,7 +186,8 @@ infixl 7 #.
 -- | operations for the children
 
 -- | datatype implementation
-type ChAttsRec prd = Rec (ChiReco prd)
+type ChAttsRec prd (chs :: [(Child,[(Att,Type)])])
+   = Rec (ChiReco prd) chs
 
 -- | index type
 data ChiReco (prd :: Prod)

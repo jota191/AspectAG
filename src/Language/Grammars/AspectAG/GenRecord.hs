@@ -234,8 +234,4 @@ instance Require (OpError (Text "Duplicated Labels on " :<>: Text (ShowRec c)
   req ctx (OpExtend' p l v r) = undefined
 
 
-lookupCtx'
-  :: Require (OpLookup c w r) ctx =>
-     Proxy ctx -> Rec c r -> Label w -> ReqR (OpLookup c w r)
-lookupCtx' (p :: Proxy ctx) chi l = req p (OpLookup @_ l chi)
 
