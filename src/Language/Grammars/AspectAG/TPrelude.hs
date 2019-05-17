@@ -33,6 +33,8 @@ import Data.Proxy
 
 
 data Label l = Label
+sndLabel :: Label '(a,b) -> Label b
+sndLabel _ = undefined
 
 -- | If construction, purely computed at type level
 type family If (cond:: Bool) (thn :: k) (els :: k) :: k where

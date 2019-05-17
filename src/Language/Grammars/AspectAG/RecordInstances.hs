@@ -37,40 +37,7 @@ data Child = Chi Symbol Prod (Either NT T)
 data NT    = NT Symbol
 data T     = T Type
 
-data ChiReco (prd :: Prod)
-data AttReco
-data Reco
-data PrdReco
 
-type instance  WrapField Reco     (v :: Type)
-  = v
-type instance  WrapField AttReco  (v :: Type)
-  = v
-type instance  WrapField (ChiReco prd)  (v :: [(k, Type)])
-  = Attribution v
-type instance  WrapField PrdReco (rule :: Type)
-  = rule
-
-
-
-
-type Aspect (asp :: [(Prod, Type)]) = Rec PrdReco asp
-
-type Attribute        = TagField AttReco
-
-
-labelChAttr :: TaggedChAttr prd l a -> Label l
-labelChAttr _ = Label
-
-type instance ShowRec (ChiReco a)  = "Children Map"
-type instance ShowRec AttReco      = "Attribution"
-type instance ShowRec Reco         = "Record"
-type instance ShowRec PrdReco      = "Aspect"
-
-type instance ShowField (ChiReco a)   = "child labelled "
-type instance ShowField AttReco       = "attribute named "
-type instance ShowField Reco          = "field named "
-type instance ShowField PrdReco       = "production named "
 
 
 type instance  ShowT ('Att l t)   = ShowT t :<>: Text  "::Attribute " :<>: Text l
@@ -80,33 +47,53 @@ type instance  ShowT ('Chi l p s) = ShowT p :<>:  Text "::Child " :<>: Text l
 type instance  ShowT ('NT l)      = Text "Non-Terminal " :<>: Text l
 type instance  ShowT ('T  l)      = Text "Terminal " :<>: ShowT l
 
-type Tagged = TagField Reco
-unTagged :: Tagged l v -> v
-unTagged (TagField _ _ v) = v
 
+
+-- | * Records
+
+-- | datatype definition
+type Record        = Rec Reco
+
+-- | index type
+data Reco
+
+-- | field type
+type instance  WrapField Reco     (v :: Type) = v
+
+-- | Type level show utilities
+type instance ShowRec Reco         = "Record"
+type instance ShowField Reco          = "field named "
+
+
+
+-- | ** Pattern Synonyms
+pattern EmptyR :: Rec Reco '[]
+pattern EmptyR = EmptyRec :: Rec Reco '[]
+pattern ConsR :: (LabelSet ( '(l,v ) ': xs))
+  => Tagged l v -> Rec Reco xs -> Rec Reco ( '(l,v ) ': xs) 
+pattern ConsR lv r = ConsRec lv r
+
+
+type Tagged = TagField Reco
 pattern Tagged :: v -> Tagged l v
 pattern Tagged v = TagField Label Label v
 
--- | Get the label of a Tagged value, restricted to the case
---when labels are a pair, for safety, since this function is used
---on that context
-labelLVPair :: Tagged '(k1,k2) v -> Label '(k1,k2)
-labelLVPair _ = Label
 
--- |Get the first member of a pair label, as a label 
-sndLabel :: Label '(a,b) -> Label b
-sndLabel _ = undefined
+-- ** Constructors
 
--- |Untag a value 
-unTaggedChAtt :: Tagged l v -> v
-unTaggedChAtt (Tagged v) = v
+-- | Pretty Constructor
+infixr 4 .=.
+(.=.) :: Label l -> v -> Tagged l v
+l .=. v = Tagged v
 
--- |Untag a value, different names to use on diferent contexts,
---in a future iteration possibly We'll have different Types of tag
---unTagged :: Tagged l v -> v
---unTagged (Tagged v) = v
+-- | For the empty Record
+emptyRecord :: Record '[]
+emptyRecord = EmptyR
 
+unTagged :: Tagged l v -> v
+unTagged (TagField _ _ v) = v
 
+-- * Destructors
 -- | Get a label
 label :: Tagged l v -> Label l
 label _ = Label
@@ -115,27 +102,6 @@ label _ = Label
 labelTChAtt :: Tagged l v -> Label l
 labelTChAtt _ = Label
 
--- | Pretty Constructor
-infixr 4 .=.
-(.=.) :: Label l -> v -> Tagged l v
-l .=. v = Tagged v
-
-
--- | * Records
-
-type Record        = Rec Reco
-
-pattern EmptyR :: Rec Reco '[]
-pattern EmptyR = EmptyRec :: Rec Reco '[]
-pattern ConsR :: (LabelSet ( '(l,v ) ': xs))
-  => Tagged l v -> Rec Reco xs -> Rec Reco ( '(l,v ) ': xs) 
-pattern ConsR lv r = ConsRec lv r
-
--- ** Exported
--- | Pretty constructors
--- | For the empty Record
-emptyRecord :: Record '[]
-emptyRecord = EmptyR
 
 -- | Show instance, used for debugging
 instance Show (Record '[]) where
@@ -151,8 +117,19 @@ instance (Show v, Show (Record xs), (LabelSet ('(l, v) : xs))) =>
 
 -- | * Attribution
 -- | An attribution is a record constructed from attributes
---type Attribution = Rec AttrRec
+
+-- | datatype implementation
 type Attribution   = Rec AttReco
+
+-- | index type
+data AttReco
+
+-- | field type
+type instance  WrapField AttReco  (v :: Type) = v
+
+-- | type level utilities
+type instance ShowRec AttReco      = "Attribution"
+type instance ShowField AttReco       = "attribute named "
 
 -- | Pattern Synonyms
 pattern EmptyAtt :: Attribution '[]
@@ -162,10 +139,12 @@ pattern ConsAtt :: LabelSet ( '(att, val) ': atts) =>
 pattern ConsAtt att atts = ConsRec att atts
 
 -- | Attribute
+
+type Attribute        = TagField AttReco
 pattern Attribute :: v -> TagField AttReco l v
 pattern Attribute v = TagField Label Label v
 
--- ** Pretty constructors
+-- ** Constructors
 -- | Apretty constructor for an attribute 
 infixr 4 =.
 
@@ -184,7 +163,7 @@ infixr 2 *.
 emptyAtt :: Attribution '[]
 emptyAtt = EmptyRec
 
--- | Pretty lookup
+-- ** Destructors
 infixl 7 #.
 
 (#.) ::
@@ -200,10 +179,30 @@ infixl 7 #.
                          ]
     in req prctx (OpLookup @_ @(AttReco) l attr)
 
--- | * Children
--- | Pattern synonyms, since now we implement ChAttsRec as a generic record,
--- this allows us to recover pattern matching
+
+
+
+-- * Children
+-- | operations for the children
+
+-- | datatype implementation
 type ChAttsRec prd = Rec (ChiReco prd)
+
+-- | index type
+data ChiReco (prd :: Prod)
+
+-- | Field type
+type instance  WrapField (ChiReco prd)  (v :: [(k, Type)])
+  = Attribution v
+
+-- | Type level Show utilities
+type instance ShowRec (ChiReco a)     = "Children Map"
+type instance ShowField (ChiReco a)   = "child labelled "
+
+-- ** Pattern synonyms
+
+-- |since now we implement ChAttsRec as a generic record, this allows us to
+--   recover pattern matching
 pattern EmptyCh :: ChAttsRec prd '[]
 pattern EmptyCh = EmptyRec
 pattern ConsCh :: (LabelSet ( '( 'Chi ch prd nt, v) ': xs)) =>
@@ -211,21 +210,19 @@ pattern ConsCh :: (LabelSet ( '( 'Chi ch prd nt, v) ': xs)) =>
                          -> ChAttsRec prd ( '( 'Chi ch prd nt,v) ': xs)
 pattern ConsCh h t = ConsRec h t
 
-
+-- | Attributions tagged by a child
 type TaggedChAttr prd = TagField (ChiReco prd)
 pattern TaggedChAttr :: Label l -> WrapField (ChiReco prd) v
                      -> TaggedChAttr prd l v
 pattern TaggedChAttr l v
   = TagField (Label :: Label (ChiReco prd)) l v
 
+
+-- ** Constructors
 -- | Pretty constructor for tagging a child
 infixr 4 .=
 (.=) :: Label l -> WrapField (ChiReco prd) v -> TaggedChAttr prd l v
 (.=) = TaggedChAttr
-
--- | To get the atribution
-unTaggedChAttr :: TaggedChAttr prd l v -> WrapField (ChiReco prd) v
-unTaggedChAttr (TaggedChAttr _ a) = a
 
 -- | Pretty constructors
 infixr 2 .*
@@ -234,20 +231,16 @@ infixr 2 .*
     -> ChAttsRec prd ('(ch, attrib) ': attribs)
 (.*) = ConsRec
 
--- | no child
+-- | empty
 emptyCh :: ChAttsRec prd '[]
 emptyCh = EmptyRec
 
--- |** This are the tag utils for tag attributions of the childred
+-- ** Destructors
+unTaggedChAttr :: TaggedChAttr prd l v -> WrapField (ChiReco prd) v
+unTaggedChAttr (TaggedChAttr _ a) = a
 
--- TODO: move this?
-
--- | Tags a Label (labels of children) to an attribution
---data TaggedChAttr (l :: (k,Type)) (v :: [(k,Type)]) :: Type where
---  TaggedChAttr :: Label l -> Attribution v -> TaggedChAttr l v
-
-
-
+labelChAttr :: TaggedChAttr prd l a -> Label l
+labelChAttr _ = Label
 
 infixl 8 .#
 (.#) ::
@@ -265,3 +258,16 @@ infixl 8 .#
                           Text "producion: " :<>: ShowT prd
                          ]
     in req prctx (OpLookup @_ @(ChiReco prd) l chi)
+
+
+
+-- * Productions
+
+data PrdReco
+
+type instance  WrapField PrdReco (rule :: Type)
+  = rule
+
+type Aspect (asp :: [(Prod, Type)]) = Rec PrdReco asp
+type instance ShowRec PrdReco      = "Aspect"
+type instance ShowField PrdReco       = "production named "
