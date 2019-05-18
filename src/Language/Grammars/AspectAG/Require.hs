@@ -54,3 +54,7 @@ que estaba definida con un pattern que capturaba todos los demas casos al final
 y en tf cerradas no se admite overlap. Entonces defino aca una instancia para el
 kind t (era a fin de cuentas lo que caia en el último pattern)
 -}
+
+type RequireR (op :: Type ) (ctx:: [ErrorMessage]) (res :: Type)
+     = (Require op ctx, ReqR op ~ res)
+

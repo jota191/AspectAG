@@ -40,10 +40,15 @@ data T     = T Type
 
 
 
-type instance  ShowT ('Att l t)   = ShowT t :<>: Text  "::Attribute " :<>: Text l
-type instance  ShowT ('Prd l nt)  = ShowT nt :<>: Text "::Production " :<>: Text l
+type instance  ShowT ('Att l t)   = Text  "Attribute " :<>: Text l
+                                                       :<>: Text ":"
+                                                       :<>: ShowT t 
+type instance  ShowT ('Prd l nt)  = ShowT nt :<>: Text "::Production "
+                                             :<>: Text l
 type instance  ShowT ('Chi l p s) = ShowT p :<>:  Text "::Child " :<>: Text l 
-                                     :<>:  Text ":" :<>: ShowT s
+                                            :<>:  Text ":" :<>: ShowT s
+type instance  ShowT ('Left l)    = ShowT l
+type instance  ShowT ('Right r)   = ShowT r
 type instance  ShowT ('NT l)      = Text "Non-Terminal " :<>: Text l
 type instance  ShowT ('T  l)      = Text "Terminal " :<>: ShowT l
 

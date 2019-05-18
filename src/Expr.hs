@@ -48,6 +48,7 @@ vname     = Label @ ('Chi "vname"     P_Var ('Right ('T String)))
 eval = Label @ ('Att "eval" Int)
 env  = Label @ ('Att "env"  (Map String Int))
 
+
 add_eval  =  syndefM eval add  $ (+) <$> at leftAdd eval <*> at rightAdd eval
 val_eval  =  syndefM eval val  $ ter ival
 var_eval  =  syndefM eval var  $ slookup <$> ter vname <*> at lhs env
