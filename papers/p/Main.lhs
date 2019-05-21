@@ -228,9 +228,8 @@ messages.
 
 \section{Introduction}
 
-\section{EDSL usage example}
-
-%include ../../src/RepminPaper.lhs
+\todo{}
+%include ../../src/ExprPaper.lhs
 
 \subsection{Adding attributes}
 

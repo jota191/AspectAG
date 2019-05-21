@@ -26,30 +26,10 @@
 \todo{hay que presentar el problema repmin}
 
 
-Attribute grammars were originally introduced to describe semantics for context
-free languages. Given a grammar, we associate attributes to each production.
-Attribute values are computed from semantic rules given by the implementator in
-every node of the abstract syntax tree in terms of the attribute values of the
-children and the parent. Usually attributes are classified in at least two sets:
-synthesized attributes (they flow bottom up) and inherited attibutes.
 
 
-Attribute grammars can be viewed also as a
-general-purpose formalism for describing recursive computations over data types.
-\todo{ reescribir esto, se lo copie a Marcos :)
-Functional programs can easily be extended by defining extra functions. If
-however a data type is extended with a new alternative, each parameter position
-and each case expression where a value of this type is matched has to be
-inspected and modified accordingly. In object oriented programing the situation
-is reversed: if we implement the alternatives of a data type by sub-classing, it
-is easy to add a new alternative by defining a new subclass in which we define a
-method for each part of desired global functionality. If however we want to
-define a new function for a data type, we have to inspect all the existing
-subclasses and add a method describing the local contribution to the global
-computation over this data type. This problem was first noted by Reynolds [REF]
-and later referred to as “the expression problem” by Wadler [REF].
-}
 
+%if False
 As a running example consider the well known {\tt repmin} problem[REF]. Given a
 tree, for example a binary tree containing integer values on its leaves. repmin
 must compute a tree with the same shape containing the global minimum in every
