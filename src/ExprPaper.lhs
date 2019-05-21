@@ -15,7 +15,7 @@
 >              AllowAmbiguousTypes
 > #-}
 
-> module Expr where
+> module ExprPaper where
 
 > import System.Exit (exitFailure)
 > import Language.Grammars.AspectAG
@@ -53,15 +53,16 @@ implement algebraic datatypes with a composite design pattern, and simply add a
 new class. However, to define a new function for a data type, we have to inspect
 all the existing subclasses and add a new method. This problem was first noted
 by Reynolds [REF] and later referred to as “the expression problem” by Wadler
-[REF]. Attribute grammars offer an aproach to solve this issue.
+\cite{ExpressionProblem}. Attribute grammars offer an aproach to solve this
+issue.
 
 Attribute grammars were originally introduced to describe semantics for context
-free languages[REF]. Given a grammar, we associate attributes to each
-production. Attribute values are computed from semantic rules given by the
-implementator in every node of the abstract syntax tree in terms of the
-attribute values of the children and the parent. Usually attributes are
+free languages\cite{Knuth68semanticsof}. Given a grammar, we associate
+attributes to each production. Attribute values are computed from semantic rules
+given by the implementator in every node of the abstract syntax tree in terms of
+the attribute values of the children and the parent. Usually attributes are
 classified in at least two sets: synthesized attributes (where information flows
-bottom up) and inherited attibutes (where it flows top down). 
+bottom up) and inherited attibutes (where it flows top down).
 
 
 \section{Overview of the library}
@@ -81,25 +82,26 @@ then the evaluation results in $10$.
 
 The abstract syntax tree for this grammar could be implemented in Haskell as:
 
-< data Expr  =  Val  { ival   :: Integer  }
-<            |  Var  { vname  :: String   }
-<            |  Add  { l, r   :: Expr     }
+> data Expr  =  Val  { ival'    :: Int  }
+>            |  Var  { vname'   :: String   }
+>            |  Add  { l', r'   :: Expr     }
 
 %if False
 
-<        deriving Show
+>       deriving Show
 
 %endif
 
 
 where the former example expression could be parsed to
+
 |Add (Add (Var "x") (Val 5)) (Val 3)|.
 
 The user of our library could define the Haskell implementation of the abstract
-syntax tree to extract from it a lot of boliterplate using Template Haskell
-[REF] utilities that we provide. But the constructions that we provide are data
-type independant, which is useful to actually solve the expression problem, as
-we shall discuss later.
+syntax tree to extract from it a lot of boliterplate using Template
+Haskell\cite{Sheard:2002:TMH:636517.636528} utilities that we provide. But the
+constructions that we provide are data type independant, which is useful to
+actually solve the expression problem, as we shall discuss later.
 
 
 Note that we have introduced three productions in this the example. |ival| and
@@ -160,14 +162,186 @@ the context defining semantics for variables.
 < attLabels
 }
 
-Time to define semantics:
+Time to define semantics. The attribute |eval| denotes the value of an
+expression. It is computed on the |add| production as the sum of the denotation
+of subexpressions. On each subexpression there is a proper attribute |eval| that
+contains its value. This is written on AspectAG as:
 
-> add_eval   =  syndefM eval add
->            $ (+) <$> at leftAdd eval <*> at rightAdd eval
+> add_eval  =  syndefM eval add
+>           $ (+) <$> at leftAdd eval <*> at rightAdd eval
 
-> val_eval   =  syndefM eval val
->            $ ter ival
+The function syndef takes an attribute (for wich the semantics are being
+defined) and a production (where it is being defined). In this case function
+|syndefM| defines a rule for the attribute |eval| at profuction |add|. The last
+argument is the proper definition. We take the values of |eval| at children
+|leftAdd| and |rightAdd|, and combine them with the operator |(+)|.
 
-> var_eval   =  syndefM eval var
->            $ slookup <$> ter vname <*> at lhs env
->   where slookup nm = fromJust . Data.Map.lookup nm
+At |val| production, where the grammar rewrites to a terminal, the value of that
+ terminal corresponds to the semantics of the expression. In terms of our
+ implementation the attribute |eval| is defined at |val| as the value of the
+ terminal |ival|.
+
+> val_eval = syndefM eval val
+>          $ ter ival
+
+|ter| is simply a reserved keyword in our EDSL.
+
+Finally on variables, the expression denotes the value of the variable on a
+given context. This is implemented as follows:
+
+> var_eval = syndefM eval var $ slookup
+>           <$> ter vname <*> at lhs env
+>    where slookup nm = fromJust . Data.Map.lookup nm
+
+We look at the terminal |vname|, and look for the attribute |env|
+on the inherited attributes. The collection of inherited attributes is
+accesed by the name |lhs| on the same way that we have acces to the synthesized
+attributes using the name of each children. We call this collections of attributes
+\emph{attributions}.
+
+Finally, we combine all this rules on an \emph{aspect}:
+
+
+> aspEval   =  traceAspect (Proxy @ ('Text "eval"))
+>           $  add_eval .+: val_eval .+: var_eval .+: emptyAspect
+
+Before understand what is going on with this |traceAspect| wrapper, lets say
+that the operator |(.+:)| is simply a combinator that adds a rule to an aspect
+(it associates to the right). In our EDSL domain an aspect is a collection of
+rules. Here we build an aspect with all the rules for a given attribute, but the
+user can combine them in the way he or she wants (for example, by production).
+Aspects can be orthogonal to one another, or not. Here |aspEval| clearly depends
+on an attribute |env| with no rules attached to it at this point, so it is not
+useful at all. We cannot complain here yet since the rules for |env| could we
+defined later (as we will do), or perhaps in another module! If we try to
+actually use |aspEval| calling it on a semantic function, there will be a type
+error, but it will be raised on the semantic function application. The function
+|traceAspect|, and also -implicitly- each application of |syndefM| tag
+definitions to show them on type errors. This is useful to debug and we
+encourage to use tags, but it is optional.
+
+For the inherited attribute |env| we provide the |inhdefM| combinator, wich
+takes an attribute name, a production where the rule is being defined, and a
+child for what the information is being distributed. In our example |env| is
+copied to both children on |add| production, so we build one rule for each:
+
+> add_leftAdd_env  = inhdefM env add leftAdd  $ at lhs env
+> add_rightAdd_env = inhdefM env add rightAdd $ at lhs env
+
+and combine them on an aspect:
+
+> aspEnv  =  traceAspect (Proxy @ ('Text "env"))
+>         $  add_leftAdd_env .+: add_rightAdd_env .+: emptyAspect 
+
+We can combine aspects with the |(.:+:)| operator:
+
+> asp = aspEval .:+: aspEnv
+
+Note that this time we decided to not make a new tag.
+
+Finally, given an implementation of the abstract syntax tree, like |Tree| we can
+encode (or derive) the \emph{semantic function}. |sem_Expr| takes an aspect, an
+AST and an initial attribution and computes semantics for that expression.
+The result is an attribution with all the synthesized attributes of the root. We
+can define an evaluator:
+
+> evalExpr e m = sem_Expr asp e (env =. m .*. emptyAtt) #. eval
+
+that takes an environment |m| mapping variable names to |Int|s.
+For example this definition
+
+> exampleExpr =  Add (Add (Var "x") (Val 5)) (Val 2)
+> exampleEval =  evalExpr exampleExpr (insert "x" 5 Data.Map.empty)
+
+evaluates to |12| % \eval{exampleEval}
+
+
+
+
+%if False
+
+> sem_Expr asp (Add l r) = knitAspect add asp
+>                            $  leftAdd  .=. sem_Expr asp l
+>                           .*. rightAdd .=. sem_Expr asp r
+>                           .*.  EmptyRec
+> sem_Expr asp (Val i)   = knitAspect val asp$
+>                           ival  .=. sem_Lit i .*. EmptyRec
+> sem_Expr asp (Var v)   = knitAspect var asp$
+>                           vname .=. sem_Lit v .*. EmptyRec
+
+%endif
+
+\subsection{Semantic Extension: Adding attributes}
+
+Defining alternative semantics or extending the already defined ones is simple.
+ For example, suppose that we want to collect the integral literals
+occurring on an expression. Define an attribute |lits|:
+
+> lits  = Label @ ('Att "lits"  [Int])
+
+And the rules to compute it. This time we combine them on the fly:
+
+> aspLits
+>    =   syndefM lits add ((++) <$> at leftAdd lits <*> at rightAdd lits)
+>   .+:  syndefM lits val ((\x -> [x]) <$> ter ival)
+>   .+:  syndefM lits var (pure [])
+>   .+:  emptyAspect
+
+The function:
+
+> litsExpr e = sem_Expr aspLits e emptyAtt #. lits
+
+returns a list of all literals occurring in the expression, in order.
+
+\subsection{Grammar extension: Adding Productions}
+
+To tackle the expression problem we must be able to extend our grammar.
+
+\begin{figure}
+\caption{Grammar plus extension}
+\centering
+
+<  expr    ->  ival
+<  expr    ->  vname
+<  expr    ->  expr_l + expr_r
+
+%\hline
+
+< expr     -> let vname = expr_d in expr_i
+
+\end{figure}
+
+
+Suppose that we add a new production to add local definitions:
+
+< expr     -> let vname = expr_d in expr_i
+
+We implement them with this definition:
+
+> type P_Let = 'Prd "p_Let" Nt_Expr
+> elet = Label @ P_Let
+
+This new production has three children
+
+> exprLet   = Label @ ('Chi "exprLet"   P_Let ('Left Nt_Expr))
+> bodyLet   = Label @ ('Chi "bodyLet"   P_Let ('Left Nt_Expr))
+> vlet      = Label @ ('Chi "vlet"      P_Let ('Right ('T String)))
+
+
+
+
+> aspEval2
+>   =  traceAspect (Proxy @ ('Text "eval2"))
+>   $  syndefM eval elet (at bodyLet eval) .+: aspEval
+
+
+> aspEnv2
+>   =    traceAspect (Proxy @ ('Text "env2"))
+>   $    inhdefM env elet exprLet (at lhs env)
+>   .+:  inhdefM env elet bodyLet (insert   <$>  ter vlet
+>                                           <*>  at exprLet eval
+>                                           <*>  at lhs env)
+>   .+:  aspEnv
+
+
+> asp2 = aspEval2 .:+: aspEnv2
