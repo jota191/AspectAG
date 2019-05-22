@@ -16,3 +16,4 @@
 %format .:+:      = "\bowtie"
 
 %format at      = "\bm{@ \!}"
+%format @       = "\;@\;"
