@@ -116,7 +116,6 @@ instance
   req = undefined
 
 type family ShowRec c :: Symbol
-
 type family ShowField c :: Symbol
 
 instance (Require (OpError (Text "field not Found on " :<>: Text (ShowRec c)

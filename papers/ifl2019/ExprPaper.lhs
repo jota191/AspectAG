@@ -175,10 +175,10 @@ the context defining semantics for variables.
 
 
 
-% Time to define semantics.
-The attribute |eval| denotes the value of an expression.
-Attributes like this, where the information to compute them flows from the children to their parent productions,
-are called \emph{synthesized attributes}.
+% Time to define semantics. The attribute |eval| denotes the value of an
+expression. Attributes like this, where the information to compute them flows
+from the children to their parent productions, are called \emph{synthesized
+attributes}.
 
 On the |add| production we compute |eval| as the sum of the denotation
 of subexpressions. On each subexpression there is a proper attribute |eval| that

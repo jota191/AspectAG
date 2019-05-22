@@ -21,3 +21,8 @@
 %format :$$:    = ":\!\!\$\!\$\!\!:"
 
 %format @       = "\;@\;"
+
+
+%format add_eval   = " add_{eval} "
+%format var_eval   = " var_{eval} "
+%format val_eval   = " val_{eval} "
