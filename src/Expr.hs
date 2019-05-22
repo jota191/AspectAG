@@ -84,8 +84,7 @@ sem_Expr asp (Val i)   = knitAspect val asp$
 sem_Expr asp (Var v)   = knitAspect var asp$
                           vname .=. sem_Lit v .*. EmptyRec
 
-evalExpr e m = sem_Expr asp e ((TagField (Label @ AttReco) env m)
-                              .*. emptyAtt) #. eval 
+evalExpr e m = sem_Expr asp e (env =. m .*. emptyAtt) #. eval 
 
 exampleExpr =  Add (Val (-9)) (Add (Var "x") (Val 2))
 exampleEval =  evalExpr exampleExpr (insert "x" 5 Data.Map.empty)
@@ -107,7 +106,7 @@ aspEval2  = traceAspect (Proxy @ ('Text "eval2"))
 
 aspEnv2   =   traceAspect (Proxy @ ('Text "env2"))
           $   inhdefM env elet exprLet (at lhs env)
-         .+:  inhdefM env elet bodyLet (insert  <$> ter vlet 
+         .+:  inhdefM env elet bodyLet (insert  <$> ter vlet
                                                 <*> at exprLet eval
                                                 <*> at lhs env)
          .+:  aspEnv

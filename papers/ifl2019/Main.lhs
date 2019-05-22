@@ -24,7 +24,7 @@
 \copyrightyear{2019}
 \acmYear{2019}
 \setcopyright{acmlicensed}
-\acmConference[Woodstock '18]{Woodstock '18: ACM Symposium on
+\acmConference[Woodstock '19]{Woodstock '18: ACM Symposium on
   Neural Gaze Detection}{June 03--05, 2018}{Woodstock, NY}
 \acmBooktitle{Woodstock '18: ACM Symposium on Neural Gaze Detection,
   June 03--05, 2018, Woodstock, NY}
@@ -198,11 +198,14 @@ messages.
 
 \todo{}
 
+
 \section{Implementation of AspectAG}
 
-\subsection{Generic Records}
 
 %include ./GenRecord.lhs
+
+%include ./AAG.lhs
+
 
 
 \bibliographystyle{ACM-Reference-Format}

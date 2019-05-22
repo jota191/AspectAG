@@ -46,6 +46,7 @@
 > import Language.Grammars.AspectAG.TPrelude
 > import Data.Proxy
 
+
 > import Language.Grammars.AspectAG.RecordInstances
 > import Language.Grammars.AspectAG.Require
 > import Language.Grammars.AspectAG.GenRecord
@@ -568,6 +569,4 @@ instance MonadReader (Fam l ho chi par) m
 > --           -> CRule ctx prd sc ip ic sp ic ( '( att, a) ': sp)
 
 > use att prd nts op unit
->    -- let res = usechi att prd nts op sc
->     -- in  syndef att prd $ maybe unit id res
 >   = syndef att prd $ \_ fam -> maybe unit id (usechi att prd nts op $ chi fam)
