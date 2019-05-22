@@ -275,6 +275,9 @@ This procedure was used in all our development:
 |ShowRec| and |ShowField| are type families used to print correctly the type
  information depending on which category of records we are working on.
 
+> type family ShowRec    (c :: k)    :: Symbol
+> type family ShowField  (c :: k)  :: Symbol
+
 For example, for attributions we implement
 
 > type instance ShowRec AttReco
@@ -291,10 +294,45 @@ For children:
 
 
 The fact that type families can be defined open is very convenient in this
- context. We argue that our generic records and/or the require framework are a
- useful libraries by their own.
+context. We argue that our generic records and/or the require framework are a
+useful libraries by their own.
 
-ShowT l
+The |ShowT| family is even more interesting.
+
+> type family ShowT (t :: k) :: ErrorMessage
+
+When we print labels which are types with kinds such as |Att|, |Prd|, |Chi| and
+so on, to show clear type errors we want to print them in a different way
+depending on the case, formatting the information correctly. At term level a
+fully polymorphic function cannot touch its arguments. Type classes are the way
+to define bounded parametricity. We do not have kind classes but they are not
+necessary since polykinded type families are actually not parametric. At type
+level we can actually inspect kinds. Therefore, the following definitions are
+completely legal:
+
+> type instance  ShowT ('Att l t)
+>   =     Text  "Attribute "  :<>: Text l
+>   :<>:  Text  ":"           :<>: ShowT t
+> type instance  ShowT ('Prd l nt)
+>   =     ShowT nt :<>: Text "::Production "
+>   :<>:  Text l
+> type instance  ShowT ('Chi l p s)
+>   =     ShowT p   :<>:  Text "::Child " :<>: Text l
+>   :<>:  Text ":"  :<>:  ShowT s
+> type instance  ShowT ('Left l)
+>   = ShowT l
+> type instance  ShowT ('Right r)
+>   = ShowT r
+> type instance  ShowT ('NT l)
+>   = Text "Non-Terminal " :<>: Text l
+> type instance  ShowT ('T  l)
+>   = Text "Terminal " :<>: ShowT l
+
+
+Also, we can code an instance for any type of kind |Type|:
+
+> type instance ShowT (t :: Type)
+>   = ShowType t
 
 %if False
 
