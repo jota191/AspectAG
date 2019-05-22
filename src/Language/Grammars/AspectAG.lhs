@@ -438,9 +438,6 @@
 >     =>  Label pos -> m (ResAt pos ('Att "term" a) m) 
 > ter (ch :: Label ('Chi ch prd (Right ('T a))))  = at ch (lit @ a)
 
-instance MonadReader (Fam l ho chi par) m
-       => At (Proxy Lhs) m par where
-  at _ = liftM (\(Fam _ _ _ par) -> par) ask
 
 > class Kn (fcr :: [(Child, Type)]) (prd :: Prod) where
 >   type ICh fcr :: [(Child, [(Att, Type)])]

@@ -155,46 +155,126 @@ are we defining. |TagField| is a fancy implementation of the well known
 
 \subsection{Requirements}
 
+As a framework to program type errors we introduce the concept of
+requirements.
+
 > class Require (op   :: Type)
 >               (ctx  :: [ErrorMessage])  where
->    type ReqR op :: k
+>    type ReqR op :: k -- TODO: ver si era necesario este polimorfismo
 >    req :: Proxy ctx -> op -> ReqR op
 
+Given an operation |op|, that is actually a product where all the parameters of
+the current require are passed, |req| extracts the tangible results (of type
+depending on the operation). This is very general and will be more clear by
+introduce some examples. Each time we lookup in a record (for example when
+accessing attributes) we require that some label actually belongs to the record.
+If this requirement is not accomplished an error must be raised at compile time.
+That means that there will be no good instance of this class. By program an
+special error instance we can capture type errors. The |Require| class is so
+general to treat all type errors in a unified manner. By doing it case by case
+it is difficult to track all cases and maintain them.
+
+For example, we define the lookup operator:
+
+> data OpLookup  (c  :: Type)
+>                (l  :: k)
+>                (r  :: [(k, k')]) :: Type where
+>   OpLookup  ::  Label l -> Rec c r
+>             ->  OpLookup c l r
+
+which is an algebraic datatype containing the record category, a label which is
+the index we are looking for, and the record parameter. To lookup on a record we
+need to code a dependant type function, which is encoded in Haskell with the
+usual idioms of type level programming. We need to inspect the head label and
+decide to return the value contained or call the lookup function recursively
+depending on the types. Moreover, the proof of equality must be explicit.
+
+We introduce a new |OpLookup'| with an auxiliar |Bool| at type level:
+
+> data OpLookup'  (b  :: Bool)
+>                 (c  :: Type)
+>                 (l  :: k)
+>                 (r  :: [(k, k')]) :: Type where
+>   OpLookup'  ::  Proxy b -> Label l -> Rec c r
+>              ->  OpLookup' b c l r
+
+
+and then we can implement our dependent function. For |OpLookup| we take the head
+label |l'| and use the auxiliar function with the value equal to the predicate of
+equality of |l'| and the argument label |l|:
+
+> instance (Require (OpLookup' (l == l') c l ( '(l', v) ': r)) ctx)
+>   =>  Require (OpLookup c l ( '(l', v) ': r)) ctx                  where
+>   type ReqR (OpLookup c l ( '(l', v) ': r))
+>     = ReqR (OpLookup' (l == l') c l ( '(l', v) ': r))
+>   req ctx (OpLookup l r)
+>     = req ctx (OpLookup' (Proxy @ (l == l')) l r)
+
+To implement instances for |OpLookup'| is easy. The true case corresponds to
+a |head| function since we know that the searched label is on head:
+
+> instance Require (OpLookup' 'True c l ( '(l, v) ': r)) ctx where
+>   type ReqR (OpLookup' 'True c l ( '(l, v) ': r))
+>     = WrapField c v
+>   req Proxy (OpLookup' Proxy Label (ConsRec f _))
+>     = untagField f
+
+The false case corresponds to a call of |OpLookup| on tail:
+
+> instance (Require (OpLookup c l r) ctx)
+>   => Require (OpLookup' False c l ( '(l', v) ': r)) ctx where
+>   type ReqR (OpLookup' False c l ( '(l', v) ': r))
+>     = ReqR (OpLookup c l r)
+>   req ctx (OpLookup' Proxy l (ConsRec _ r))
+>     = req ctx (OpLookup l r)
+
+
+When we lookup on an empty record an error happened: There is no value
+tagged with the searched label.
+
+To print pretty type errors, we define a special operation:
+
+> data OpError (m :: ErrorMessage) where {}
+
+Which is a phantom type containing some useful information to print.
+When we call |req| with this operator the type checker explodes since
+there is only one instance:
+
+> instance (TypeError (Text "Error: " :<>: m :$$:
+>                      Text "from context: " :<>: ShowCTX ctx))
+>   => Require (OpError m) ctx where {}
+
+Recall thet |TypeError| and |ErrorMessage| are defined in |GHC.TypeLits|. The
+type family |TypeError| is like the function |error| but at type level. When it
+is 'called' a type error is raised. |TypeError| is so polymorphic that we can
+use it as a Constraint, like in this case. This generic instance is used to
+print all sort of type errors in a unified way, but the specific information of
+what happened is on |OpError| which is built from a specific instance of
+|OpLookup|:
+
+> instance Require (OpError
+>     (     Text "field not Found on "  :<>: Text (ShowRec c)
+>     :$$:  Text "looking up the "      :<>: Text (ShowField c)
+>     :<>:  ShowT l )) ctx
+>   => Require  (OpLookup c l ( '[]  :: [(k, k')])) ctx where
+>   type ReqR   (OpLookup c l ('[]   :: [(k, k')])  ) = ()
+>   req = undefined
+
+
+This procedure was used in all our development:
+\begin{itemize}
+\item Code dependent Haskell, if everything goes well we neither
+  access bad indexes nor use rules for incorrect productions, etc.
+
+\item Encode the bad cases, requiring an |OpError|. Note that when building it,
+  like in the former |Require| instance for |OpLookup| a lot of information
+  about types is on scope and can be used to print an informative error.
+\end{itemize}
+
+
+
+
 %if False
-
-
-
-data OpLookup (c :: Type)
-              (l  :: k)
-              (r  :: [(k, k')]) :: Type where
-  OpLookup :: Label l -> Rec c r -> OpLookup c l r
-
-data OpLookup' (b  :: Bool)
-               (c  :: Type)
-               (l  :: k)
-               (r  :: [(k, k')]) :: Type where
-  OpLookup' :: Proxy b -> Label l -> Rec c r -> OpLookup' b c l r
-
-
-
-
-instance (Require (OpLookup' (l == l') c l ( '(l', v) ': r)) ctx)
-  => Require (OpLookup c l ( '(l', v) ': r)) ctx where
-  type ReqR (OpLookup c l ( '(l', v) ': r))
-    = ReqR (OpLookup' (l == l') c l ( '(l', v) ': r))
-  req ctx (OpLookup l r) = req ctx (OpLookup' (Proxy @ (l == l')) l r)
-
-instance Require (OpLookup' 'True c l ( '(l, v) ': r)) ctx where
-  type ReqR (OpLookup' 'True c l ( '(l, v) ': r)) = WrapField c v
-  req Proxy (OpLookup' Proxy Label (ConsRec f _)) = untagField f
-
-instance (Require (OpLookup c l r) ctx)
-  => Require (OpLookup' False c l ( '(l', v) ': r)) ctx where
-  type ReqR (OpLookup' False c l ( '(l', v) ': r)) = ReqR (OpLookup c l r)
-  req ctx (OpLookup' Proxy l (ConsRec _ r)) = req ctx (OpLookup l r)
-
-
-
 
 instance
   Require (OpError (Text "field not Found on " :<>: Text (ShowRec c)
