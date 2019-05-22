@@ -65,15 +65,6 @@ untagField (TagField lc lv v) = v
 
 type family    WrapField (c :: k')  (v :: k) -- = ftype | ftype c -> v
 
-
-
-
-
-
-
-
-
-
 {-
 Node:
 We cannot encode the dependency {ftype, c} -> v since TypeFamilyDependencies
@@ -81,12 +72,6 @@ does not support this general dependencies. So from (WrapField c v) we
 can't infer c.
 
 -}
-
-
-
--- class WrapFieldC (t :: Type)  (v :: k) where
---   type WrapField' t v :: Type
---   wrapfield :: WrapField' t v -> 
 
 
 data OpLookup (c :: Type)

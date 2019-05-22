@@ -190,7 +190,7 @@ messages.
 
 \todo{}
 
-%include ../../src/ExprPaper.lhs
+%include ./ExprPaper.lhs
 
 \section{Design of AspectAG}
 

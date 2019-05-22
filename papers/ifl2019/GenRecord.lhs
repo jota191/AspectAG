@@ -272,7 +272,29 @@ This procedure was used in all our development:
 \end{itemize}
 
 
+|ShowRec| and |ShowField| are type families used to print correctly the type
+ information depending on which category of records we are working on.
 
+For example, for attributions we implement
+
+> type instance ShowRec AttReco
+>   = "Attribution"
+> type instance ShowField AttReco
+>   = "attribute named "
+
+For children:
+
+> type instance ShowRec (ChiReco a)
+>   = "Children Map"
+> type instance ShowField (ChiReco a)
+>   = "child labelled "
+
+
+The fact that type families can be defined open is very convenient in this
+ context. We argue that our generic records and/or the require framework are a
+ useful libraries by their own.
+
+ShowT l
 
 %if False
 
