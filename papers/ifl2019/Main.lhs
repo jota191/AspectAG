@@ -61,8 +61,8 @@
 \begin{document}
 % The "title" command has an optional parameter, allowing the author to define a
 % "short title" to be used in page headers.
-\title{Attribute Grammars Fly First-class... Safer!\\
-Dealing with DSL errors in type-level programming}
+\title{Attribute Grammars Fly First-class... Safer!}
+\subtitle{Dealing with DSL errors in type-level programming}
 
 % The "author" command and its associated commands are used to define the
 % authors and their affiliations. Of note is the shared affiliation of the first
