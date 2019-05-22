@@ -165,9 +165,9 @@ which is actually useful to solve the expression problem, as we shall discuss la
 Attribute grammars decorate the productions of context-free grammars with
 \emph{attribute} computations, in order to provide semantics to such grammars.
 In our example the semantics consist on the evaluation of the expressions.
-To define the semantics we can use two attributes: one to represent
+To define the semantics we can use two attributes: |eval| to represent
 the result of the evaluation %(that is certainly synthesized)
-and one to distribute
+and |env| to distribute
 the context defining semantics for variables.
 
 > eval = Label @ ('Att "eval" Int)
@@ -176,18 +176,24 @@ the context defining semantics for variables.
 
 
 % Time to define semantics.
-The attribute |eval| denotes the value of an
-expression. It is computed on the |add| production as the sum of the denotation
+The attribute |eval| denotes the value of an expression.
+Attributes like this, where the information to compute them flows from the children to their parent productions,
+are called \emph{synthesized attributes}.
+
+On the |add| production we compute |eval| as the sum of the denotation
 of subexpressions. On each subexpression there is a proper attribute |eval| that
 contains its value. This is written on AspectAG as:
-
+%
 > add_eval  =  syndefM eval add
->           $ (+) <$> at leftAdd eval <*> at rightAdd eval
-
-The function syndef takes an attribute (for wich the semantics are being
-defined) and a production (where it is being defined). In this case function
-|syndefM| defines a rule for the attribute |eval| at profuction |add|. The last
-argument is the proper definition. We take the values of |eval| at children
+>           $  (+) <$> at leftAdd eval <*> at rightAdd eval
+%
+The function |syndefM|, to define synthesized attributes,
+takes an attribute (for wich the semantics are being
+defined) and a production (where it is being defined).
+%In this case function
+%|syndefM| defines a rule for the attribute |eval| at profuction |add|.
+The last argument is the proper definition.
+Using the applicative interface\cite{applicative}, we take the values of |eval| at children
 |leftAdd| and |rightAdd|, and combine them with the operator |(+)|.
 
 At |val| production, where the grammar rewrites to a terminal, the value of that
