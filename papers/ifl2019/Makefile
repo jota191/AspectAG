@@ -1,21 +1,21 @@
 
-TEX = pdflatex -shell-escape -interaction=nonstopmode -file-line-error
+TEX = pdflatex -shell-escape -interaction=batchmode -file-line-error
 LHS2TEX = ./lhs2TeX
-REPORTE = Main
+
 
 .PHONY: all view
 
-all : pdf view
+all : pdf
 
 view : Main.tex
 	evince Main.pdf&
 
 pdf : Main.lhs myformat.fmt ExprPaper.lhs GenRecord.lhs bib.bib
-	$(LHS2TEX)  $(REPORTE).lhs > $(REPORTE).tex
-	$(TEX) $(REPORTE).tex
-	pdflatex $(REPORTE).tex
-	bibtex $(REPORTE)
-	pdflatex $(REPORTE).tex
+	$(LHS2TEX)  Main.lhs > Main.tex
+	$(TEX) Main.tex
+	pdflatex Main.tex
+	bibtex Main
+	pdflatex Main.tex
 
 
 .PHONY: clean

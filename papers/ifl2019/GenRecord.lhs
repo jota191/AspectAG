@@ -24,7 +24,21 @@
 
 %endif
 
+
+
 \todo{references, HList, vinyl, etc}
+
+Attribute grammars prove that they are useful not only to implement programming
+languages, but also as a general purpose programming paradigm. Pitifully an
+attribute grammar is an example of a structure that can be easily illformed. It
+is a common mistake to try to use attributes that are not defined in some
+production. This kind of error can be introduced directly, or by associating
+rules to incorrect productions.
+
+\AspectAG provides an strongly typed solution, where all attributions are built
+from strongly typed heterogeneous records, so an incorrect lookup would be
+detected at compile time.
+
 
 \subsection{Extensible Records: Using Type Level Programming in Haskell}
 
@@ -32,23 +46,34 @@
 In our implementation we use extensible records in more than one place.
 \begin{itemize}
 \item
-  |Attribution|s are mappings from attribute names to values.
+  |Attribution|s are mappings from attribute names to values (i.e. a record).
 \item
   For each production, there is a set of children, each one with an
-associated attribution. This is modelled as a record. Note that in this case
+associated attribution. This is implemented as a record. Note that in this case
 each field is not a flat value, but a full record by itself. This must be
 reflected on types as our goal is to code strongly kinded.
 \item
-  \todo{}
+  \emph{Aspects} are more or less, a record of rules indexed by productions.
+\item
+  Semantic functions are kept on a record (not visible by the user).
 \end{itemize}
 
 
-Modern Haskell provides extensions to the type system that allows to encode
-this sort of dependent types.
-Notably {\tt TypeFamilies}\cite{Chakravarty:2005:ATC:1047659.1040306,
- Chakravarty:2005:ATS:1090189.1086397, Sulzmann:2007:SFT:1190315.1190324}, {\tt
+Modern Haskell provides extensions to the type system that allows to encode this
+sort of dependent types. Notably {\tt
+  TypeFamilies}\cite{Chakravarty:2005:ATC:1047659.1040306,
+  Chakravarty:2005:ATS:1090189.1086397, Sulzmann:2007:SFT:1190315.1190324}, {\tt
   DataKinds}~\cite{Yorgey:2012:GHP:2103786.2103795} implementing data promotion.
- {\tt PolyKinds} providing kind polymorphism, {\tt KindSignatures}\cite{ghcman} permite. Or {\tt GADTs}\cite{Cheney2003FirstClassPT,Xi:2003:GRD:604131.604150}.
+{\tt PolyKinds} providing kind polymorphism, {\tt KindSignatures}\cite{ghcman}.
+Or {\tt GADTs}\cite{Cheney2003FirstClassPT,Xi:2003:GRD:604131.604150}.
+
+Extensible records implemented using type level programming are already part of
+the folk-lore in the Haskell community. The HList
+library\cite{Kiselyov:2004:STH:1017472.1017488} popularized them. Other
+implementations such a Vinyl\cite{libvinyl} or CTRex\cite{libCTRex} have been
+introduced.
+
+One common way to implement a |Record| is using a |GADT|
 
 > data Record (r :: [(k, Type)]) :: Type where
 >   EmptyRec  ::  Record '[]
@@ -56,19 +81,29 @@ Notably {\tt TypeFamilies}\cite{Chakravarty:2005:ATC:1047659.1040306,
 >             =>  Tagged l v -> Record r
 >             -> Record ( '(l, v) ': r)
 
-A data type isomorphic to the previous one would model well some of the
-structures in our library, for example attributions. To model children
-in a strongly kinded manner it is not enough. To say that every field
-is actually an attribution we may implement a predicate (as a type class)
-wich degenerates to an old fashioned type level programming with constraints,
-a la prolog.
+A record is indexed on a promoted list of pairs. The kind of the first
+components is polymorphic since we do not need that the type of labels is
+inhabited; they live only at type level. |LabelSet| is a predicate that encodes
+the fact that there are no repeated labels. |Tagged| is the well known type
+implemented as:
+
+> data Tagged (l :: k) (v :: Type) :: Type
+>   = Tagged v
+
+A data type isomorphic to the former one would model well some of the
+structures in our library like attributions. To code children in a strongly
+kinded manner it is not enough. Here every field has kind |Type|, wich means
+that they have some inhabited type. To say that every field is actually an
+attribution we may implement a predicate (as a type class) wich degenerates to
+an old fashioned type level programming with constraints, \emph{a la} prolog.
 
 We prefer to introduce something like another specialized record with a
 declaration like
 
 < data ChAttsRec (r :: [([k, (k', Type)])]) :: Type where ..
 
-But of course, we do not want to implement every structure each time.
+But of course, we do not want to implement every function of the interface
+over records again.
 
 \subsection{Generic Records}
 
@@ -327,6 +362,7 @@ completely legal:
 >   = Text "Non-Terminal " :<>: Text l
 > type instance  ShowT ('T  l)
 >   = Text "Terminal " :<>: ShowT l
+
 
 
 Also, we can code an instance for any type of kind |Type|:
