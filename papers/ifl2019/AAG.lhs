@@ -145,19 +145,13 @@ where
 > emptyAspect :: CAspect ctx '[]
 > emptyAspect  = CAspect $ const EmptyRec
 
-> comAspect ::
->  ( Require (OpComAsp al ar) ctx
->  , ReqR (OpComAsp al ar) ~ Aspect asp)
->  =>  CAspect ctx al -> CAspect ctx ar -> CAspect ctx asp
-> comAspect al ar
->   = CAspect $ \ctx -> req ctx (OpComAsp (mkAspect al ctx) (mkAspect ar ctx))
-
 
 > traceAspect (_ :: Proxy (e::ErrorMessage))
 >   = mapCAspect $ \(_ :: Proxy ctx) -> Proxy @ ((Text "aspect ":<>: e) : ctx)
 
 > traceRule (_ :: Proxy (e::ErrorMessage))
 >   = mapCRule $ \(_ :: Proxy ctx) -> Proxy @ ((Text "rule ":<>: e) : ctx)
+
 
 
 > mapCRule :: (Proxy ctx -> Proxy ctx')
@@ -199,6 +193,16 @@ where
 
 > (.+:) = extAspect
 > infixr 3 .+:
+
+combining
+
+> comAspect ::
+>  ( Require (OpComAsp al ar) ctx
+>  , ReqR (OpComAsp al ar) ~ Aspect asp)
+>  =>  CAspect ctx al -> CAspect ctx ar -> CAspect ctx asp
+> comAspect al ar
+>   = CAspect $ \ctx
+>     -> req ctx (OpComAsp (mkAspect al ctx) (mkAspect ar ctx))
 
 > (.:+:) = comAspect
 > infixr 4 .:+:
@@ -288,13 +292,138 @@ where
 >       in  req ctx (OpUpdate prd newRule asp)
 
 
+Require of equality
+
+> type RequireEq (t1 :: k )(t2 :: k) (ctx:: [ErrorMessage])
+>     = (Require (OpEq t1 t2) ctx, t1 ~ t2)
+
+> data OpEq t1 t2
+
+
+> instance Require (OpEq t t) ctx where
+>   type ReqR (OpEq t t) = ()
+>   req = undefined
+
+
+> instance Require (OpError (Text "" :<>: ShowT t1 :<>: Text " /= "
+>                             :<>: ShowT t2)) ctx
+>   => Require (OpEq t1 t2) ctx where
+>   type ReqR (OpEq t1 t2) = ()
+>   req = undefined
+
 
 \subsection{Terminals}
 
 > class SemLit a where
 >   sem_Lit :: a -> Attribution ('[] :: [(Att,Type)])
->                -> Attribution '[ '( 'Att "term" a , a)]
+>                -> Attribution [( 'Att "term" a , a)]
 >   lit     :: Label ('Att "term" a)
 > instance SemLit a where
 >   sem_Lit a _ = (Label =. a) *. emptyAtt
 >   lit         = Label @ ('Att "term" a)
+
+
+
+\subsection{Monadic interface}
+
+> data Lhs
+> lhs :: Label Lhs
+> lhs = Label
+>
+> class At pos att m  where
+>  type ResAt pos att m
+>  at :: Label pos -> Label att -> m (ResAt pos att m)
+
+
+> instance ( RequireR (OpLookup (ChiReco prd) ('Chi ch prd nt) chi) ctx
+>                     (Attribution r)
+>          , RequireR (OpLookup AttReco ('Att att t) r) ctx t'
+>          , RequireEq prd prd' ctx
+>          , RequireEq t t' ctx 
+>          )
+>       => At ('Chi ch prd nt) ('Att att t)
+>             (Reader (Proxy ctx, Fam prd' chi par))  where
+>  type ResAt ('Chi ch prd nt) ('Att att t) (Reader (Proxy ctx, Fam prd' chi par))
+>          = t 
+>  at (ch :: Label ('Chi ch prd nt)) (att :: Label ('Att att t))
+>   = liftM (\(ctx, Fam chi _)  -> let atts = req ctx (OpLookup ch chi)
+>                                  in  req ctx (OpLookup att atts))
+>           ask
+
+> instance
+>          ( RequireR (OpLookup AttReco ('Att att t) par) ctx t'
+>          , RequireEq t t' ctx
+>          )
+>  => At Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))  where
+>  type ResAt Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))
+>     = t
+>  at lhs att
+>   = liftM (\(ctx, Fam _ par) -> req ctx (OpLookup att par)) ask
+
+subsection{Putting all together}
+
+> class Kn (fcr :: [(Child, Type)]) (prd :: Prod) where
+>   type ICh fcr :: [(Child, [(Att, Type)])]
+>   type SCh fcr :: [(Child, [(Att, Type)])]
+>   kn :: Record fcr -> ChAttsRec prd (ICh fcr) -> ChAttsRec prd (SCh fcr)
+
+> instance Kn '[] prod where
+>   type ICh '[] = '[]
+>   type SCh '[] = '[] 
+>   kn _ _ = emptyCh
+
+> instance ( lch ~ 'Chi l prd nt
+>          , Kn fc prd
+>          , LabelSet ('(lch, sch) : SCh fc)
+>          , LabelSet ('(lch, ich) : ICh fc)
+>          ) => 
+>   Kn ( '(lch , Attribution ich -> Attribution sch) ': fc) prd where
+>   type ICh ( '(lch , Attribution ich -> Attribution sch) ': fc)
+>     = '(lch , ich) ': ICh fc
+>   type SCh ( '(lch , Attribution ich -> Attribution sch) ': fc)
+>     = '(lch , sch) ': SCh fc
+>   kn ((ConsRec (TagField _ lch fch) (fcr :: Record fc)))
+>    = \((ConsCh pich icr) :: ChAttsRec prd ( '(lch, ich) ': ICh fc))
+>    -> let scr = kn fcr icr
+>           ich = unTaggedChAttr pich
+>       in ConsCh (TaggedChAttr lch
+>                (fch ich)) scr
+
+
+
+> emptyCtx = Proxy @ '[]
+
+
+> class Empties (fc :: [(Child,Type)]) (prd :: Prod) where
+>   type EmptiesR fc :: [(Child, [(Att, Type)])] 
+>   empties :: Record fc -> ChAttsRec prd (EmptiesR fc)
+
+> instance Empties '[] prd where
+>   type EmptiesR '[] = '[]
+>   empties _ = emptyCh
+
+> instance ( Empties fcr prd
+>          , chi ~ 'Chi ch prd nt
+>          , LabelSet ( '(chi, '[]) ': EmptiesR fcr))
+>  => Empties ( '(chi, Attribution e -> Attribution a) ': fcr) prd where
+>   type EmptiesR ( '(chi, Attribution e -> Attribution a) ': fcr)
+>     = '(chi, '[]) ': EmptiesR fcr
+>   empties (ConsRec pch fcr)
+>     = let lch = labelTChAtt pch
+>       in  (lch .= emptyAtt) .* (empties fcr)
+
+> knit (ctx  :: Proxy ctx)
+>      (rule :: CRule ctx prd (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp)
+>      (fc   :: Record fc)
+>      (ip   :: Attribution ip)
+>   = let (Fam ic sp) = mkRule rule ctx
+>                        (Fam sc ip) (Fam ec emptyAtt)
+>         sc          = kn fc ic
+>         ec          = empties fc
+>     in  sp
+
+
+> knitAspect (prd :: Label prd) asp fc ip
+>   = let ctx  = Proxy @ '[]
+>         ctx' = Proxy @ '[Text "knit" :<>: ShowT prd]
+>     in  knit ctx (req ctx' (OpLookup prd ((mkAspect asp) ctx))) fc ip
