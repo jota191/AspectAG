@@ -49,7 +49,9 @@
 
 \usepackage[utf8]{inputenc}
 
-\usepackage {amssymb}
+\usepackage { amssymb }
+\usepackage { hyperref }
+
 
 \setlength{\mathindent}{0.3cm}
 

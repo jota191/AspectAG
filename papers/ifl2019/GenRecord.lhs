@@ -102,8 +102,8 @@ declaration like
 
 < data ChAttsRec (r :: [([k, (k', Type)])]) :: Type where ..
 
-But of course, we do not want to implement every function of the interface
-over records again.
+Of course, we should avoid implementing every function of the interface
+over records several times.
 
 \subsection{Generic Records}
 
@@ -115,11 +115,23 @@ We develop a parametrized implementation, as follows:
 >             =>  TagField c l v -> Rec c r
 >             -> Rec c ( '(l, v) ': r)
 
-The parameter |c| is an extra index defining wich category of record
+The parameter |c| is an extra index pointing out wich category of record
 are we defining. |TagField| is a fancy implementation of the well known
 |Tagged| data type, as we shall see.
 
-\todo{\lipsum}
+
+For a moment, lets pay attention on the |LabelSet| constraint. A similar class
+is introduced on the HList\cite{Kiselyov:2004:STH:1017472.1017488} library. By
+using a type class to encode a predicate new instances can be defined anytime
+since classes are open. When an instance is not found, that does not mean that
+the predicate is False, but that the typechecker did not find a proof. In the
+case of |LabelSet| given a set of labels, if we know how to compare on their
+kind, |LabelSet| is closed and decidable. On previous iterations we encoded
+instances of |TypeError| [REF] for cases where a repeated label is found. We
+will use an unified way to process type errors as whe shall see in section
+\ref{sec:requirements}. To do that we need to manipulate the result, a Boolean
+type family seems the way to go:
+
 
 > type family LabelSetF (r :: [(k, k')]) :: Bool where
 >   LabelSetF '[]          = True
@@ -129,18 +141,21 @@ are we defining. |TagField| is a fancy implementation of the well known
 >            (LabelSetF ( '(l, v)   ': r) )
 >            (LabelSetF ( '(l', v') ': r) )
 
+Then, we encode the predicate version since it fits better in some contexts,
+such as the |ConsRec| constructor.
+
 > class LabelSet (r :: [(k, k')]) where {}
 > instance LabelSetF r ~ True => LabelSet r
 
 
-\todo{\lipsum}
+\todo{}
 
 > data TagField (c :: k) (l :: k') (v :: k'') where
 >   TagField  ::  Label c -> Label l -> WrapField c v
 >             ->  TagField c l v
 > data Label (l :: k) = Label
 
-\todo{\lipsum}
+\todo{}
 
 > type family WrapField (c :: k')  (v :: k) :: Type
 
@@ -189,7 +204,7 @@ are we defining. |TagField| is a fancy implementation of the well known
 
 
 \subsection{Requirements}
-
+\label{sec:requirements}
 As a framework to program type errors we introduce the concept of
 requirements.
 
