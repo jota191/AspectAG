@@ -176,7 +176,7 @@ the context defining semantics for variables.
 
 
 % Time to define semantics. The attribute |eval| denotes the value of an
-expression. Attributes like this, where the information to compute them flows
+expression. Attributes like this, where the information we compute flows
 from the children to their parent productions, are called \emph{synthesized
 attributes}.
 
@@ -195,29 +195,33 @@ defined) and a production (where it is being defined).
 The last argument is the proper definition.
 Using the applicative interface\cite{applicative}, we take the values of |eval| at children
 |leftAdd| and |rightAdd|, and combine them with the operator |(+)|.
+With the notation |at leftAdd eval|, we take from the collection of synthesized attributes of
+the child |leftAdd| the attribute |eval|.
+We call this collections of attributes \emph{attributions}.
+
 
 At |val| production, where the grammar rewrites to a terminal, the value of that
  terminal corresponds to the semantics of the expression. In terms of our
  implementation the attribute |eval| is defined at |val| as the value of the
  terminal |ival|.
 
-> val_eval = syndefM eval val
->          $ ter ival
-
+> val_eval  = syndefM eval val $ ter ival
+%
 |ter| is simply a reserved keyword in our EDSL.
 
 Finally on variables, the expression denotes the value of the variable on a
 given context. This is implemented as follows:
 
-> var_eval = syndefM eval var $ slookup
->           <$> ter vname <*> at lhs env
+> var_eval  =  syndefM eval var 
+>           $  slookup <$> ter vname <*> at lhs env
 >    where slookup nm = fromJust . Data.Map.lookup nm
+%
+We lookup a variable, with the name of the terminal |vname|,
+into the environment provided by the attribute |env|.
+The name |lhs| indicates that we receive the attribute from the parent.
+Attributes like |env|, that flow in a top-down way,
+are called \emph{inherited attributes}.
 
-We look at the terminal |vname|, and look for the attribute |env|
-on the inherited attributes. The collection of inherited attributes is
-accesed by the name |lhs| on the same way that we have acces to the synthesized
-attributes using the name of each children. We call this collections of attributes
-\emph{attributions}.
 
 Finally, we combine all this rules on an \emph{aspect}:
 
@@ -225,29 +229,29 @@ Finally, we combine all this rules on an \emph{aspect}:
 > aspEval   =  traceAspect (Proxy @ ('Text "eval"))
 >           $  add_eval .+: val_eval .+: var_eval .+: emptyAspect
 
-Before understand what is going on with this |traceAspect| wrapper, lets say
+Before understanding what is going on with this |traceAspect| wrapper, lets say
 that the operator |(.+:)| is simply a combinator that adds a rule to an aspect
 (it associates to the right). In our EDSL domain an aspect is a collection of
 rules. Here we build an aspect with all the rules for a given attribute, but the
-user can combine them in the way he or she wants (for example, by production).
+user can combine them in the way she wants (for example, by production).
 Aspects can be orthogonal to one another, or not. Here |aspEval| clearly depends
 on an attribute |env| with no rules attached to it at this point, so it is not
-useful at all. We cannot complain here yet since the rules for |env| could we
+useful at all. We cannot complain here yet since the rules for |env| could be
 defined later (as we will do), or perhaps in another module! If we try to
 actually use |aspEval| calling it on a semantic function, there will be a type
 error, but it will be raised on the semantic function application. The function
 |traceAspect|, and also -implicitly- each application of |syndefM| tag
 definitions to show them on type errors. This is useful to debug and we
-encourage to use tags, but it is optional.
+encourage the use tags, but it is optional.
 
 For the inherited attribute |env| we provide the |inhdefM| combinator, wich
 takes an attribute name, a production where the rule is being defined, and a
 child for what the information is being distributed. In our example |env| is
-copied to both children on |add| production, so we build one rule for each:
+copied to both children on the |add| production, so we build one rule for each:
 
 > add_leftAdd_env  = inhdefM env add leftAdd  $ at lhs env
 > add_rightAdd_env = inhdefM env add rightAdd $ at lhs env
-
+%
 and combine them on an aspect:
 
 > aspEnv  =  traceAspect (Proxy @ ('Text "env"))
@@ -256,8 +260,8 @@ and combine them on an aspect:
 We can combine aspects with the |(.:+:)| operator:
 
 > asp = aspEval .:+: aspEnv
-
-Note that this time we decided to not make a new tag.
+%
+Note that this time we decided to not add a new tag.
 
 Finally, given an implementation of the abstract syntax tree, like |Tree| we can
 encode (or derive) the \emph{semantic function}. |sem_Expr| takes an aspect, an
