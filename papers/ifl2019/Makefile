@@ -10,7 +10,7 @@ all : pdf view
 view : Main.tex
 	evince Main.pdf&
 
-pdf : Main.lhs
+pdf : Main.lhs myformat.fmt ExprPaper.lhs GenRecord.lhs bib.bib
 	$(LHS2TEX)  $(REPORTE).lhs > $(REPORTE).tex
 	$(TEX) $(REPORTE).tex
 	pdflatex $(REPORTE).tex

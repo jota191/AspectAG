@@ -5,10 +5,17 @@
 %format p_Add = "p_{Add}"
 %format p_Val = "p_{Val}"
 %format p_Var = "p_{Var}"
+%format p_Let = "p_{Let}"
 
 %format P_Add = "P_{Add}"
 %format P_Val = "P_{Val}"
 %format P_Var = "P_{Var}"
+%format P_Let = "P_{Let}"
+
+%format expr_l = "expr_l"
+%format expr_r = "expr_r"
+%format expr_d = "expr_d"
+%format expr_i = "expr_i"
 
 %format <$>      = "<\!\!\$\!\!\!>"
 %format <*>      = "\oast"

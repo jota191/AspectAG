@@ -64,8 +64,7 @@ the attribute values of the children and the parent. Usually attributes are
 classified in at least two sets: synthesized attributes (where information flows
 bottom up) and inherited attibutes (where it flows top down).
 
-%format expr_l = "expr_l"
-%format expr_r = "expr_r"
+
 
 \section{Overview of the library}
 
@@ -263,37 +262,38 @@ We can combine aspects with the |(.:+:)| operator:
 %
 Note that this time we decided to not add a new tag.
 
-Finally, given an implementation of the abstract syntax tree, like |Tree| we can
-encode (or derive) the \emph{semantic function}. |sem_Expr| takes an aspect, an
-AST and an initial attribution and computes semantics for that expression.
+Finally, given an implementation of the abstract syntax tree, like |Expr|, we can
+encode (or derive with Template Haskell) the \emph{semantic function}.
+
+> sem_Expr asp (Add l r)  = knitAspect add asp
+>                 $    leftAdd   .=. sem_Expr asp l
+>                 .*.  rightAdd  .=. sem_Expr asp r
+>                 .*.  EmptyRec
+> sem_Expr asp (Val i)    = knitAspect val asp
+>                 $    ival  .=. sem_Lit i .*. EmptyRec
+> sem_Expr asp (Var v)    = knitAspect var asp
+>                 $    vname .=. sem_Lit v .*. EmptyRec
+%
+|sem_Expr| takes an aspect, an
+AST and an initial attribution (with the inherited attributes of the root)
+and computes semantics for this expression.
 The result is an attribution with all the synthesized attributes of the root. We
 can define an evaluator:
 
-> evalExpr e m = sem_Expr asp e (env =. m .*. emptyAtt) #. eval
-
+> evalExpr e m =  sem_Expr asp e (env =. m .*. emptyAtt)
+>                 #. eval
+%
 that takes an environment |m| mapping variable names to |Int|s.
-For example this definition
-
-> exampleExpr =  Add (Add (Var "x") (Val 5)) (Val 2)
-> exampleEval =  evalExpr exampleExpr (insert "x" 5 Data.Map.empty)
-
-evaluates to |12| % \eval{exampleEval}
-
-
-
+For example, the following expression evaluates to |12|.
+< evalExpr  (Add (Add (Var "x") (Val 5)) (Val 2))
+<           (insert "x" 5 empty)
+%
 
 %if False
-
-> sem_Expr asp (Add l r) = knitAspect add asp
->                            $  leftAdd  .=. sem_Expr asp l
->                           .*. rightAdd .=. sem_Expr asp r
->                           .*.  EmptyRec
-> sem_Expr asp (Val i)   = knitAspect val asp$
->                           ival  .=. sem_Lit i .*. EmptyRec
-> sem_Expr asp (Var v)   = knitAspect var asp$
->                           vname .=. sem_Lit v .*. EmptyRec
-
+> exampleExpr =  Add (Add (Var "x") (Val 5)) (Val 2)
+> exampleEval =  evalExpr exampleExpr (insert "x" 5 Data.Map.empty)
 %endif
+
 
 \subsection{Semantic Extension: Adding attributes}
 
@@ -319,8 +319,7 @@ returns a list of all literals occurring in the expression, in order.
 
 \subsection{Grammar extension: Adding Productions}
 
-To tackle the expression problem we must be able to extend our grammar.
-
+%if False
 \begin{figure}
 \caption{Grammar plus extension}
 \centering
@@ -328,15 +327,13 @@ To tackle the expression problem we must be able to extend our grammar.
 <  expr    ->  ival
 <  expr    ->  vname
 <  expr    ->  expr_l + expr_r
-
-%\hline
-
-< expr     -> let vname = expr_d in expr_i
+<  expr     -> let vname = expr_d in expr_i
 
 \end{figure}
+%endif
 
-
-Suppose that we add a new production to add local definitions:
+To compĺetely tackle the expression problem we must be able to extend our grammar.
+Suppose that we add a new production to bind local definitions:
 
 < expr     -> let vname = expr_d in expr_i
 
@@ -347,16 +344,19 @@ We implement them with this definition:
 
 This new production has three children
 
-> exprLet   = Label @ ('Chi "exprLet"   P_Let ('Left Nt_Expr))
-> bodyLet   = Label @ ('Chi "bodyLet"   P_Let ('Left Nt_Expr))
-> vlet      = Label @ ('Chi "vlet"      P_Let ('Right ('T String)))
+> exprLet   = Label @ ('Chi "exprLet"   P_Let
+>                                       ('Left Nt_Expr))
+> bodyLet   = Label @ ('Chi "bodyLet"   P_Let
+>                                       ('Left Nt_Expr))
+> vlet      = Label @ ('Chi "vlet"      P_Let
+>                                       ('Right ('T String)))
 
 
+We can extend the aspects with the definitions of
+the attributes for the new production.
 
-
-> aspEval2
->   =  traceAspect (Proxy @ ('Text "eval2"))
->   $  syndefM eval elet (at bodyLet eval) .+: aspEval
+> aspEval2  =  traceAspect (Proxy @ ('Text "eval2"))
+>           $  syndefM eval elet (at bodyLet eval) .+: aspEval
 
 
 > aspEnv2
@@ -366,6 +366,8 @@ This new production has three children
 >                                           <*>  at exprLet eval
 >                                           <*>  at lhs env)
 >   .+:  aspEnv
-
+%
+%
+And again combine them.
 
 > asp2 = aspEval2 .:+: aspEnv2
