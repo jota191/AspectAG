@@ -9,6 +9,10 @@
 
 %include myformat.fmt
 
+\usepackage{ifthen}
+
+%include lineno.fmt
+\arrayhs
 
 %
 % \BibTeX command to typeset BibTeX logo in the docs
@@ -177,6 +181,8 @@ messages.
   \parbox{\textwidth/3}{NOTE: \\ #1}}}
 
 \newcommand{\AspectAG}{AspectAG }
+
+\numbersoff
 
 \section{Introduction}
 
