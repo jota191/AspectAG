@@ -227,7 +227,7 @@
 >   req ctx (OpComRA' _ (rule :: CRule ctx prd sc ip ic sp ic' sp') asp)
 >     = req ctx (OpExtend (Label @ prd) rule asp)
 
-> instance 
+> instance
 >  ( Require (OpUpdate PrdReco prd (CRule ctx prd sc ip ic sp ic'' sp'') a) ctx
 >  , RequireR (OpLookup PrdReco prd a) ctx (CRule ctx prd sc ip ic sp ic' sp') 
 >  , (IC (ReqR (OpLookup PrdReco prd a))) ~ ic
@@ -261,7 +261,7 @@
 >      , ctx'
 >          ~ ((Text "syndef("
 >              :<>: ShowT ('Att att t) :<>: Text ", "
->              :<>: ShowT prd :<>: Text ")") ': ctx) 
+>              :<>: ShowT prd :<>: Text ")") ': ctx)
 >      )
 >      => Label ('Att att t)
 >      -> Label prd
