@@ -303,7 +303,7 @@
 >      , RequireR (OpLookup (ChiReco ('Prd prd nt))
 >                 ('Chi chi ('Prd prd nt) ntch) ic) ctx
 >                 (Attribution r)
->      , ntch ~ 'Left n
+>      , RequireEq ntch ('Left n) ctx'
 >      , ctx' ~ ((Text "inhdef("
 >                 :<>: ShowT ('Att att t)  :<>: Text ", "
 >                 :<>: ShowT ('Prd prd nt) :<>: Text ", "
@@ -337,7 +337,7 @@
 >      , RequireR (OpLookup (ChiReco ('Prd prd nt))
 >                 ('Chi chi ('Prd prd nt) ntch) ic) ctx
 >                 (Attribution r)
->      , ntch ~ 'Left n
+>      , RequireEq ntch ('Left n) ctx'
 >      , ctx' ~ ((Text "inhmod("
 >                 :<>: ShowT ('Att att t)  :<>: Text ", "
 >                 :<>: ShowT ('Prd prd nt) :<>: Text ", "
@@ -409,16 +409,19 @@
 >                     (Attribution r)
 >          , RequireR (OpLookup AttReco ('Att att t) r) ctx t'
 >          , RequireEq prd prd' ctx
->          , RequireEq t t' ctx 
+>          , RequireEq t t' ctx
+>          --, RequireEq nt ('Left n) ctx
 >          )
 >       => At ('Chi ch prd nt) ('Att att t)
 >             (Reader (Proxy ctx, Fam prd' chi par))  where
 >  type ResAt ('Chi ch prd nt) ('Att att t) (Reader (Proxy ctx, Fam prd' chi par))
 >          = t 
->  at (ch :: Label ('Chi ch prd nt)) (att :: Label ('Att att t))
+>  at ch att
 >   = liftM (\(ctx, Fam chi _)  -> let atts = req ctx (OpLookup ch chi)
 >                                  in  req ctx (OpLookup att atts))
 >           ask
+
+
 
 > instance
 >          ( RequireR (OpLookup AttReco ('Att att t) par) ctx t'
@@ -434,7 +437,9 @@
 >     -> (Proxy ctx -> (Fam prd chi par) -> a)
 > def = curry . runReader
 
-> ter :: ( At pos ('Att "term" a) m, pos ~ 'Chi ch prd (Right ('T a)) )
+> ter :: ( At pos ('Att "term" a) m
+>        , RequireEq pos ('Chi ch prd (Right ('T a))) ctx
+>        , m ~ Reader (Proxy ctx, Fam prd chi par) )
 >     =>  Label pos -> m (ResAt pos ('Att "term" a) m) 
 > ter (ch :: Label ('Chi ch prd (Right ('T a))))  = at ch (lit @ a)
 

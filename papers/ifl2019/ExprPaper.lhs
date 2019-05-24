@@ -20,13 +20,13 @@
 > import System.Exit (exitFailure)
 > import Language.Grammars.AspectAG
 > import Control.Monad
-> import Control.Applicative
+> import Control.Applicative hiding (empty)
 > import Data.Proxy
 > import GHC.TypeLits
 > import Data.Map
 > import Data.Maybe
 > import Debug.Trace
-
+> import Prelude hiding (lookup)
 
 %endif
 
@@ -162,7 +162,7 @@ which is actually useful to solve the expression problem, as we shall discuss la
 > val_eval  =  syndefM eval val $  ter ival                                     {-"\label{line:val_eval} "-}
 >
 > var_eval  =  syndefM eval var $  slookup <$> ter vname <*> at lhs env         {-"\label{line:var_eval} "-}
->    where slookup nm = fromJust . Data.Map.lookup nm
+>    where slookup nm = fromJust . lookup nm
 > {-" "-}
 > aspEval   =  traceAspect (Proxy @ ('Text "eval")) $  add_eval .+: val_eval .+: var_eval .+: emptyAspect {-"\label{line:aspEval} "-}
 > {-" "-} 
@@ -280,7 +280,7 @@ For example, the following expression evaluates to |12|.
 
 %if False
 > exampleExpr =  Add (Add (Var "x") (Val 5)) (Val 2)
-> exampleEval =  evalExpr exampleExpr (insert "x" 5 Data.Map.empty)
+> exampleEval =  evalExpr exampleExpr (insert "x" 5 empty)
 %endif
 
 
@@ -368,14 +368,14 @@ new production.
 
 \subsection{Error Messages}
 
-If in Figure~\ref{fig:eval} instead of Line~\ref{line:add_eval} we have the following declaration:
+If in Figure~\ref{fig:eval} instead of Line~\ref{line:var_eval} we have the following declaration:
 
-< add_eval  =  syndefM eval add  $ (+)  <$>  at leftAdd eval
-<                                       <*>  pure True
+< var_eval  =  syndefM eval var
+<           $  lookup <$> ter vname <*> at lhs env
 %
 We obtain a type error in this line, with the information:
 \begin{Verbatim}[fontsize=\small]
-Couldn't match type 'Bool' with 'Int'
+Couldn't match type 'Maybe Int' with 'Int'
 \end{Verbatim}
 
 
@@ -387,8 +387,21 @@ using a child (|ival|) that does not belong to the production
 Error: Non-Terminal Expr::Production p_Val
        /=
        Non-Terminal Expr::Production p_Add
-from context: syndef( Attribute eval:Int
-                    , Non-Terminal Expr::Production p_Add)
+trace: syndef( Attribute eval:Int
+             , Non-Terminal Expr::Production p_Add)
+\end{Verbatim}
+
+
+If we try to treat a non-terminal as a terminal
+< add_eval  =  syndefM eval add  $ ter leftAdd
+\begin{Verbatim}[fontsize=\small]
+Error: Non-Terminal Expr::Production p_Add
+       ::Child leftAdd:Non-Terminal Expr
+       /=
+       Non-Terminal Expr::Production p_Add
+       ::Child leftAdd:Terminal Int
+trace: syndef( Attribute eval:Int
+             , Non-Terminal Expr::Production p_Add)
 \end{Verbatim}
 
 
@@ -404,14 +417,27 @@ Now suppose we have an attribute |foo|, of type |Int|,
 but without any rules defining its computation. 
 < add_eval  =  syndefM eval add  $ (+)  <$>  at leftAdd eval
 <                                       <*>  at rightAdd foo
-
-
+%
 The error appears at Line~\ref{line:evalExpr}, where ..
 the trace guides us to the place where the invalid rule is defined.
 \begin{Verbatim}[fontsize=\small]
-Error: field not Found on Attribution
+Error: Field not Found on Attribution
        looking up Attribute foo:Int
-from context: syndef( Attribute eval:Int
-                    , Non-Terminal Expr::Production p_Add)
-              aspect eval
+trace: syndef( Attribute eval:Int
+             , Non-Terminal Expr::Production p_Add)
+       aspect eval
+\end{Verbatim}
+
+modify Line~\ref{line:aspEval} to define a duplicated attribute
+
+< aspEval   =    traceAspect (Proxy @ ('Text "eval"))
+<           $    add_eval .+: add_eval 
+<           .+:  val_eval .+: var_eval .+: emptyAspect
+%
+The error appears again at Line~\ref{line:evalExpr}
+
+\begin{Verbatim}[fontsize=\small]
+Error: Duplicated Labels on Attribution
+       on Attribute eval:Int
+trace: aspect eval
 \end{Verbatim}
