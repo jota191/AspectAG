@@ -25,23 +25,24 @@
 %endif
 
 
-
-\todo{references, HList, vinyl, etc}
-
-Attribute grammars prove that they are useful not only to implement programming
+Attribute grammars prove that they are not only useful to implement programming
 languages, but also as a general purpose programming paradigm. Pitifully an
 attribute grammar is an example of a structure that can be easily illformed. It
 is a common mistake to try to use attributes that are not defined in some
 production. This kind of error can be introduced directly, or by associating
-rules to incorrect productions.
+rules to incorrect productions. Like showed in the prevoius section, \AspectAG
+captures common errors. \AspectAG internals are built from strongly typed
+heterogeneous records, so an incorrect lookup would be detected at compile time.
 
-\AspectAG provides an strongly typed solution, where all attributions are built
-from strongly typed heterogeneous records, so an incorrect lookup would be
-detected at compile time.
+Detecting errors is not enough. It is a common problem when implementing
+Embedded DSLs that implementation leaks on type errors. User defined type errors
+[REF] a tool introduced to solve this issue. The family |GHC.TypeLits.TypeError|
+can be used to print a custom error message but it is not clear how to structure
+the implementation in a modular, dependable and scalable way. On section
+\ref{sec:requirements} we present our solution.
 
 
 \subsection{Extensible Records: Using Type Level Programming in Haskell}
-
 
 In our implementation we use extensible records in more than one place.
 \begin{itemize}
@@ -67,13 +68,11 @@ sort of dependent types. Notably {\tt
 {\tt PolyKinds} providing kind polymorphism, {\tt KindSignatures}\cite{ghcman}.
 Or {\tt GADTs}\cite{Cheney2003FirstClassPT,Xi:2003:GRD:604131.604150}.
 
-Extensible records implemented using type level programming are already part of
-the folk-lore in the Haskell community. The HList
+Extensible records coded using type level programming are already part of the
+folk-lore in the Haskell community. The {\tt HList}
 library\cite{Kiselyov:2004:STH:1017472.1017488} popularized them. Other
 implementations such a Vinyl\cite{libvinyl} or CTRex\cite{libCTRex} have been
-introduced.
-
-One common way to implement a |Record| is using a |GADT|
+introduced. One common way to implement a |Record| is using a |GADT|:
 
 > data Record (r :: [(k, Type)]) :: Type where
 >   EmptyRec  ::  Record '[]
@@ -81,56 +80,56 @@ One common way to implement a |Record| is using a |GADT|
 >             =>  Tagged l v -> Record r
 >             -> Record ( '(l, v) ': r)
 
-A record is indexed on a promoted list of pairs. The kind of the first
-components is polymorphic since we do not need that the type of labels is
-inhabited; they live only at type level. |LabelSet| is a predicate that encodes
-the fact that there are no repeated labels. |Tagged| is the well known type
-implemented as:
+A record is indexed on a promoted list of pairs. The kind of the first component
+is polymorphic since we do not need that the type of labels is inhabited; they
+live only at type level. |LabelSet| is a predicate that encodes the fact that
+there are no repeated labels. |Tagged| is the well known data type implemented
+as:
 
 > data Tagged (l :: k) (v :: Type) :: Type
 >   = Tagged v
 
-A data type isomorphic to the former one would model well some of the
-structures in our library like attributions. To code children in a strongly
-kinded manner it is not enough. Here every field has kind |Type|, wich means
-that they have some inhabited type. To say that every field is actually an
-attribution we may implement a predicate (as a type class) wich degenerates to
-an old fashioned type level programming with constraints, \emph{a la} prolog.
+A data type isomorphic to |Record| would model well some of the structures in
+our library, like attributions. To code children in a strongly kinded manner it
+is not enough. Here every field has kind |Type|, wich means that they have some
+inhabited type. Although this is fine, it is too general. To say that every
+field is actually a full attribution we may implement a predicate (as a type
+class) wich degenerates to an old fashioned type level programming with
+constraints, \emph{a la} prolog.
 
 We prefer to introduce something like another specialized record with a
 declaration like
 
-< data ChAttsRec (r :: [([k, (k', Type)])]) :: Type where ..
+< data ChAttsRec (r :: [([k, (k', Type)])]) :: Type where ....
 
-Of course, we should avoid implementing every function of the interface
+Surely, we should avoid implementing every function of the interface
 over records several times.
 
 \subsection{Generic Records}
 
-We develop a parametrized implementation, as follows:
+We introduce a parametrized implementation, as follows:
 
 > data Rec (c :: k) (r :: [(k', k'')]) :: Type where
 >   EmptyRec  ::  Rec c '[]
 >   ConsRec   ::  LabelSet ( '(l,v) ': r)
 >             =>  TagField c l v -> Rec c r
->             -> Rec c ( '(l, v) ': r)
+>             ->  Rec c ( '(l, v) ': r)
 
-The parameter |c| is an extra index pointing out wich category of record
-are we defining. |TagField| is a fancy implementation of the well known
-|Tagged| data type, as we shall see.
-
+The parameter |c| is an extra index pointing out wich category of record are we
+defining. |TagField| is a fancier implementation of the |Tagged| data type, as
+we shall see.
 
 For a moment, lets pay attention on the |LabelSet| constraint. A similar class
 is introduced on the HList\cite{Kiselyov:2004:STH:1017472.1017488} library. By
 using a type class to encode a predicate new instances can be defined anytime
-since classes are open. When an instance is not found, that does not mean that
-the predicate is False, but that the typechecker did not find a proof. In the
-case of |LabelSet| given a set of labels, if we know how to compare on their
-kind, |LabelSet| is closed and decidable. On previous iterations we encoded
-instances of |TypeError| [REF] for cases where a repeated label is found. We
-will use an unified way to process type errors as whe shall see in section
-\ref{sec:requirements}. To do that we need to manipulate the result, a Boolean
-type family seems the way to go:
+since classes are open. When an instance is not found, one could argue that does
+not mean that the predicate is |False|, but that the typechecker did not find a
+proof. In the case of |LabelSet| given a set of labels, once we know how to
+compare on their kind |LabelSet| is closed and decidable. On previous iterations
+we used the constraint alternative and encoded instances of |TypeError| for
+cases where a repeated label is found. We will use an unified way to process
+type errors as whe shall see in section \ref{sec:requirements}. To do that we
+need to manipulate the result, a Boolean type family seems the way to go:
 
 
 > type family LabelSetF (r :: [(k, k')]) :: Bool where
@@ -148,41 +147,99 @@ such as the |ConsRec| constructor.
 > instance LabelSetF r ~ True => LabelSet r
 
 
-\todo{}
+The data type |TagField| is implemented as:
 
 > data TagField (c :: k) (l :: k') (v :: k'') where
 >   TagField  ::  Label c -> Label l -> WrapField c v
 >             ->  TagField c l v
+
+where labels are proxies
+
 > data Label (l :: k) = Label
 
-\todo{}
+The constructor uses |Label| arguments to build instances because we usually
+have them avaiable at term level as we saw in the example of section [REF], but
+type applications -or a much less elegant annotation- would work fine. The third
+argument of type |WrapField c v| should be the value that we want to tag.
+Instead of using |v| of kind |Type| note that it is kind polymorphic. The kind
+of |v| can be something like |[(k, Type)]| in the case of children. When
+actually creating a field to append in a record a real value must be stored,
+all this kind information must be Wrapped by a type constructor.
 
-> type family WrapField (c :: k')  (v :: k) :: Type
+> type family WrapField (c :: k') (v :: k) :: Type
+
+The type family |WrapField| give us, depending on |c| the type of |v| wrapped
+with a suitable type constructor. Note that if |v| is already inhabitated
+|WrapField c| can be the identity function (and it actually is in every instance
+like that we have implemented.)
+
+We usually encode some of our functions as operators, for example, instead of
+|ConsRec| we usually use:
 
 > infixr 2 .*.
-> (.*.) :: LabelSet ( '(l, v) ': r) =>
->     TagField c l v -> Rec c r -> Rec c ( '(l,v) ': r)
 > (.*.) = ConsRec
-
 
 \subsection{Record Instances}
 
-\todo{\lipsum}
+Most functions over records are implemented over the polykinded implementation.
+Then we use this library to implement our actual data structures. To introduce a
+record we must give an index and implement the family instance |WrapField|. To
+print pretty and domain specific error messages we also need to add instances
+for |ShowField| and |ShowRec|, as we shall see later. We give some
+examples.
+
 
 \subsubsection{Example: Attribution}\hfill\break
 
-> type Attribution   = Rec AttReco
+Attributions are mappings from attribute names to values. To make an index we
+define a datatype as:
 
 > data AttReco
 
+On |GenRecord| the |c| is polykinded. We use the kind |Type| for indexes in
+our case since |Type| is the only extensible kind. The generic record library
+allows the user use a fixed kind of |c| and work with a closed category
+of records.
+
+Attributions are records using the |AttReco| index. Also, we define a
+descriptive name and fix the polymorphic kinds since Attribution labels are of
+kind |Att|, and fields of kind |Type|.
+
+> type Attribution (attr :: [(Att,Type)]) = Rec AttReco attr
+
+We do not need to actually wrap the fields since they are simply values:
+
 > type instance  WrapField AttReco  (v :: Type) = v
 
+We also use an specific name for fields:
 
-
+> type Attribute (l :: Att) (v :: Type) = TagField AttReco l v
 > type Attribute        = TagField AttReco
+
+
+Pattern matching is a very useful feature in functional programming languages,
+but somewhat incompatible with abstract datatypes. Hiding constructors
+of |GenRecord| is nice but we lose pattern matching.
+Fortunately Haskell implements pattern synonyms.
+
+\todo{aparentemente hay bastante literatura con esto y los pattern synonyms son
+  algo nuevo, tengo que buscar referencias}
+
+
+\todo{ya que enchastré acá pongo esto: hay que ver como llamarle a los distintos
+  tipos de record (Record, Attribution, Prod, ChAttsRec, etc) y que no se pise
+  con términos de Haskell. Estoy escribiendo ``category'' y no me parece bueno,
+  igual seguí para que sea fácil el search and replace. ``Type'' ``class'' o
+  ``kind'' serían más adecuados pero tienen obviamente otra connotación (btw,
+  cuantas formas distintas de cuasiconjuntos manejamos!) talvez ``denomination''
+  pero puede ser confuso o pomposo. Talvez una frase en vez de un término
+  puntual. otros: ``Flavo\{u\}r'', ``Sort'', ``instance'' }
+
+For each category of record we define fake constructors, specialized versions of
+|TagField|, |EmptyRec| an |ConsAtt|. In this case this can be coded as follows:
+
 > pattern Attribute :: v -> TagField AttReco l v
 > pattern Attribute v = TagField Label Label v
-
 > pattern EmptyAtt :: Attribution '[]
 > pattern EmptyAtt = EmptyRec
 > pattern ConsAtt :: LabelSet ( '(att, val) ': atts)
@@ -190,17 +247,35 @@ such as the |ConsRec| constructor.
 >     ->  Attribution ( '(att,val) ': atts)
 > pattern ConsAtt att atts = ConsRec att atts
 
+
+
+
+
 \subsubsection{Example: Children Records}\hfill\break
 
+Again, we need a new index:
+
+> data ChiReco (prd :: Prod)
+
+A child is associated to a production. Our denomination has itself an index wit
+that information. Recall that |Prod| has a name, for the production but also a
+name for the non-terminal that it rewrites, so all this information is contained
+on a child.
 
 > type ChAttsRec prd (chs :: [(Child,[(Att,Type)])])
 >    = Rec (ChiReco prd) chs
 
-> data ChiReco (prd :: Prod)
+|WrapField| in this case takes the type information of the field, which is
+not inhabited, and puts the |Attribution| wrapper.
 
-> type instance  WrapField (ChiReco prd)  (v :: [(k, Type)])
+> type instance  WrapField (ChiReco prd)  (v :: [(Att, Type)])
 >   = Attribution v
 
+Again, we define pattern synonyms as in the previous case.
+
+
+
+\todo{capaz figure tabla con los records y sus constructores?}
 
 
 \subsection{Requirements}

@@ -124,7 +124,7 @@ instance (Show v, Show (Record xs), (LabelSet ('(l, v) : xs))) =>
 -- | An attribution is a record constructed from attributes
 
 -- | datatype implementation
-type Attribution   = Rec AttReco
+type Attribution (attr :: [(Att,Type)]) =  Rec AttReco attr
 
 -- | index type
 data AttReco
@@ -145,7 +145,7 @@ pattern ConsAtt att atts = ConsRec att atts
 
 -- | Attribute
 
-type Attribute        = TagField AttReco
+type Attribute (l :: Att) (v :: Type) = TagField AttReco l v
 pattern Attribute :: v -> TagField AttReco l v
 pattern Attribute v = TagField Label Label v
 
@@ -177,7 +177,7 @@ infixl 7 #.
            ]
   , Require (OpLookup AttReco l r) msg
   )
-  => Rec AttReco r -> Label l -> ReqR (OpLookup AttReco l r)
+  => Attribution r -> Label l -> ReqR (OpLookup AttReco l r)
 (attr :: Attribution r) #. (l :: Label l)
   = let prctx = Proxy @ '[Text "looking up attribute " :<>: ShowT l :$$:
                           Text "on " :<>: ShowT r
@@ -198,7 +198,7 @@ type ChAttsRec prd (chs :: [(Child,[(Att,Type)])])
 data ChiReco (prd :: Prod)
 
 -- | Field type
-type instance  WrapField (ChiReco prd)  (v :: [(k, Type)])
+type instance  WrapField (ChiReco prd) v
   = Attribution v
 
 -- | Type level Show utilities

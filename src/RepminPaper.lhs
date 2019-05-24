@@ -15,7 +15,7 @@
 > #-}
 
 > module RepminPaper where
-> import Language.Grammars.AspectAG2
+> import Language.Grammars.AspectAG
 > import Control.Monad
 > import Control.Applicative
 > import Data.Proxy
