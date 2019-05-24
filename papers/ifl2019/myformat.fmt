@@ -35,4 +35,7 @@
 %format val_eval   = " val_{eval} "
 
 
-%format pattern   = "{\bf pattern}"
+%format pattern     = "{\bf pattern}"
+%format kind  = "{\bf \{- kind -\}}"
+%format .*.   = " \: \: .\!\!*\!\!.  \: \: "
+%format .=.   = " \: \: .\!\!=\!\!. \: \: "
