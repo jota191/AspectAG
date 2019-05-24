@@ -368,38 +368,50 @@ new production.
 
 \subsection{Error Messages}
 
+If in Figure~\ref{fig:eval} instead of Line~\ref{line:add_eval} we have the following declaration:
+
 < add_eval  =  syndefM eval add  $ (+)  <$>  at leftAdd eval
 <                                       <*>  pure True
-
-\begin{verbatim}
+%
+We obtain a type error in this line, with the information:
+\begin{Verbatim}[fontsize=\small]
 Couldn't match type 'Bool' with 'Int'
-\end{verbatim}
+\end{Verbatim}
 
 
+If we modify the same line with the following:
 < add_eval  =  syndefM eval add  $ ter ival
+%
+using a child (|ival|) that does not belong to the production
+\begin{Verbatim}[fontsize=\small]
+Error: Non-Terminal Expr::Production p_Val
+       /=
+       Non-Terminal Expr::Production p_Add
+from context: syndef( Attribute eval:Int
+                    , Non-Terminal Expr::Production p_Add)
+\end{Verbatim}
 
-\begin{verbatim}
-Error: Non-Terminal Expr::Production p_Val /= Non-Terminal Expr::Production p_Add
-from context: syndef(Attribute eval:Int, Non-Terminal Expr::Production p_Add)
-\end{verbatim}
+
+< add_eval  =  syndefM eval add  $ (+)  <$>  at leftAdd eval
+<                                       <*>  at rightAdd env
 
 
-< add_eval  =  syndefM eval add  $ (+)  <$> at leftAdd eval
-<                                       <*> at rightAdd env
-
-
-\begin{verbatim}
+\begin{Verbatim}[fontsize=\small]
 Couldn't match type 'Map String Int' with 'Int'
-\end{verbatim}
+\end{Verbatim}
 
-< add_eval  =  syndefM eval add  $ (+)  <$> at leftAdd eval
-<                                       <*> at rightAdd foo
+Now suppose we have an attribute |foo|, of type |Int|,
+but without any rules defining its computation. 
+< add_eval  =  syndefM eval add  $ (+)  <$>  at leftAdd eval
+<                                       <*>  at rightAdd foo
 
 
-At |evalExpr|
-\begin{verbatim}
+The error appears at Line~\ref{line:evalExpr}, where ..
+the trace guides us to the place where the invalid rule is defined.
+\begin{Verbatim}[fontsize=\small]
 Error: field not Found on Attribution
-       looking up the attribute named Attribute foo:Int
-from context: syndef(Attribute eval:Int, Non-Terminal Expr::Production p_Add)
+       looking up Attribute foo:Int
+from context: syndef( Attribute eval:Int
+                    , Non-Terminal Expr::Production p_Add)
               aspect eval
-\end{verbatim}
+\end{Verbatim}
