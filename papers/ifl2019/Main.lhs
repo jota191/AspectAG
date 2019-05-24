@@ -188,8 +188,6 @@ messages.
 
 \section{Introduction}
 
-\todo{}
-
 %include ./ExprPaper.lhs
 
 

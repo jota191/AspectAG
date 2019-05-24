@@ -1,5 +1,5 @@
 
-TEX = pdflatex -shell-escape -interaction=batchmode -file-line-error
+TEX = pdflatex -shell-escape -interaction=nonstopmode -file-line-error
 LHS2TEX = ./lhs2TeX
 
 
