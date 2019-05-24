@@ -5,11 +5,11 @@ Rules are actually functions from an input family to an output family
 \todo{\lipsum}
 
 
-> data  {- kind -}  Att    = Att Symbol Type
-> data  {- kind -}  Prod   = Prd Symbol NT
-> data  {- kind -}  Child  = Chi Symbol Prod (Either NT T)
-> data  {- kind -}  NT     = NT Symbol
-> data  {- kind -}  T      = T Type
+> data  kind  Att    = Att Symbol Type
+> data  kind  Prod   = Prd Symbol NT
+> data  kind  Child  = Chi Symbol Prod (Either NT T)
+> data  kind  NT     = NT Symbol
+> data  kind  T      = T Type
 
 
 \todo{\lipsum}
