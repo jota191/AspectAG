@@ -42,7 +42,7 @@ the implementation in a modular, dependable and scalable way. On section
 \ref{sec:requirements} we present our solution.
 
 
-\subsection{Extensible Records: Using Type Level Programming in Haskell}
+\subsection{Polymorphic Heterogeneous Records}
 In \AspectAG we use multiple instances of extensible records:
 
 \begin{itemize}
@@ -58,8 +58,6 @@ reflected on types as our goal is to code strongly kinded.
 \item
   Semantic functions are kept on a record (not visible by the user).
 \end{itemize}
-
-\subsection{Polymorphic Heterogeneous Records}
 
 Extensible records coded using type level programming are already part of the
 folklore in the Haskell community. The {\tt HList}

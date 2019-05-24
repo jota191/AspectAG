@@ -31,22 +31,22 @@
 %endif
 
 Higher order functions such as |foldr| are powerful abstraction tools for the
-functional programmer. Given a data type we capture the structural recursion
+functional programmer. Given a datatype we capture the structural recursion
 scheme by giving a function for each constructor to combine contained data and
 recursive calls. From the algebraic perspective the programmer must provide an
-\emph{algebra} capturing semantics for the grammar -or data type, note that
-there is a clear correspondence between both formalisms-, and the
-\emph{catamorphism} builds the computation. However in practice, when
-constructing real world compilers, many problems arise. Abstract syntax trees
-tend to have a lot of alternatives (meaning huge algebras). Some information
-must flow top down, and actually many orthogonal (or not) alternative semantics
-are needed (well formedness properties, free variables, type checking,
-evaluation..). Also, it is common that abstract syntax trees evolve with time,
-when new constructs are added to the language, breaking every algebra.
+\emph{algebra} capturing semantics for the grammar -or datatype, note that there
+is a correspondence between both formalisms-, and the \emph{catamorphism} builds
+the computation. In practice, however, when constructing real world compilers
+many problems arise. Abstract syntax trees tend to have a lot of alternatives
+(meaning huge algebras), some information must flow top down, and many -maybe
+non-orthogonal- alternative semantics are actually employed (well formedness
+properties, type checking, program transformation, evaluation..). Also, it is
+common for syntax to evolve over time when new constructs are
+added to the language, breaking every algebra on an implementation.
 
-More in general, given a functional program it is easy to extended it by
-defining new functions. However, extending data (for example, if a datatype is
-extended with a new constructor) is not easy. Each case expression where a value
+More generally, given a functional program it is easy to extended it by
+defining new functions. However, extending data (e.g. if a datatype is
+extended with a new case construct) is not easy. Each case expression where a value
 of this type is matched has to be inspected and modified accordingly. On the
 other side, object oriented programing is good to define new data: one could
 implement algebraic datatypes with a composite design pattern, and simply add a
