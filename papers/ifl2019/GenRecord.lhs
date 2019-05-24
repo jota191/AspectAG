@@ -65,8 +65,8 @@ Extensible records coded using type level programming are already part of the
 folklore in the Haskell community. The {\tt HList}
 library\cite{Kiselyov:2004:STH:1017472.1017488} popularized them. Old versions
 of HList originally abused of Multi Parameter Typeclasses and Functional
-Dependencies. Modern Haskell provides extensions to the type system to encode
-this sort of dependent types in a better way. Notably {\tt
+Dependencies. Modern GHC Haskell provides extensions to the type system to
+encode this sort of dependent types in a better way. Notably {\tt
   TypeFamilies}\cite{Chakravarty:2005:ATC:1047659.1040306,
   Chakravarty:2005:ATS:1090189.1086397, Sulzmann:2007:SFT:1190315.1190324}, {\tt
   DataKinds}~\cite{Yorgey:2012:GHP:2103786.2103795} implementing data promotion.
@@ -157,6 +157,7 @@ such as the |ConsRec| constructor.
 > class LabelSet (r :: [(k, k')]) where {}
 > instance LabelSetF r ~ True => LabelSet r
 
+\todo{notar el uso de |==| en type level}
 
 \subsection{Record Instances}
 
@@ -165,7 +166,20 @@ Then we use this record library to implement our actual record-like data
 structures. To introduce a record we must give an index acting as a name, and
 implement the family instance |WrapField|. To print pretty and domain specific
 error messages we also need to add instances for |ShowField| and |ShowRec|, as
-we shall see later. We give some examples.
+we shall see later.
+
+Also, to be strongly kinded it is useful to specific datatypes for labels.
+
+> data  kind  Att    = Att Symbol Type
+> data  kind  Prod   = Prd Symbol NT
+> data  kind  Child  = Chi Symbol Prod (Either NT T)
+> data  kind  NT     = NT Symbol
+> data  kind  T      = T Type
+
+|Att| are used for attributions, |Prod| for productions, and |Child|
+for children.
+
+In the next subsection we give some examples.
 
 \subsubsection{Example: Attribution}\hfill\break
 
@@ -257,32 +271,43 @@ requirements.
 >    type ReqR op :: k -- TODO:
 >    req :: Proxy ctx -> op -> ReqR op
 
+
 Given an operation |op|, that is actually a product where all the parameters of
-the current requirement are passed, |req| extracts the tangible results whose
-return type of type depend on the operation. This is very general and will be
-more clear by introduce some examples. Each time we lookup in a record (for
+the current operation are provided, |req| extracts the tangible results -whose
+return type depends on the operation-. Each time we lookup in a record (for
 example when accessing attributes) we require that some label actually belongs
 to the record. If this requirement is not accomplished an error must be raised
-at compile time. That means that there will be no regular instance of this class.
-By program an special error instance we can capture type errors. The |Require|
-class is so general to treat all type errors in a unified manner. By doing it
-case by case it is difficult to track all cases and maintain them.
+at compile time. Some requirements are only about types, like label equality, in
+that case it is still useful to keep type errors in this framework, we do not
+care about |req| and |ReqR|, but use the constraint.
 
-To print pretty type errors, we define a special operation:
+
+
+A call to |OpError| happens when some requirement is not fullfilled. Some
+examples of requirements implemented in our library are shown on table
+~\ref{tab:req}: A non satisfied requirement means that there will be no regular
+instance of this class and produces a call to |OpError|. Catching type errors
+case by by case it is difficult and error prone to track all cases.
+
+To pretty print type errors, we define a special operation:
 
 > data OpError (m :: ErrorMessage) where {}
 
-Which is a phantom type containing some useful information to print.
-When we call |req| with this operator the type checker explodes since
-there is only one instance:
+Which is a phantom type containing some useful information to print. When we
+call |req| with this operator the type checker reports an error since there is
+only one instance:
 
 > instance (TypeError (Text "Error: " :<>: m :$$:
 >                      Text "from context: " :<>: ShowCTX ctx))
 >   => Require (OpError m) ctx where {}
 
-
-
-
+Recall that |TypeError| and |ErrorMessage| are defined in |GHC.TypeLits|. The
+type family |TypeError| works like the term level function |error|. When it is
+'called' a type error is raised. |TypeError| is so polymorphic that we can use
+it as a Constraint. This generic instance is used to print all sort of type
+errors in a unified way, but the specific information of what happened is on
+|OpError| which is built from a specific instance of |Require| where every type
+relevant to show the error message was in scope.
 
 \begin{table}[t] 
    \label{tab:req}
@@ -308,16 +333,8 @@ there is only one instance:
 \end{table}
 
 
-A call to |OpError| happens when some requirement is not fullfilled. Some
-examples of requirements implemented in our library are shown on table
-~\ref{tab:req}:
 
-
-
-
-
-
-For example, we define the lookup operator:
+As a running example, we define the lookup operator:
 
 > data OpLookup  (c  :: Type)
 >                (l  :: k)
@@ -325,12 +342,13 @@ For example, we define the lookup operator:
 >   OpLookup  ::  Label l -> Rec c r
 >             ->  OpLookup c l r
 
-which is an algebraic datatype containing the record category, a label which is
-the index we are looking for, and the record parameter. To lookup on a record we
-need to code a dependant type function, which is encoded in Haskell with the
-usual idioms of type level programming. We need to inspect the head label and
-decide to return the value contained or call the lookup function recursively
-depending on the types. Moreover, the proof of equality must be explicit.
+which is an algebraic datatype parametric on the record class, the index we are
+looking for, and the proper record. To lookup on a record we implement a
+dependant type function, which is encoded in Haskell with the usual idioms of
+type level programming. The head label is inspected and depending on types the
+head value is returned or a recursive call is performed. Moreover, the proof of
+equality must be made explicit using a proxy to help GHC to carry type level
+information.
 
 We introduce a new |OpLookup'| with an auxiliar |Bool| at type level:
 
@@ -341,10 +359,9 @@ We introduce a new |OpLookup'| with an auxiliar |Bool| at type level:
 >   OpLookup'  ::  Proxy b -> Label l -> Rec c r
 >              ->  OpLookup' b c l r
 
-
-and then we can implement our dependent function. For |OpLookup| we take the head
-label |l'| and use the auxiliar function with the value equal to the predicate of
-equality of |l'| and the argument label |l|:
+For |OpLookup| we take the head
+label |l'| and use the auxiliar function with the value equal to the predicate
+of equality of |l'| and the argument label |l|:
 
 > instance (Require (OpLookup' (l == l') c l ( '(l', v) ': r)) ctx)
 >   =>  Require (OpLookup c l ( '(l', v) ': r)) ctx                  where
@@ -353,8 +370,9 @@ equality of |l'| and the argument label |l|:
 >   req ctx (OpLookup l r)
 >     = req ctx (OpLookup' (Proxy @ (l == l')) l r)
 
-To implement instances for |OpLookup'| is easy. The true case corresponds to
-a |head| function since we know that the searched label is on head:
+Implementing instances for |OpLookup'| is easy. The case where |b==True|
+corresponds to a |head| function since we know that the searched label is on
+the first position:
 
 > instance Require (OpLookup' 'True c l ( '(l, v) ': r)) ctx where
 >   type ReqR (OpLookup' 'True c l ( '(l, v) ': r))
@@ -362,7 +380,7 @@ a |head| function since we know that the searched label is on head:
 >   req Proxy (OpLookup' Proxy Label (ConsRec f _))
 >     = untagField f
 
-The false case corresponds to a call of |OpLookup| on tail:
+The case where |b==True| corresponds to a call of |OpLookup| on tail:
 
 > instance (Require (OpLookup c l r) ctx)
 >   => Require (OpLookup' False c l ( '(l', v) ': r)) ctx where
@@ -372,16 +390,9 @@ The false case corresponds to a call of |OpLookup| on tail:
 >     = req ctx (OpLookup l r)
 
 
-When we lookup on an empty record an error happened: There is no value
-tagged with the searched label.
-
-Recall thet |TypeError| and |ErrorMessage| are defined in |GHC.TypeLits|. The
-type family |TypeError| is like the function |error| but at type level. When it
-is 'called' a type error is raised. |TypeError| is so polymorphic that we can
-use it as a Constraint, like in this case. This generic instance is used to
-print all sort of type errors in a unified way, but the specific information of
-what happened is on |OpError| which is built from a specific instance of
-|OpLookup|:
+When we lookup on an empty record an error happened: We went over all the record
+and there was no value tagged with the searched label. Here we build a pithy
+instance of |OpError|:
 
 > instance Require (OpError
 >     (     Text "field not Found on "  :<>: Text (ShowRec c)
@@ -392,22 +403,24 @@ what happened is on |OpError| which is built from a specific instance of
 >   req = undefined
 
 
-This procedure was used in all our development:
+This procedure is recurrent in all our development:
 \begin{itemize}
-\item Code dependent Haskell, if everything goes well we neither
-  access bad indexes nor use rules for incorrect productions, etc.
-
+\item Code dependent Haskell, if everything goes well neither
+  we access bad indexes nor rules at incorrect productions were used, etc.
 \item Encode the bad cases, requiring an |OpError|. Note that when building it,
   like in the former |Require| instance for |OpLookup| a lot of information
-  about types is on scope and can be used to print an informative error.
+  about types is on scope and can be used to make up an informative error.
 \end{itemize}
 
+Then the singleton instance |Require OpError| triggers a compile type error.
 
-|ShowRec| and |ShowField| are type families used to print correctly the type
- information depending on which category of records we are working on.
+
+In the former definition |ShowRec| and |ShowField| type families were used to
+pretty print the type information depending on which instance of records we
+are working on.
 
 > type family ShowRec    (c :: k)    :: Symbol
-> type family ShowField  (c :: k)  :: Symbol
+> type family ShowField  (c :: k)    :: Symbol
 
 For example, for attributions we implement
 
@@ -423,10 +436,10 @@ For children:
 > type instance ShowField (ChiReco a)
 >   = "child labelled "
 
-
 The fact that type families can be defined open is very convenient in this
-context. We argue that our generic records and/or the require framework are a
-useful libraries by their own.
+context, new records can be defined in very custom and modular ways. We think
+that |Require| and |GenRecord| trascend the status of internal modules for
+\AspectAG and are useful as a standalone on its own.
 
 The |ShowT| family is even more interesting.
 
@@ -434,12 +447,14 @@ The |ShowT| family is even more interesting.
 
 When we print labels which are types with kinds such as |Att|, |Prd|, |Chi| and
 so on, to show clear type errors we want to print them in a different way
-depending on the case, formatting the information correctly. At term level a
+depending on the case formatting the information correctly. At term level a
 fully polymorphic function cannot touch its arguments. Type classes are the way
-to define bounded parametricity. We do not have kind classes but they are not
-necessary since polykinded type families are actually not parametric. At type
-level we can actually inspect kinds. Therefore, the following definitions are
-completely legal:
+to define bounded parametricity. Haskell does not provide kind classes but they
+are not necessary since polykinded type families are actually not parametric.
+When programming at type level we can actually inspect kinds and pattern match
+on them like using {\bf |typeOf|} in languages where types are avaiable at run
+time (they actually are!). Therefore, the following definitions are completely
+legal:
 
 > type instance  ShowT ('Att l t)
 >   =     Text  "Attribute "  :<>: Text l
@@ -447,21 +462,20 @@ completely legal:
 > type instance  ShowT ('Prd l nt)
 >   =     ShowT nt :<>: Text "::Production "
 >   :<>:  Text l
-> type instance  ShowT ('Chi l p s)
->   =     ShowT p   :<>:  Text "::Child " :<>: Text l
->   :<>:  Text ":"  :<>:  ShowT s
-> type instance  ShowT ('Left l)
->   = ShowT l
-> type instance  ShowT ('Right r)
->   = ShowT r
-> type instance  ShowT ('NT l)
->   = Text "Non-Terminal " :<>: Text l
-> type instance  ShowT ('T  l)
->   = Text "Terminal " :<>: ShowT l
 
-
-
-Also, we can code an instance for any type of kind |Type|:
+and so on.
+%% > type instance  ShowT ('Chi l p s)
+%% >   =     ShowT p   :<>:  Text "::Child " :<>: Text l
+%% >   :<>:  Text ":"  :<>:  ShowT s
+%% > type instance  ShowT ('Left l)
+%% >   = ShowT l
+%% > type instance  ShowT ('Right r)
+%% >   = ShowT r
+%% > type instance  ShowT ('NT l)
+%% >   = Text "Non-Terminal " :<>: Text l
+%% > type instance  ShowT ('T  l)
+%% >   = Text "Terminal " :<>: ShowT l
+We can also code an instance for any type of kind |Type|:
 
 > type instance ShowT (t :: Type)
 >   = ShowType t

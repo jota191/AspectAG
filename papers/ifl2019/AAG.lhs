@@ -5,11 +5,6 @@ Rules are actually functions from an input family to an output family
 \todo{\lipsum}
 
 
-> data  kind  Att    = Att Symbol Type
-> data  kind  Prod   = Prd Symbol NT
-> data  kind  Child  = Chi Symbol Prod (Either NT T)
-> data  kind  NT     = NT Symbol
-> data  kind  T      = T Type
 
 
 \todo{\lipsum}
@@ -69,6 +64,7 @@ The function |syndef| takes an attribute name |att| and a production
 >      ->  Label prd
 >      ->  (Proxy ctx' -> Fam prd sc ip -> t')
 >      ->  CRule ctx prd sc ip ic sp ic sp'
+
 > syndef att prd f
 >   =  CRule $ \ctx inp (Fam ic sp)
 >      ->  Fam ic $ req ctx (OpExtend att (f Proxy inp) sp)
