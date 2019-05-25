@@ -405,6 +405,20 @@ trace: syndef( Attribute eval:Int
 \end{Verbatim}
 
 
+If we try to treat a terminal as a non-terminal,
+changing for example Line~\ref{line:val_eval} by the following
+< val_eval  =  syndefM eval val  $ at ival eval
+\begin{Verbatim}[fontsize=\small]
+Error: Non-Terminal Expr::Production p_Val
+       ::Child ival:Terminal Int
+       /=
+       Non-Terminal Expr::Production p_Val
+       ::Child ival:Non-Terminal n0
+trace: syndef( Attribute eval:Int
+             , Non-Terminal Expr::Production p_Val)
+\end{Verbatim}
+
+
 < add_eval  =  syndefM eval add  $ (+)  <$>  at leftAdd eval
 <                                       <*>  at rightAdd env
 

@@ -410,7 +410,7 @@
 >          , RequireR (OpLookup AttReco ('Att att t) r) ctx t'
 >          , RequireEq prd prd' ctx
 >          , RequireEq t t' ctx
->          --, RequireEq nt ('Left n) ctx
+>          , RequireEq ('Chi ch prd nt) ('Chi ch prd ('Left ('NT n)))  ctx
 >          )
 >       => At ('Chi ch prd nt) ('Att att t)
 >             (Reader (Proxy ctx, Fam prd' chi par))  where
@@ -437,11 +437,20 @@
 >     -> (Proxy ctx -> (Fam prd chi par) -> a)
 > def = curry . runReader
 
-> ter :: ( At pos ('Att "term" a) m
->        , RequireEq pos ('Chi ch prd (Right ('T a))) ctx
->        , m ~ Reader (Proxy ctx, Fam prd chi par) )
->     =>  Label pos -> m (ResAt pos ('Att "term" a) m) 
-> ter (ch :: Label ('Chi ch prd (Right ('T a))))  = at ch (lit @ a)
+> ter :: ( RequireR (OpLookup (ChiReco prd) pos chi) ctx
+>                   (Attribution r)
+>        , RequireR (OpLookup AttReco ('Att "term" t) r) ctx t'
+>        , RequireEq prd prd' ctx
+>        , RequireEq t t' ctx
+>        , RequireEq pos ('Chi ch prd (Right ('T t))) ctx
+>        , m ~ Reader (Proxy ctx, Fam prd' chi par) )
+>     =>  Label pos -> m (ResAt pos ('Att "term" t) m) 
+>  -- ter (ch :: Label ('Chi ch prd (Right ('T a))))  = at ch (lit @ a)
+> ter (ch :: Label ('Chi ch prd (Right ('T t))))
+>   = liftM (\(ctx, Fam chi _)  -> let atts = req ctx (OpLookup ch chi)
+>                                  in  req ctx (OpLookup (lit @ t) atts))
+>           ask
+
 
 
 > class Kn (fcr :: [(Child, Type)]) (prd :: Prod) where
