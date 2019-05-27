@@ -26,13 +26,14 @@
 
 
 Attribute grammars prove that they are not only useful to implement programming
-languages, but also as a general purpose programming paradigm. Pitifully an
+language semantics, but as a general purpose programming paradigm. Pitifully an
 attribute grammar is an example of a structure that can be easily illformed. It
 is a common mistake to try to use attributes that are not defined in some
 production. This kind of error can be introduced directly, or by associating
 rules to incorrect productions. Like showed in the prevoius section, \AspectAG
-captures common errors. \AspectAG internals are built from strongly typed
-heterogeneous records, so an incorrect lookup would be detected at compile time.
+captures common errors and prints them in a readable way. \AspectAG internals
+are built from strongly typed heterogeneous records, so an incorrect lookup
+would be detected at compile time.
 
 Detecting errors is not enough. It is a common problem when implementing
 Embedded DSLs that implementation leaks on type errors. User defined type errors
@@ -71,16 +72,17 @@ encode this sort of dependent types in a better way. Notably {\tt
 {\tt PolyKinds} providing kind polymorphism, {\tt KindSignatures}\cite{ghcman}.
 
 
-Other implementations such a Vinyl\cite{libvinyl} or CTRex\cite{libCTRex} have
-been introduced. One common way to implement a |Record| is using a
+Other implementations of Extensible Records such as Vinyl\cite{libvinyl} or
+CTRex\cite{libCTRex} have been introduced. One common way to implement a
+|Record| is using a
 |GADT|\cite{Cheney2003FirstClassPT,Xi:2003:GRD:604131.604150}. Usually
 heterogeneous records contain values of kind |Type|. It makes sense since |Type|
 is the kind of inhabited types and records store values. At kind level this is a
 sort of untyped programming; datatype constructors take information with
-expressive kinds and wrap it on a uniform box. In use cases such as children
-records where we store an attribution we desire to state this on kinds. We
-abstract this notion and code a library of a very polymporphic implementation of
-extensible records as follows:
+expressive kinds and wrap it on a uniform box. In use cases such as our children
+records where we store a full featured attribution we desire to state this on
+kinds. We abstract this notion and code a library of a very polymporphic
+implementation of extensible records defined as follows:
 
 
 > data Rec (c :: k) (r :: [(k', k'')]) :: Type where
@@ -93,12 +95,13 @@ extensible records as follows:
 A record is indexed on a promoted list of pairs |r|. The kind of the first
 component in each pair is polymorphic since it is not mandatory that the type of
 labels is inhabited; they live only at type level. The second component is also
-polymorphic and can be a rich kind. The |Tagfield| constructor solves the
-problem of wrapping and unwrapping some value so that it actually stores
-something with a |Type|. |LabelSet| is a predicate that encodes the fact that
-there are no repeated labels. The parameter |c| is an extra index pointing out
-wich instance of record are we defining. |TagField| is a fancier implementation
-of the well known |Data.Tagged| datatype:
+polymorphic and it can be an elaborate kind. The |Tagfield| constructor solves
+the problem of wrapping and unwrapping some value so that it actually stores
+something with a |Type|, keeping explicitly the information at type level.
+|LabelSet| is a predicate that encodes the fact that there are no repeated
+labels. The parameter |c| is an extra index pointing out wich instance of record
+are we defining, new instances can be defined by the user as we shall see.
+|TagField| is a fancier implementation of the well known |Data.Tagged| datatype:
 
 > data TagField (c :: k) (l :: k') (v :: k'') where
 >   TagField  ::  Label c -> Label l -> WrapField c v
@@ -126,7 +129,7 @@ function (and it actually is in every instance like that we have implemented).
 
 We usually encode some of our functions as operators, for example, instead of
 |ConsRec| we usually use an infix operator |(.*.)|.
-
+elaborado
 
 Another relevant design decision is the implementation of the |LabelSet|
 constraint. A similar class is introduced on the
@@ -134,12 +137,13 @@ HList\cite{Kiselyov:2004:STH:1017472.1017488} library. By using a type class to
 encode a predicate new instances can be defined anytime since classes are open.
 When an instance is not found, one could argue that does not mean that the
 predicate is |False|, but that the typechecker did not find a proof. In the case
-of |LabelSet| given a set of labels, once we know how to compare on their kind
+of |LabelSet|, given a set of labels, once we know how to compare on their kind
 |LabelSet| is closed and decidable. On previous iterations of our development we
 used the constraint alternative and encoded instances of |TypeError| for cases
-where a repeated label is found. We will use an unified way to process type
+where a repeated label is found. We will use a unified way to process type
 errors as whe shall see in section \ref{sec:requirements}. To do that we need to
-manipulate truth value of the result, a Boolean type family seems the way to go:
+manipulate the truth value of the result, a Boolean type family seems the way to
+go:
 
 > type family LabelSetF (r :: [(k, k')]) :: Bool where
 >   LabelSetF '[]          = True
@@ -149,22 +153,23 @@ manipulate truth value of the result, a Boolean type family seems the way to go:
 >            (LabelSetF ( '(l, v)   ': r) )
 >            (LabelSetF ( '(l', v') ': r) )
 
-Then we encode the predicate version since it fits better in some contexts,
+where |(==)| is the operator for equality at type level.
+Then we encode the predicate alternatve since it fits better in some contexts,
 such as the |ConsRec| constructor.
 
 > class LabelSet (r :: [(k, k')]) where {}
 > instance LabelSetF r ~ True => LabelSet r
 
-\todo{notar el uso de |==| en type level}
 
 \subsection{Record Instances}
 
-Most functions over records are implemented over the polykinded implementation.
-Then we use this record library to implement our actual record-like data
-structures. To introduce a record we must give an index acting as a name, and
-implement the family instance |WrapField|. To print pretty and domain specific
-error messages we also need to add instances for |ShowField| and |ShowRec|, as
-we shall see later.
+Most functions over records are implemented over the polykinded implementation
+as part of the record library. Then we implement our actual record-like data
+structures as particular instances of the general datatype. To introduce a
+record we must give an index acting as a name (the ``|c|''). Then we code the
+family instance |WrapField|. To print pretty and domain specific error messages
+we also need to add instances for |ShowField| and |ShowRec|, as we shall see
+later.
 
 Also, to be strongly kinded it is useful to specific datatypes for labels.
 
@@ -175,9 +180,7 @@ Also, to be strongly kinded it is useful to specific datatypes for labels.
 > data  kind  T      = T Type
 
 |Att| are used for attributions, |Prod| for productions, and |Child|
-for children.
-
-In the next subsection we give some examples.
+for children. We give some examples.
 
 \subsubsection{Example: Attribution}\hfill\break
 
@@ -270,22 +273,19 @@ requirements.
 >    req :: Proxy ctx -> op -> ReqR op
 
 
-Given an operation |op|, that is actually a product where all the parameters of
-the current operation are provided, |req| extracts the tangible results -whose
-return type depends on the operation-. Each time we lookup in a record (for
-example when accessing attributes) we require that some label actually belongs
-to the record. If this requirement is not accomplished an error must be raised
-at compile time. Some requirements are only about types, like label equality, in
-that case it is still useful to keep type errors in this framework, we do not
-care about |req| and |ReqR|, but use the constraint.
-
-
+Given an operation |op|, that takes all the arguments needed for the current
+operation to be performed, |req| extracts the tangible results, whose return
+type depends on the operation. For example, each time we lookup in a record we
+require that some label actually belongs to the record. If this requirement is
+not accomplished an error must be raised at compile time. Some requirements are
+only about types, like label equality. In that case it is still useful to keep
+type errors in this framework, we do not care about |req| and |ReqR|, but use
+the constraint.
 
 A call to |OpError| happens when some requirement is not fullfilled. Some
 examples of requirements implemented in our library are shown on table
 ~\ref{tab:req}: A non satisfied requirement means that there will be no regular
-instance of this class and produces a call to |OpError|. Catching type errors
-case by by case it is difficult and error prone to track all cases.
+instance of this class and it produces a call to |OpError|.
 
 To pretty print type errors, we define a special operation:
 
@@ -303,9 +303,10 @@ Recall that |TypeError| and |ErrorMessage| are defined in |GHC.TypeLits|. The
 type family |TypeError| works like the term level function |error|. When it is
 'called' a type error is raised. |TypeError| is so polymorphic that we can use
 it as a Constraint. This generic instance is used to print all sort of type
-errors in a unified way, but the specific information of what happened is on
-|OpError| which is built from a specific instance of |Require| where every type
-relevant to show the error message was in scope.
+errors in a unified way, otherwise catching type errors case by case would be
+difficult and error prone. Note that specific information of what happened is on
+|OpError| which is built from a specific instance of |Require|, from a given
+operator and where every type relevant to show the error message was in scope.
 
 \begin{table}[t] 
    \label{tab:req}
@@ -341,14 +342,13 @@ As a running example, we define the lookup operator:
 >             ->  OpLookup c l r
 
 which is an algebraic datatype parametric on the record class, the index we are
-looking for, and the proper record. To lookup on a record we implement a
-dependant type function, which is encoded in Haskell with the usual idioms of
-type level programming. The head label is inspected and depending on types the
-head value is returned or a recursive call is performed. Moreover, the proof of
-equality must be made explicit using a proxy to help GHC to carry type level
-information.
-
-We introduce a new |OpLookup'| with an auxiliar |Bool| at type level:
+looking for, and the proper record. The head label is inspected and depending on
+types the head value is returned or a recursive call is performed. To make
+decisions over types and set return types depending on arguments we implement a
+-sort of- dependant type function, which is encoded in Haskell with the usual
+idioms of type level programming. For instance, the proof of equality must be
+made explicit using a proxy to help GHC to carry type level information. We
+introduce a new |OpLookup'| with an auxiliar |Bool| at type level:
 
 > data OpLookup'  (b  :: Bool)
 >                 (c  :: Type)
@@ -357,9 +357,8 @@ We introduce a new |OpLookup'| with an auxiliar |Bool| at type level:
 >   OpLookup'  ::  Proxy b -> Label l -> Rec c r
 >              ->  OpLookup' b c l r
 
-For |OpLookup| we take the head
-label |l'| and use the auxiliar function with the value equal to the predicate
-of equality of |l'| and the argument label |l|:
+For |OpLookup| we take the head label |l'| and use the auxiliar function with
+the value equal to the predicate of equality of |l'| and the argument label |l|:
 
 > instance (Require (OpLookup' (l == l') c l ( '(l', v) ': r)) ctx)
 >   =>  Require (OpLookup c l ( '(l', v) ': r)) ctx                  where
@@ -420,7 +419,7 @@ are working on.
 > type family ShowRec    (c :: k)    :: Symbol
 > type family ShowField  (c :: k)    :: Symbol
 
-For example, for attributions we implement
+For instance, for attributions we implement:
 
 > type instance ShowRec AttReco
 >   = "Attribution"
@@ -435,24 +434,23 @@ For children:
 >   = "child labelled "
 
 The fact that type families can be defined open is very convenient in this
-context, new records can be defined in very custom and modular ways. We think
+context, new records can be defined in very custom and modular way. We think
 that |Require| and |GenRecord| trascend the status of internal modules for
 \AspectAG and are useful as a standalone on its own.
 
-The |ShowT| family is even more interesting.
+The |ShowT| family is even more interesting:
 
 > type family ShowT (t :: k) :: ErrorMessage
 
 When we print labels which are types with kinds such as |Att|, |Prd|, |Chi| and
-so on, to show clear type errors we want to print them in a different way
-depending on the case formatting the information correctly. At term level a
+so on, to show clear type errors we should print them in a different way
+depending on the case, formatting the information correctly. At term level a
 fully polymorphic function cannot touch its arguments. Type classes are the way
 to define bounded parametricity. Haskell does not provide kind classes but they
 are not necessary since polykinded type families are actually not parametric.
 When programming at type level we can actually inspect kinds and pattern match
 on them like using {\bf |typeOf|} in languages where types are avaiable at run
-time (they actually are!). Therefore, the following definitions are completely
-legal:
+time. Therefore, the following definitions are completely legal:
 
 > type instance  ShowT ('Att l t)
 >   =     Text  "Attribute "  :<>: Text l
@@ -473,7 +471,8 @@ and so on.
 %% >   = Text "Non-Terminal " :<>: Text l
 %% > type instance  ShowT ('T  l)
 %% >   = Text "Terminal " :<>: ShowT l
-We can also code an instance for any type of kind |Type|:
+We can also code an instance for any type of kind |Type|, so inhabited types
+are printed with their standard name:
 
 > type instance ShowT (t :: Type)
 >   = ShowType t
