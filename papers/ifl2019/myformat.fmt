@@ -20,7 +20,8 @@
 %format <$>      = "<\!\!\$\!\!\!>"
 %format <*>      = "\oast"
 %format .+:      = "\triangleleft"
-%format .:+:      = "\bowtie"
+%format .:+:     = "\bowtie"
+%format .+.      = "\diamond"
 
 %format at      = "\bm{@ \!}"
 

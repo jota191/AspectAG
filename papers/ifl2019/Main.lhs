@@ -182,7 +182,7 @@ messages.
 \newcommand{\note}[1]{\fbox{
   \parbox{\textwidth/3}{NOTE: \\ #1}}}
 
-\newcommand{\AspectAG}{AspectAG }
+\newcommand{\AspectAG}{ { \tt AspectAG }}
 
 \numbersoff
 

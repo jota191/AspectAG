@@ -1,13 +1,11 @@
-\subsection{Rules}
+\subsection{Families and Rules}
 
-Rules are actually functions from an input family to an output family
-
-\todo{\lipsum}
-
-
-
-
-\todo{\lipsum}
+On \AspectAG internals we use the concept of \emph{families} as input and output
+for attribute computations. A family for a given production contains an
+attribution for the parent, and a collection of attributions for children, one
+for each. 
+A family is implemented as a product, of |Attribution| and |ChAttsRec|, and it is
+indexed by a production:
 
 > data Fam  (prd  ::  Prod)
 >           (c    ::  [(Child, [(Att, Type)])])
@@ -16,12 +14,20 @@ Rules are actually functions from an input family to an output family
 >   Fam  ::  ChAttsRec prd c -> Attribution p
 >        ->  Fam prd c p
 
+Esto es prescindible: 
+
 > chi :: Fam prd c p -> ChAttsRec prd c
 > chi (Fam c p) = c
 
 > par :: Fam prd c p -> Attribution p
 > par (Fam c p) = p
 
+Attribute computations, or rules are actually functions from an \emph{input
+  family} (attributes inherited from the parent and synthesized of the children)
+to an \emph{output family} (attributes synthesized for the parent, inherited to
+children). We implement them with an extra arity to make them composable, this
+trick was introduced in [REF]. Given an imput family we build a function that
+updates the output family constructed thus far:
 
 > type Rule
 >   (prd  :: Prod)
@@ -35,6 +41,8 @@ Rules are actually functions from an input family to an output family
 >   ->  Fam prd ic sp -> Fam prd ic' sp'
 
 
+esto es prescindible:
+
 > type family IC (rule :: Type) where
 >   IC (Rule prd sc ip ic sp ic' sp') = ic
 >   IC (CRule ctx prd sc ip ic sp ic' sp') = ic
@@ -42,29 +50,26 @@ Rules are actually functions from an input family to an output family
 >   SP (Rule prd sc ip ic sp ic' sp') = sp
 >   SP (CRule ctx prd sc ip ic sp ic' sp') = sp
 
-
-
-\todo{\lipsum}
+To pass context information printable on type errors we can tag a rule:
 
 > newtype CRule (ctx :: [ErrorMessage]) prd sc ip ic sp ic' sp'
 >  = CRule { mkRule :: (Proxy ctx -> Rule prd sc ip ic sp ic' sp')}
 
+
 \subsection{Defining Attributes}
 
 The function |syndef| takes an attribute name |att| and a production
-|prd|
+|prd|, an update function |f|:
 
-> syndef
->   :: (   RequireEq t t' ctx'
->      ,   RequireR (OpExtend AttReco ('Att att t) t sp) ctx (Attribution sp')
->      ,   ctx'  ~     ((Text "syndef("
->                :<>:  ShowT ('Att att t) :<>: Text ", "
->                :<>:  ShowT prd :<>: Text ")") ': ctx))
->      =>  Label ('Att att t)
->      ->  Label prd
->      ->  (Proxy ctx' -> Fam prd sc ip -> t')
->      ->  CRule ctx prd sc ip ic sp ic sp'
-
+> syndef  ::  (   RequireEq t t' ctx'
+>             ,   RequireR  ( OpExtend AttReco ('Att att t) t sp)
+>                             ctx (Attribution sp')
+>             ,   ctx'  ~     ((Text "syndef("
+>                             :<>:  ShowT ('Att att t) :<>: Text ", "
+>                             :<>:  ShowT prd :<>: Text ")") ': ctx) )
+>         =>  Label ('Att att t) ->  Label prd
+>         ->  (Proxy ctx' -> Fam prd sc ip -> t')
+>         ->  CRule ctx prd sc ip ic sp ic sp'
 > syndef att prd f
 >   =  CRule $ \ctx inp (Fam ic sp)
 >      ->  Fam ic $ req ctx (OpExtend att (f Proxy inp) sp)
@@ -79,7 +84,7 @@ where
 >     -> (Proxy ctx -> (Fam prd chi par) -> a)
 > def = curry . runReader
 
-
+To define an inherited attribute we can use the function |inhdef|:
 
 > inhdef
 >   :: ( RequireEq t t' ctx'
@@ -109,11 +114,20 @@ where
 >               catts'= req ctx (OpExtend  att (f Proxy inp) catts)
 >           in  Fam ic' sp
 
+
+Again, a monadic version fits better when calling it:
+
 > inhdefM att prd chi = inhdef att prd chi . def
 
 
+\subsection{Combining Rules.}
 
-\subsection{Combining rules}
+Functions like |syndef| or |inhdef| build a rule from scratch defining how to
+compute one single new attribute from a given family using functions of the
+host language.
+Rules can be more than that, building a full family. To build a big rule
+we compose smaller rules. Composing them is easy once since we encoded them
+using the extra arity trick:
 
 > ext' ::  CRule ctx prd sc ip ic sp ic' sp'
 >      ->  CRule ctx prd sc ip a b ic sp
@@ -121,25 +135,76 @@ where
 > (CRule f) `ext'` (CRule g)
 >  = CRule $ \ctx input -> f ctx input . g ctx input
 
+Note that to compose rules they must be tagged from the same productions
+|prd|. If we use |ext'| and try to combine two rules from different
+productions, we get a huge type error where the type mismatch is
+obfuscated on hundreds of lines of error code, where every record such as
+|ic| or |sp| are printed, and every clas constraint such as |Require|s is
+printed (each one printing again some record and so on). We need a clear
+and small type error and this can be done by using the following definition:
+
 > ext ::  RequireEq prd prd' (Text "ext":ctx)
 >      => CRule ctx prd sc ip ic sp ic' sp'
 >      -> CRule ctx prd' sc ip a b ic sp
 >      -> CRule ctx prd sc ip a b ic' sp'
 > ext = ext'
-
 > infixr 6 .+.
 > (.+.) = ext
+
+Here we use |RequireEq| wich is actually a sugar for a couple of constraints:
+
+> type RequireEq (t1 :: k )(t2 :: k) (ctx:: [ErrorMessage])
+>     = (Require (OpEq t1 t2) ctx, t1 ~ t2)
+
+The first is a requirement, using the following operator:
+
+> data OpEq t1 t2
+
+which is trivially implemented when |t1==t2|
+
+> instance Require (OpEq t t) ctx where
+>   type ReqR (OpEq t t) = ()
+>   req = undefined
+
+and builds an understandable error message for label mistmatch otherwise:
+
+> instance Require (OpError (Text "" :<>: ShowT t1 :<>: Text " /= "
+>                             :<>: ShowT t2)) ctx
+>   => Require (OpEq t1 t2) ctx where
+>   type ReqR (OpEq t1 t2) = ()
+>   req = undefined
+
+\todo{no me convence esto}
 
 
 
 \subsection{Aspects}
 
+Aspects are collections of rules, indexed by productions. They are an instance
+of |GenRecord|, defined as:
+
+> data PrdReco
+> type instance  WrapField PrdReco (rule :: Type)
+>   = rule
+> type Aspect (asp :: [(Prod, Type)]) =  Rec PrdReco asp
+> type instance ShowRec PrdReco       =  "Aspect"
+> type instance ShowField PrdReco     =  "production named "
+
+\todo{ hay cierta inconsistencia aca, estamos metiendo las reglas bajo
+el wrapper type. Creo que manejarlas explícitamente sería muy doloroso,
+e incluso creo que podemos tener algun problema para instanciar los kinds
+del argumento extra, La solución puede pasar por decir simplemente
+que lo hacemos así para simplificar (es la realidad), pero hay que ser menos
+enfático antes cada vez que se habla de poner toda la informacion posible en
+los kinds
+}
+
+Again, to move contexts we introduce the concept of a tagged aspect:
+
 > newtype CAspect (ctx :: [ErrorMessage]) (asp :: [(Prod, Type)] )
 >   = CAspect { mkAspect :: Proxy ctx -> Aspect asp}
 
 
-> emptyAspect :: CAspect ctx '[]
-> emptyAspect  = CAspect $ const EmptyRec
 
 
 > traceAspect (_ :: Proxy (e::ErrorMessage))
@@ -190,7 +255,8 @@ where
 > (.+:) = extAspect
 > infixr 3 .+:
 
-combining
+
+\subsection{Combining Aspects}
 
 > comAspect ::
 >  ( Require (OpComAsp al ar) ctx
@@ -288,24 +354,6 @@ combining
 >       in  req ctx (OpUpdate prd newRule asp)
 
 
-Require of equality
-
-> type RequireEq (t1 :: k )(t2 :: k) (ctx:: [ErrorMessage])
->     = (Require (OpEq t1 t2) ctx, t1 ~ t2)
-
-> data OpEq t1 t2
-
-
-> instance Require (OpEq t t) ctx where
->   type ReqR (OpEq t t) = ()
->   req = undefined
-
-
-> instance Require (OpError (Text "" :<>: ShowT t1 :<>: Text " /= "
->                             :<>: ShowT t2)) ctx
->   => Require (OpEq t1 t2) ctx where
->   type ReqR (OpEq t1 t2) = ()
->   req = undefined
 
 
 \subsection{Terminals}
@@ -356,7 +404,8 @@ Require of equality
 >  at lhs att
 >   = liftM (\(ctx, Fam _ par) -> req ctx (OpLookup att par)) ask
 
-subsection{Putting all together}
+
+\subsection{Putting it all together: How the computation is done}
 
 > class Kn (fcr :: [(Child, Type)]) (prd :: Prod) where
 >   type ICh fcr :: [(Child, [(Att, Type)])]
