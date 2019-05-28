@@ -269,11 +269,3 @@ infixl 8 .#
 
 -- * Productions
 
-data PrdReco
-
-type instance  WrapField PrdReco (rule :: Type)
-  = rule
-
-type Aspect (asp :: [(Prod, Type)]) = Rec PrdReco asp
-type instance ShowRec PrdReco      = "Aspect"
-type instance ShowField PrdReco       = "production named "

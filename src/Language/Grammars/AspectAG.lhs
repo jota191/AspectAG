@@ -31,6 +31,7 @@
 > {-# LANGUAGE PartialTypeSignatures     #-}
 > {-# LANGUAGE IncoherentInstances       #-}
 > {-# LANGUAGE AllowAmbiguousTypes       #-}
+> {-# LANGUAGE TypeInType #-}
 
 > module Language.Grammars.AspectAG (
 >               module Language.Grammars.AspectAG,
@@ -93,15 +94,28 @@
 >   (sp'  :: [(Att,       Type)])
 >   = Fam prd sc ip -> Fam prd ic sp -> Fam prd ic' sp'
 
+> data TRule a b c d e f g h = TRule a b c d e f g h
+
+
+> data PrdReco
+> type instance  WrapField PrdReco ('TRule ct p a b c d e f)
+>   = CRule ct p a b c d e f
+
+> type Aspect (asp :: [(Prod, TRule a b c d e f g h)]) = Rec PrdReco asp
+> type instance ShowRec PrdReco       = "Aspect"
+> type instance ShowField PrdReco     = "production named "
+
+
+
 > newtype CRule (ctx :: [ErrorMessage]) prd sc ip ic sp ic' sp'
 >  = CRule { mkRule :: (Proxy ctx -> Rule prd sc ip ic sp ic' sp')}
 
-> newtype CAspect (ctx :: [ErrorMessage]) (asp :: [(Prod, Type)] )
+> newtype CAspect (ctx :: [ErrorMessage]) asp
 >   = CAspect { mkAspect :: Proxy ctx -> Aspect asp}
 
 
 
-> emptyAspect :: CAspect ctx '[]
+> emptyAspect :: CAspect ctx ('[] :: [(Prod, TRule a b c d e f g h)])
 > emptyAspect  = CAspect $ const EmptyRec
 
 > comAspect ::
@@ -127,27 +141,32 @@
 > mapCAspect fctx (CAspect fasp) = CAspect $ 
 >        mapCtxRec fctx . fasp . fctx
 
-> class MapCtxAsp (r :: [(Prod,Type)]) (ctx :: [ErrorMessage])
+> class MapCtxAsp (r :: [(Prod, TRule a b c d e f g h)]) (ctx :: [ErrorMessage])
 >                                      (ctx' :: [ErrorMessage])  where
->   type ResMapCtx r ctx ctx' :: [(Prod,Type)]
+>   type ResMapCtx r ctx ctx' :: [(Prod, TRule a b c d e f g h)]
 >   mapCtxRec :: (Proxy ctx -> Proxy ctx')
 >             -> Aspect r -> Aspect (ResMapCtx r ctx ctx')
 
-> instance ( MapCtxAsp r ctx ctx' 
+> instance ( WrapField PrdReco ('TRule ctx' prd sc ip ic sp ic' sp')
+>             ~ CRule ctx' prd sc ip ic sp ic' sp'
+>          , WrapField PrdReco ('TRule ctx prd sc ip ic sp ic' sp')
+>             ~ CRule ctx prd sc ip ic sp ic' sp'
+>          , MapCtxAsp r ctx ctx' 
 >          , ResMapCtx r ctx ctx' ~ r'
->          , LabelSetF ('(l, CRule ctx prd sc ip ic sp ic' sp') : r')
+>          , LabelSetF ('(l, 'TRule ctx prd sc ip ic sp ic' sp') : r')
 >          ~ True) =>
->   MapCtxAsp ( '(l, CRule ctx' prd sc ip ic sp ic' sp') ': r) ctx ctx' where
->   type ResMapCtx ( '(l, CRule ctx' prd sc ip ic sp ic' sp') ': r) ctx ctx'
->      =  '(l, CRule ctx prd sc ip ic sp ic' sp') ':  ResMapCtx r ctx ctx'
+>   MapCtxAsp ( '(l, 'TRule ctx' prd sc ip ic sp ic' sp') ': r) ctx ctx' where
+>   type ResMapCtx ( '(l, 'TRule ctx' prd sc ip ic sp ic' sp') ': r) ctx ctx'
+>      =  '(l, 'TRule ctx prd sc ip ic sp ic' sp') ':  ResMapCtx r ctx ctx'
 >   mapCtxRec fctx (ConsRec (TagField c l r) rs) = (ConsRec (TagField c l
 >                                                             (mapCRule fctx r))
 >                                                           (mapCtxRec fctx rs))
 
-> instance MapCtxAsp ('[] :: [(Prod,Type)]) ctx ctx' where
->   type ResMapCtx ('[] :: [(Prod,Type)]) ctx ctx'
+> instance MapCtxAsp ('[] :: [(Prod, TRule a b c d e f g h)]) ctx ctx' where
+>   type ResMapCtx ('[] :: [(Prod, TRule a b c d e f g h)]) ctx ctx'
 >      =  '[]
 >   mapCtxRec _ EmptyRec = EmptyRec
+
 
 > extAspect
 >   :: RequireR (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx (Aspect asp)
@@ -162,8 +181,8 @@
 > (.:+:) = comAspect
 > infixr 4 .:+:
 
-> data OpComAsp  (al :: [(Prod, Type)])
->                (ar :: [(Prod, Type)]) where
+> data OpComAsp  (al :: [(Prod, TRule a b c d e f g h)])
+>                (ar :: [(Prod, TRule a b c d e f g h)]) where
 >   OpComAsp :: Aspect al -> Aspect ar -> OpComAsp al ar
 
 > instance Require (OpComAsp al '[]) ctx where
@@ -175,9 +194,9 @@
 >   , Require  (OpComRA ctx prd sc ip ic sp ic' sp' ar') ctx
 >   )
 >   => Require (OpComAsp al
->        ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar)) ctx where
+>        ( '(prd, 'TRule ctx prd sc ip ic sp ic' sp') ': ar)) ctx where
 >   type ReqR (OpComAsp al
->        ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar))
+>        ( '(prd, 'TRule ctx prd sc ip ic sp ic' sp') ': ar))
 >     = ReqR (OpComRA ctx prd sc ip ic sp ic' sp'
 >             (UnWrap (ReqR (OpComAsp al ar))))
 >   req ctx (OpComAsp al (ConsRec prdrule ar))
@@ -193,7 +212,7 @@
 >               (sp   :: [(Att, Type)])
 >               (ic'  :: [(Child, [(Att, Type)])])
 >               (sp'  :: [(Att, Type)])
->               (a     :: [(Prod, Type)])  where
+>               (a     :: [(Prod, TRule a' b c d e f g h)])  where
 >   OpComRA :: CRule ctx prd sc ip ic sp ic' sp'
 >           -> Aspect a -> OpComRA ctx prd sc ip ic sp ic' sp' a
 
@@ -206,7 +225,7 @@
 >               (sp   :: [(Att, Type)])
 >               (ic'  :: [(Child, [(Att, Type)])])
 >               (sp'  :: [(Att, Type)])
->               (a     :: [(Prod, Type)])  where
+>               (a     :: [(Prod, TRule a' b' c d e f g h)])  where
 >   OpComRA' :: Proxy b -> CRule ctx prd sc ip ic sp ic' sp'
 >           -> Aspect a -> OpComRA' b ctx  prd sc ip ic sp ic' sp' a
 
@@ -220,40 +239,47 @@
 >      = req ctx (OpComRA' (Proxy @ (HasLabel prd a)) rule a)
 
 > instance
->   (Require (OpExtend PrdReco prd (CRule ctx prd sc ip ic sp ic' sp') a)) ctx
+>   (Require (OpExtend PrdReco prd ('TRule ctx prd sc ip ic sp ic' sp') a)) ctx
 >   => Require (OpComRA' 'False ctx prd sc ip ic sp ic' sp' a) ctx where
 >   type ReqR (OpComRA' 'False ctx prd sc ip ic sp ic' sp' a)
->     = ReqR (OpExtend PrdReco prd (CRule ctx prd sc ip ic sp ic' sp') a)
+>     = ReqR (OpExtend PrdReco prd ('TRule ctx prd sc ip ic sp ic' sp') a)
 >   req ctx (OpComRA' _ (rule :: CRule ctx prd sc ip ic sp ic' sp') asp)
->     = req ctx (OpExtend (Label @ prd) rule asp)
+>     = req ctx (OpExtend @prd @PrdReco @('TRule ctx prd sc ip ic sp ic' sp') (Label @ prd) rule asp)
 
 > instance
->  ( Require (OpUpdate PrdReco prd (CRule ctx prd sc ip ic sp ic'' sp'') a) ctx
->  , RequireR (OpLookup PrdReco prd a) ctx (CRule ctx prd sc ip ic sp ic' sp') 
+>  ( WrapField PrdReco ('TRule ctx prd sc ip ic sp ic'' sp'') ~ CRule ctx prd sc ip ic sp ic'' sp''
+>  , WrapField PrdReco ('TRule ctx prd sc ip ic sp ic' sp')   ~ CRule ctx prd sc ip ic sp ic' sp'
+>  , Require (OpUpdate PrdReco prd ('TRule ctx prd sc ip ic sp ic'' sp'') a) ctx
+>  , RequireR (OpLookup PrdReco prd a) ctx (CRule ctx prd sc ip ic sp ic' sp')
+>  , ReqR (OpLookup PrdReco prd a) ~ (CRule ctx prd sc ip ic sp ic' sp')
 >  , (IC (ReqR (OpLookup PrdReco prd a))) ~ ic
 >  , (SP (ReqR (OpLookup PrdReco prd a))) ~ sp
 >  ) => 
 >   Require (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a) ctx where
 >   type ReqR (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a)
 >     = ReqR (OpUpdate PrdReco prd
->            (CRule ctx prd sc ip
+>            ('TRule ctx prd sc ip
 >              (IC (ReqR (OpLookup PrdReco prd a)))
 >              (SP (ReqR (OpLookup PrdReco prd a)))
 >             ic'' sp'') a)
 >   req ctx (OpComRA' _ rule asp)
 >     = let prd     = Label @ prd
->           oldRule = req ctx (OpLookup prd asp)
+>           oldRule = req ctx (OpLookup @prd @PrdReco  prd asp)
 >           newRule = rule `ext` oldRule
->       in  req ctx (OpUpdate prd newRule asp)
+>       in  req ctx (OpUpdate  @prd @PrdReco @('TRule ctx prd sc ip ic sp ic'' sp'') prd newRule asp)
 
 
 
-> type family IC (rule :: Type) where
->   IC (Rule prd sc ip ic sp ic' sp') = ic
->   IC (CRule ctx prd sc ip ic sp ic' sp') = ic
-> type family SP (rule :: Type) where
->   SP (Rule prd sc ip ic sp ic' sp') = sp
->   SP (CRule ctx prd sc ip ic sp ic' sp') = sp
+> type family IC (rule :: k) :: k'
+> type instance IC (Rule prd sc ip ic sp ic' sp') = ic
+> type instance IC (CRule ctx prd sc ip ic sp ic' sp') = ic
+> type instance IC ('TRule ctx prd sc ip ic sp ic' sp') = ic
+> type instance IC (TRule ctx prd sc ip ic sp ic' sp') = ic
+> type family SP (rule :: k) :: k'
+> type instance SP (Rule prd sc ip ic sp ic' sp') = sp
+> type instance SP (CRule ctx prd sc ip ic sp ic' sp') = sp
+> type instance SP ('TRule ctx prd sc ip ic sp ic' sp') = sp
+> type instance SP (TRule ctx prd sc ip ic sp ic' sp') = sp
 
 > syndef
 >   :: ( RequireEq t t' ctx'

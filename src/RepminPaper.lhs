@@ -225,7 +225,6 @@ Note that we need to have the |Root| wrapper as a starting symbol of the
 
 
 
-%if False
 
 node_sres
   = syndefM sres p_Node $ Node <$> at ch_l sres <*> at ch_r sres
@@ -245,10 +244,10 @@ node_ival_r
 
 
 
-asp_smin = updCAspect (Proxy @ ('Text "smin"))
-    $   node_smin
-   .+:  leaf_smin
-   .+:  emptyAspect
+> asp_smin = updCAspect (Proxy @ ('Text "smin"))
+>     $   node_smin
+>    .+:  leaf_smin
+>    .+:  emptyAspect
 
 asp_sres = updCAspect (Proxy @ ('Text "sres"))
     $   node_sres
@@ -295,23 +294,24 @@ asp_ssum
  .+: syndefM ssum p_Leaf (at ch_i lit)
  .+: emptyAspect
 
-examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
-                      (Node (Leaf 2) (Leaf 7))
-                    )
-                (Node (Node (Leaf (5)) (Leaf (27)))
-                  (Leaf 6)
-                )
-              )
+
+
+> examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
+>                       (Node (Leaf 2) (Leaf 7))
+>                     )
+>                 (Node (Node (Leaf (5)) (Leaf (27)))
+>                   (Leaf 6)
+>                 )
+>               )
 
 
 
-sem_Tree asp (Node l r) = knitAspect p_Node asp
-                           $  ch_l .=. sem_Tree asp l
-                          .*. ch_r .=. sem_Tree asp r
-                          .*.  EmptyRec
-sem_Tree asp (Leaf i)   = knitAspect p_Leaf asp$
-                          ch_i .=. sem_Lit i .*. EmptyRec
-sem_Root asp (Root r)   = knitAspect p_Root asp$
-                          ch_tree .=. sem_Tree asp r .*. EmptyRec
+> sem_Tree asp (Node l r) = knitAspect p_Node asp
+>                            $  ch_l .=. sem_Tree asp l
+>                           .*. ch_r .=. sem_Tree asp r
+>                           .*.  EmptyRec
+> sem_Tree asp (Leaf i)   = knitAspect p_Leaf asp$
+>                           ch_i .=. sem_Lit i .*. EmptyRec
+> sem_Root asp (Root r)   = knitAspect p_Root asp$
+>                           ch_tree .=. sem_Tree asp r .*. EmptyRec
 
-%endif
