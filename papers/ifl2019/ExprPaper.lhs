@@ -507,5 +507,5 @@ Error: Duplicated Labels on Attribution
        of Attribute eval:Int
 trace: aspect eval
 \end{Verbatim}
-However, the trace information says that duplication was generated when we
+However, the trace information says that the duplication was generated when we
 defined the aspect |eval|; i.e. Line~\ref{line:aspEval}. 
