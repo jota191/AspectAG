@@ -51,14 +51,14 @@ env  = Label @ ('Att "env"  (Map String Int))
 foo = Label @ ('Att "foo" Int)
 
 add_eval  =  syndefM eval add  $ (+) <$> at leftAdd eval <*> at rightAdd eval
-val_eval  =  syndefM eval val  $ at ival eval -- ter ival
+val_eval  =  syndefM eval val  $ ter ival
 var_eval  =  syndefM eval var  $ slookup <$> ter vname <*> at lhs env
 
 slookup nm = fromJust . Data.Map.lookup nm
 
 
 aspEval   =  traceAspect (Proxy @ ('Text "eval"))
-          $  add_eval .+: val_eval .+: var_eval .+: emptyAspect
+          $  add_eval .+: add_eval .+: val_eval .+: var_eval .+: emptyAspect
 
 
 add_leftAdd_env  = inhdefM env add leftAdd  $ at lhs env
@@ -66,10 +66,10 @@ add_rightAdd_env = inhdefM env add rightAdd $ at lhs env
 -- val_ival_env = inhdefM env val ival $ at lhs env
 
 aspEnv  =  traceAspect (Proxy @ ('Text "env"))
-        $  add_leftAdd_env .+: add_rightAdd_env .+: emptyAspect 
+        $  add_rightAdd_env .+: emptyAspect 
 
 
-asp = aspEval .:+: aspEnv
+asp = aspEval .:+: aspEval .:+: aspEnv
 
 
 data Expr = Val Int
@@ -88,12 +88,13 @@ sem_Expr asp (Val i)   = knitAspect val asp$
 sem_Expr asp (Var v)   = knitAspect var asp$
                           vname .=. sem_Lit v .*. EmptyRec
 
+{-
 evalExpr e m = sem_Expr asp e (env =. m .*. emptyAtt) #. eval
 
 
 exampleExpr =  Add (Val (-9)) (Add (Var "x") (Val 2))
 exampleEval =  evalExpr exampleExpr (insert "x" 5 Data.Map.empty)
-
+-}
 {-
 
 type P_Let = 'Prd "p_Let" Nt_Expr
