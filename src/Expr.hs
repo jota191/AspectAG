@@ -51,7 +51,7 @@ env  = Label @ ('Att "env"  (Map String Int))
 foo = Label @ ('Att "foo" Int)
 
 add_eval  =  syndefM eval add  $ (+) <$> at leftAdd eval <*> at rightAdd eval
-val_eval  =  syndefM eval val  $ at ival eval -- ter ival
+val_eval  =  syndefM eval val  $ ter ival
 var_eval  =  syndefM eval var  $ slookup <$> ter vname <*> at lhs env
 
 slookup nm = fromJust . Data.Map.lookup nm
