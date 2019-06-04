@@ -23,7 +23,7 @@
 %format .:+:     = "\bowtie"
 %format .+.      = "\diamond"
 
-%format at      = "\bm{@ \!}"
+%%format at      = "\bm{@ \!}"
 
 %format :<>:    = "\!:\!<\!>\!\!:"
 %format :$$:    = ":\!\!\$\!\$\!\!:"

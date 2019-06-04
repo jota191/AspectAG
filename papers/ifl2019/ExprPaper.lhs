@@ -368,21 +368,53 @@ new production.
 
 \subsection{Error Messages}
 
-If in Figure~\ref{fig:eval} instead of Line~\ref{line:var_eval} we have the following declaration:
+When dealing with type-level programming, type error messages are usually very
+difficult to understand, often leaking implementation details.
+The library was designed to provide good, DSL-oriented, error messages for the
+mistakes an AG programmer may make.
+In this subsection we show some examples of such error messages.
 
+
+A possible error when defining an attribute,
+is to define a computation that returns a value of a different type
+than the type of the attribute.
+For example, if in Figure~\ref{fig:eval}, instead of Line~\ref{line:var_eval}
+we have the following declaration that uses |lookup| instead of |slookup|:
+%
 < var_eval  =  syndefM eval var
 <           $  lookup <$> ter vname <*> at lhs env
 %
-We obtain a type error in this line, with the information:
+We obtain a |GHC| type error, pointing at this position in the code,
+with the message:
 \begin{Verbatim}[fontsize=\small]
 Couldn't match type 'Maybe Int' with 'Int'
 \end{Verbatim}
+%
+expressing that we provided a |Maybe Int| where an |Int| was expected.
+Similar messages are obtained if the expression has internal type errors,
+like writing |pure False| instead of |at lhs env|.
+Such errors can also be caused by the use of an attribute of different
+type than the expected. For example, if in Line~\ref{line:add_eval}
+we use |env| instead of |eval|:
+%
+< add_eval  =  syndefM eval add  $ (+)  <$>  at leftAdd eval
+<                                       <*>  at rightAdd env
+%
+we get the error:
+%
+\begin{Verbatim}[fontsize=\small]
+Couldn't match type 'Map String Int' with 'Int'
+\end{Verbatim}
 
 
-If we modify the same line with the following:
+A more AG-specific error is to try to access to a child
+that does not belong to the production where we are defining the attribute.
+If we modify Line~\ref{line:add_eval} with the following code:
 < add_eval  =  syndefM eval add  $ ter ival
 %
-using a child (|ival|) that does not belong to the production
+where we use the child |ival| that does not belong to the production |add|.
+In this case the error points to |ter ival|, and says:
+%
 \begin{Verbatim}[fontsize=\small]
 Error: Non-Terminal Expr::Production p_Val
        /=
@@ -390,10 +422,25 @@ Error: Non-Terminal Expr::Production p_Val
 trace: syndef( Attribute eval:Int
              , Non-Terminal Expr::Production p_Add)
 \end{Verbatim}
+%
+expressing that the production of type |p_Val| (of the non-terminal |Expr|) is
+not equal to the expected production of type |p_Add| (of the non-terminal |Expr|).
+There is also some \verb"trace" information, showing the context where
+the error appears.
+In this case is not necessary, since the source of the error and the place where
+the error is detected are the same. But we will see later in this section some
+examples where this information will guide us to the possible source of an
+error that is produced in a later stage.
 
-
-If we try to treat a non-terminal as a terminal
+Another mistake, similar to the previous one, is to treat a non-terminal as a terminal,
+or the other way around.
+Then, if we use |ter| to get a value out of the child |leftAdd|:
 < add_eval  =  syndefM eval add  $ ter leftAdd
+%
+We obtain a message indicating that the child
+(belonging to the production |p_Add| of the non-terminal |Expr|) is a non-terminal (|Expr|),
+and not a terminal of type |Int| as it was expected:
+%
 \begin{Verbatim}[fontsize=\small]
 Error: Non-Terminal Expr::Production p_Add
        ::Child leftAdd:Non-Terminal Expr
@@ -403,11 +450,14 @@ Error: Non-Terminal Expr::Production p_Add
 trace: syndef( Attribute eval:Int
              , Non-Terminal Expr::Production p_Add)
 \end{Verbatim}
-
-
-If we try to treat a terminal as a non-terminal,
-changing for example Line~\ref{line:val_eval} by the following
+%
+Similarly, if we try to treat a terminal as a non-terminal,
+changing for example Line~\ref{line:val_eval} by the following:
 < val_eval  =  syndefM eval val  $ at ival eval
+%
+the error says that |ival| is a terminal of type |Int| and
+not some non-terminal |n0|:
+%
 \begin{Verbatim}[fontsize=\small]
 Error: Non-Terminal Expr::Production p_Val
        ::Child ival:Terminal Int
@@ -419,21 +469,16 @@ trace: syndef( Attribute eval:Int
 \end{Verbatim}
 
 
-< add_eval  =  syndefM eval add  $ (+)  <$>  at leftAdd eval
-<                                       <*>  at rightAdd env
-
-
-\begin{Verbatim}[fontsize=\small]
-Couldn't match type 'Map String Int' with 'Int'
-\end{Verbatim}
-
 Now suppose we have an attribute |foo|, of type |Int|,
-but without any rules defining its computation. 
+but without any rules defining its computation,
+and we use it in the definition of the rule |add_eval|:
 < add_eval  =  syndefM eval add  $ (+)  <$>  at leftAdd eval
 <                                       <*>  at rightAdd foo
 %
-The error appears at Line~\ref{line:evalExpr}, where ..
-the trace guides us to the place where the invalid rule is defined.
+At this point this is not an error, because this rule can
+be combined into an aspect where this attribute is defined.
+However, it becomes an error at Line~\ref{line:evalExpr},
+where we finally try to evaluate the incomplete aspect |asp|.
 \begin{Verbatim}[fontsize=\small]
 Error: Field not Found on Attribution
        looking up Attribute foo:Int
@@ -441,17 +486,26 @@ trace: syndef( Attribute eval:Int
              , Non-Terminal Expr::Production p_Add)
        aspect eval
 \end{Verbatim}
+Notice that in this case the trace guides us to the place
+where the unsatisfied rule is defined:
+the synthesized attribute |eval| at the production |p_Add| (Line~\ref{line:add_eval}),
+into the aspect |eval| (Line~\ref{line:aspEval}).
 
-modify Line~\ref{line:aspEval} to define a duplicated attribute
-
+Another case where the trace is helpful in the task of finding
+the source of an error, is when we define a duplicated attribute. 
+For example, if add |add_eval| twice when defining |aspEval| at  Line~\ref{line:aspEval}.
+%
 < aspEval   =    traceAspect (Proxy @ ('Text "eval"))
 <           $    add_eval .+: add_eval 
 <           .+:  val_eval .+: var_eval .+: emptyAspect
 %
-The error appears again at Line~\ref{line:evalExpr}
-
+Due to some flexibility matters that will become more clear in the next section,
+we can not detect this error at this point.
+The error appears again at Line~\ref{line:evalExpr}, when we close the AG:
 \begin{Verbatim}[fontsize=\small]
 Error: Duplicated Labels on Attribution
-       on Attribute eval:Int
+       of Attribute eval:Int
 trace: aspect eval
 \end{Verbatim}
+However, the trace information says that the duplication was generated when we
+defined the aspect |eval|; i.e. Line~\ref{line:aspEval}. 
