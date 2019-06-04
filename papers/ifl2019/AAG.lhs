@@ -4,30 +4,22 @@ On \AspectAG internals we use the concept of \emph{families} as input and output
 for attribute computations. A family for a given production contains an
 attribution for the parent, and a collection of attributions for children, one
 for each. 
-A family is implemented as a product, of |Attribution| and |ChAttsRec|, and it is
-indexed by a production:
+A family is implemented as a product of |Attribution| and |ChAttsRec|, and it is
+indexed with the production which it belongs:
 
 > data Fam  (prd  ::  Prod)
 >           (c    ::  [(Child, [(Att, Type)])])
->           (p    ::  [(Att, Type)])  :: Type
->  where
+>           (p    ::  [(Att, Type)])  :: Type where
 >   Fam  ::  ChAttsRec prd c -> Attribution p
 >        ->  Fam prd c p
 
-Esto es prescindible: 
-
-> chi :: Fam prd c p -> ChAttsRec prd c
-> chi (Fam c p) = c
-
-> par :: Fam prd c p -> Attribution p
-> par (Fam c p) = p
 
 Attribute computations, or rules are actually functions from an \emph{input
   family} (attributes inherited from the parent and synthesized of the children)
 to an \emph{output family} (attributes synthesized for the parent, inherited to
 children). We implement them with an extra arity to make them composable, this
 trick was introduced in [REF]. Given an imput family we build a function that
-updates the output family constructed thus far:
+updates the output family constructed thus far
 
 > type Rule
 >   (prd  :: Prod)
@@ -40,17 +32,7 @@ updates the output family constructed thus far:
 >   =   Fam prd sc ip
 >   ->  Fam prd ic sp -> Fam prd ic' sp'
 
-
-esto es prescindible:
-
-> type family IC (rule :: Type) where
->   IC (Rule prd sc ip ic sp ic' sp') = ic
->   IC (CRule ctx prd sc ip ic sp ic' sp') = ic
-> type family SP (rule :: Type) where
->   SP (Rule prd sc ip ic sp ic' sp') = sp
->   SP (CRule ctx prd sc ip ic sp ic' sp') = sp
-
-To pass context information printable on type errors we can tag a rule:
+To pass context information printable on type errors we use tagged rules:
 
 > newtype CRule (ctx :: [ErrorMessage]) prd sc ip ic sp ic' sp'
 >  = CRule { mkRule :: (Proxy ctx -> Rule prd sc ip ic sp ic' sp')}

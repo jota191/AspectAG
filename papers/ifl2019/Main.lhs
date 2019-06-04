@@ -191,10 +191,9 @@ messages.
 %include ./ExprPaper.lhs
 
 
-\section{Implementation of AspectAG}
-
-
+\section{Implementation}
 %include ./GenRecord.lhs
+
 
 %include ./AAG.lhs
 
