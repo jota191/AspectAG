@@ -17,8 +17,7 @@
              InstanceSigs,
              AllowAmbiguousTypes,
              TypeApplications,
-             PatternSynonyms,
-             TypeInType
+             PatternSynonyms
 #-}
 
 module Language.Grammars.AspectAG.Require where

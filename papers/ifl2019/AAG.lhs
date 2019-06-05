@@ -141,11 +141,14 @@ we present this definition omiting the constraints.
 >               catts'= req ctx (OpExtend  att (f Proxy inp) catts)
 >           in  Fam ic' sp
 
-Inherited attribute definitions are also reated to a child.
-Again, |inhdefM| can is provided.
-
-Functions to define synthesized and inherited attributes are
-
+Inherited attribute definitions are also related to a child. Again, the monadic
+alternative |inhdefM| is provided. Functions to define synthesized and inherited
+attributes are neccesary to compose nontrivial attribute grammar. More
+constructs are useful in practice. In section[REF] |synmod| was used and proved
+to be useful to change semantics. Its inherited counterpart |inhmod| is also
+provided. On top of this we implement some common patterns that generate rules
+from higher level specifications.
+\todo{}
 
 
 
@@ -153,12 +156,12 @@ Functions to define synthesized and inherited attributes are
 
 \subsection{Combining Rules.}
 
-Functions as |syndef| or |inhdef| build a rule from scratch defining how to
-compute one single new attribute from a given family using functions of the
-host language.
-Rules can be more than that, building a full family. To build a big rule
-we compose smaller rules. Composing them is easy once since we encoded them
-using the extra arity trick:
+Functions as |syndef| or |inhdef| build rules from scratch defining how to
+compute one single new attribute from a given family using functions of the host
+language. A full rule is usually more complex, since it builds a full output
+family, where many attributes are computed in many ways. To build a big rule we
+compose smaller rules. Composing them is easy once since we encoded them using
+the extra arity trick:
 
 > ext' ::  CRule ctx prd sc ip ic sp ic' sp'
 >      ->  CRule ctx prd sc ip a b ic sp
@@ -184,6 +187,7 @@ and small type error and this can be done by using the following definition:
 
 Here we use |RequireEq| wich is actually a sugar for a couple of constraints:
 
+
 > type RequireEq (t1 :: k )(t2 :: k) (ctx:: [ErrorMessage])
 >     = (Require (OpEq t1 t2) ctx, t1 ~ t2)
 
@@ -191,21 +195,23 @@ The first is a requirement, using the following operator:
 
 > data OpEq t1 t2
 
-which is trivially implemented when |t1==t2|
 
-> instance Require (OpEq t t) ctx where
->   type ReqR (OpEq t t) = ()
->   req = undefined
-
-and builds an understandable error message for label mistmatch otherwise:
-
-> instance Require (OpError (Text "" :<>: ShowT t1 :<>: Text " /= "
->                             :<>: ShowT t2)) ctx
+> instance RequireEqRes t1 t2 ctx
 >   => Require (OpEq t1 t2) ctx where
 >   type ReqR (OpEq t1 t2) = ()
 >   req = undefined
 
-\todo{no me convence esto}
+> type family RequireEqRes  (t1 :: k) (t2 :: k)
+>                           (ctx :: [ErrorMessage]) ::  Constraint where
+>   RequireEqRes t1 t2 ctx
+>   = If            (t1 `Equal` t2)
+>         {-then-}  (() :: Constraint)
+>         {-else-}  (Require (OpError (Text "" :<>: ShowT t1
+>                             :<>: Text " /= " :<>: ShowT t2)) ctx)
+
+
+
+and builds an understandable error message for label mistmatch otherwise:
 
 
 

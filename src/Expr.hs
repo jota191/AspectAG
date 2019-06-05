@@ -64,7 +64,9 @@ aspEval   =  traceAspect (Proxy @ ('Text "eval"))
           $  add_eval .+: val_eval .+: var_eval .+: emptyAspect
 
 
-add_leftAdd_env  = inhdefM env add leftAdd  $ at lhs env
+add_param_env ch = inhdefM env add ch  $ at lhs env
+add_leftAdd_env  = --inhdefM env add leftAdd  $ at lhs env
+  add_param_env leftAdd
 add_rightAdd_env = inhdefM env add rightAdd $ at lhs env
 -- val_ival_env = inhdefM env val ival $ at lhs env
 

@@ -62,6 +62,7 @@ library
                        Language.Grammars.AspectAG.TPrelude,
                        Language.Grammars.AspectAG.Derive,
                        Language.Grammars.AspectAG.GenRecord,
+                       Language.Grammars.AspectAG.RecordInstances,
                        Language.Grammars.AspectAG.Require
   -- LANGUAGE extensions used by modules in this package.
   other-extensions:    TypeInType,
