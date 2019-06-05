@@ -121,8 +121,8 @@ type family ShowField c :: Symbol
 instance (Require (OpError (Text "field not Found on " :<>: Text (ShowRec c)
                     :$$: Text "updating the " :<>: Text (ShowField c)
                      :<>: ShowT l)) ctx)
-  => Require (OpUpdate c l v '[]) ctx where 
-  type ReqR (OpUpdate c l v ('[] )  ) = '[]
+  => Require (OpUpdate c l v '[]) ctx where
+  type ReqR (OpUpdate c l v ('[] )  ) = Rec c '[]
   req = undefined
 
 -- | update
@@ -219,3 +219,10 @@ instance Require (OpError (Text "Duplicated Labels on " :<>: Text (ShowRec c)
 
 
 
+data OpNonEmpty (c :: Type) (r :: [(k, k')]) where
+  OpNonEmpty :: Rec c r -> OpNonEmpty c r
+
+
+instance Require (OpNonEmpty c ( '(l, v) ': r)) ctx where
+  type ReqR (OpNonEmpty c ( '(l, v) ': r)) = ()
+  req = undefined

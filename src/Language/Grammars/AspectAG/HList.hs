@@ -77,3 +77,7 @@ infixr 2 .:
 data KList (l :: [k]) :: Type where
   KNil :: KList '[]
   KCons :: f h -> KList l -> KList (h ': l)
+
+infixr 2 .:.
+(.:.) = KCons
+eL = KNil

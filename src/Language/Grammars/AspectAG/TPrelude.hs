@@ -64,23 +64,6 @@ type family Not (l :: Bool) :: Bool where
 --well formedness
 -- class LabelSet (l :: [(k1,k2)])
 
--- -- | The empty set is a valid mapping
--- instance LabelSet '[]
-
--- -- | A singleton set is a valid mapping, defined only in one point.
--- instance LabelSet '[ '(x,v)] 
-
-
-
--- instance ( {-HEqK l1 l2 leq
---          ,-} LabelSet' '(l1,v1) '(l2,v2) (l1==l2) r)
---         => LabelSet ( '(l1,v1) ': '(l2,v2) ': r)
-
--- class LabelSet' l1v1 l2v2 (leq::Bool) r
--- instance ( LabelSet ( '(l2,v2) ': r)
---          , LabelSet ( '(l1,v1) ': r)
---          ) => LabelSet' '(l1,v1) '(l2,v2) False r
-
 type family LabelSetF (r :: [(k, k')]) :: Bool where
   LabelSetF '[] = True
   LabelSetF '[ '(l, v)] = True
@@ -95,7 +78,7 @@ instance LabelSetF r ~ True => LabelSet r
 type family And3 (a1 :: Bool) (a2 :: Bool) (a3 :: Bool) where
   And3 True True True  = True
   And3 _     _   _     = False
-                                                 
+
 -- | Predicate of membership, for lists at type level
 type family HMemberT (e::k)(l ::[k]) :: Bool where
   HMemberT k '[] = 'False
@@ -133,3 +116,9 @@ type family LabelsOf (r :: [(k, k')]) :: [k] where
 type family HasLabel (l :: k) (r :: [(k, k')]) :: Bool where
   HasLabel l '[] = False
   HasLabel l ( '(l', v) ': r) = Or (l == l') (HasLabel l r)
+
+
+type family Equal (a:: k)(b :: k') :: Bool where
+  Equal a a = True
+  Equal a b = False
+

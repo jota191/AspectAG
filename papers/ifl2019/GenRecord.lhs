@@ -126,8 +126,7 @@ all this kind information must be Wrapped by a type constructor. The type family
 
 computes depending on the index |c|, the wrapping of |v| under a suitable type
 constructor. Note that if |v| is already inhabitated then |WrapField c| can be
-the identity function (and it actually is in every instance like that we have
-implemented).
+the identity function.
 
 %We use some sugar to encode some of our functions as operators, for example,
 %instead of |ConsRec| we usually use an infix operator |..*..|.
@@ -240,7 +239,7 @@ on a child and used to check well formedness where it is used.
 > type ChAttsRec prd (chs :: [(Child,[(Att,Type)])])
 >    = Rec (ChiReco prd) chs
 
-|WrapField| in this case takes the type information of the field, which is
+|WrapField| takes the type information of the field, which is
 not inhabited, and puts the |Attribution| wrapper.
 
 > type instance  WrapField (ChiReco prd)  (v :: [(Att, Type)])
@@ -350,7 +349,7 @@ with the value equal to the predicate of equality of |l'| and the argument label
 >   req ctx (OpLookup l r)
 >     = req ctx (OpLookup' (Proxy @ (l == l')) l r)
 
-Implementing instances for |OpLookup'| is easy. The case where |b==True|
+Implementing instances for |OpLookup'| is easy. When |b==True| it
 corresponds to a |head| function since we know that the searched label is on
 the first position:
 
@@ -362,7 +361,7 @@ the first position:
 
 Note that we set the return type to be |WrapField c v|, which is
 completely generic.
-The case where |b==True| corresponds to a call of |OpLookup| on tail:
+When |b==True| a call to |OpLookup| on tail is performed:
 
 > instance (Require (OpLookup c l r) ctx)
 >   => Require (OpLookup' False c l ( '(l', v) ': r)) ctx where
@@ -435,7 +434,7 @@ fully polymorphic function cannot touch its arguments. Type classes are the way
 to define bounded parametricity. Haskell does not provide kind classes but they
 are not necessary since polykinded type families are actually not parametric.
 When programming at type level we can actually inspect kinds and pattern match
-on them like using {\bf |typeOf|} in languages where types are avaiable at run
+on them as using {\bf |typeOf|} in languages where types are avaiable at run
 time. Therefore, the following definitions are completely legal:
 
 > type instance  ShowT ('Att l t)

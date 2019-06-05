@@ -31,11 +31,11 @@ import GHC.TypeLits
 import Data.Kind
 import Data.Proxy
 
-data Att   = Att Symbol Type
-data Prod  = Prd Symbol NT
-data Child = Chi Symbol Prod (Either NT T)
-data NT    = NT Symbol
-data T     = T Type
+data Att   = Att Symbol Type               -- deriving Eq
+data Prod  = Prd Symbol NT                  --deriving Eq
+data Child = Chi Symbol Prod (Either NT T)  --deriving Eq
+data NT    = NT Symbol                      --deriving Eq
+data T     = T Type                        -- deriving Eq
 
 
 

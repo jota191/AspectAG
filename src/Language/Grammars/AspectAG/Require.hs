@@ -17,7 +17,8 @@
              InstanceSigs,
              AllowAmbiguousTypes,
              TypeApplications,
-             PatternSynonyms
+             PatternSynonyms,
+             TypeInType
 #-}
 
 module Language.Grammars.AspectAG.Require where
@@ -25,11 +26,12 @@ module Language.Grammars.AspectAG.Require where
 import Data.Kind
 import Data.Proxy
 import GHC.TypeLits
-
+import Language.Grammars.AspectAG.TPrelude
+import Data.Type.Equality
 
 class Require (op   :: Type)
               (ctx  :: [ErrorMessage])  where
-   type ReqR op :: k
+   type ReqR op :: Type
    req :: Proxy ctx -> op -> ReqR op
 
 instance (TypeError (Text "Error: " :<>: m :$$:
@@ -57,4 +59,20 @@ kind t (era a fin de cuentas lo que caia en el último pattern)
 
 type RequireR (op :: Type ) (ctx:: [ErrorMessage]) (res :: Type)
      = (Require op ctx, ReqR op ~ res)
+
+
+type RequireEq (t1 :: k )(t2 :: k) (ctx:: [ErrorMessage])
+    = (Require (OpEq t1 t2) ctx, t1 ~ t2)
+
+data OpEq t1 t2
+
+instance RequireEqRes t1 t2 ctx
+  => Require (OpEq t1 t2) ctx where
+  type ReqR (OpEq t1 t2) = ()
+  req = undefined
+
+type family RequireEqRes (t1 :: k) (t2 :: k)
+                     (ctx :: [ErrorMessage]) ::  Constraint where
+  RequireEqRes t1 t2 ctx = If (t1 `Equal` t2) (() :: Constraint)
+    (Require (OpError (Text "" :<>: ShowT t1 :<>: Text " /= " :<>: ShowT t2)) ctx)
 

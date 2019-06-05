@@ -40,8 +40,7 @@ To pass context information printable on type errors we use tagged rules:
 
 \subsection{Defining Attributes}
 
-The function |syndef| takes an attribute name |att| and a production
-|prd|, an update function |f|:
+The function |syndef| introduces a new synthesized attribute.
 
 > syndef  ::  (   RequireEq t t' ctx'
 >             ,   RequireR  ( OpExtend AttReco ('Att att t) t sp)
@@ -56,6 +55,11 @@ The function |syndef| takes an attribute name |att| and a production
 >   =  CRule $ \ctx inp (Fam ic sp)
 >      ->  Fam ic $ req ctx (OpExtend att (f Proxy inp) sp)
 
+It takes an attribute name |att|, a production |prd|, and a function |f| that
+computes the value of the attribute in terms of the input family. |f| takes
+an extra |proxy| argument to carry context information. It appends information
+about the current definition to the existing context of the attribution being
+extended.
 In practice it is useful to use a monadic version of |syndef|
 
 > syndefM att prd = syndef att prd . def
@@ -66,8 +70,46 @@ where
 >     -> (Proxy ctx -> (Fam prd chi par) -> a)
 > def = curry . runReader
 
-To define an inherited attribute we can use the function |inhdef|:
+We define a monadic function |at| to sugarize definitions:
 
+> class At pos att m  where
+>  type ResAt pos att m
+>  at :: Label pos -> Label att -> m (ResAt pos att m)
+
+> instance
+>  (  RequireR  (OpLookup  (ChiReco prd) ('Chi ch prd nt) chi)
+>               ctx (Attribution r)
+>  ,  RequireR  (OpLookup AttReco ('Att att t) r) ctx t'
+>  ,  RequireEq prd prd' ctx
+>  ,  RequireEq t t' ctx
+>  )
+>  => At ('Chi ch prd nt) ('Att att t)
+>        (Reader (Proxy ctx, Fam prd' chi par))  where
+>  type ResAt ('Chi ch prd nt) ('Att att t)
+>             (Reader (Proxy ctx, Fam prd' chi par))
+>    = t
+>  at  (ch :: Label ('Chi ch prd nt))
+>      (att :: Label ('Att att t))
+>   =  liftM  (\(ctx, Fam chi _)  ->
+>                let atts = req ctx (OpLookup ch chi)
+>                in  req ctx (OpLookup att atts))
+>             ask
+
+For instance in the example of section[REF], |add_eval| can be rewritten as:
+
+> add_eval = syndef eval add
+>  (\Proxy (Fam sc ip)->
+>   (+) (sc .#. leftAdd .#. eval) (sc .#. rightAdd .#. eval))
+
+where |(.#.)| is the lookup operator. If the programmer prefers, he or she
+cab
+
+
+
+To define an inherited attribute we can use the function |inhdef|. This time
+we present this definition omiting the constraints.
+
+%if False
 > inhdef
 >   :: ( RequireEq t t' ctx'
 >      , RequireR  (OpExtend AttReco ('Att att t) t r) ctx (Attribution v2)
@@ -84,7 +126,10 @@ To define an inherited attribute we can use the function |inhdef|:
 >                 :<>: ShowT ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
 >                 ': ctx))
 >      =>
->      Label ('Att att t)
+%endif
+
+> inhdef :: ( ... )
+>      => Label ('Att att t)
 >      -> Label ('Prd prd nt)
 >      -> Label ('Chi chi ('Prd prd nt) ntch)
 >      -> (Proxy ctx' -> Fam ('Prd prd nt) sc ip -> t')
@@ -96,15 +141,19 @@ To define an inherited attribute we can use the function |inhdef|:
 >               catts'= req ctx (OpExtend  att (f Proxy inp) catts)
 >           in  Fam ic' sp
 
+Inherited attribute definitions are also reated to a child.
+Again, |inhdefM| can is provided.
 
-Again, a monadic version fits better when calling it:
+Functions to define synthesized and inherited attributes are
 
-> inhdefM att prd chi = inhdef att prd chi . def
+
+
+
 
 
 \subsection{Combining Rules.}
 
-Functions like |syndef| or |inhdef| build a rule from scratch defining how to
+Functions as |syndef| or |inhdef| build a rule from scratch defining how to
 compute one single new attribute from a given family using functions of the
 host language.
 Rules can be more than that, building a full family. To build a big rule
@@ -355,26 +404,7 @@ Again, to move contexts we introduce the concept of a tagged aspect:
 > data Lhs
 > lhs :: Label Lhs
 > lhs = Label
->
-> class At pos att m  where
->  type ResAt pos att m
->  at :: Label pos -> Label att -> m (ResAt pos att m)
 
-
-> instance ( RequireR (OpLookup (ChiReco prd) ('Chi ch prd nt) chi) ctx
->                     (Attribution r)
->          , RequireR (OpLookup AttReco ('Att att t) r) ctx t'
->          , RequireEq prd prd' ctx
->          , RequireEq t t' ctx 
->          )
->       => At ('Chi ch prd nt) ('Att att t)
->             (Reader (Proxy ctx, Fam prd' chi par))  where
->  type ResAt ('Chi ch prd nt) ('Att att t) (Reader (Proxy ctx, Fam prd' chi par))
->          = t 
->  at (ch :: Label ('Chi ch prd nt)) (att :: Label ('Att att t))
->   = liftM (\(ctx, Fam chi _)  -> let atts = req ctx (OpLookup ch chi)
->                                  in  req ctx (OpLookup att atts))
->           ask
 
 > instance
 >          ( RequireR (OpLookup AttReco ('Att att t) par) ctx t'

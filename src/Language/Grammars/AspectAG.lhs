@@ -232,7 +232,7 @@
 >  , RequireR (OpLookup PrdReco prd a) ctx (CRule ctx prd sc ip ic sp ic' sp') 
 >  , (IC (ReqR (OpLookup PrdReco prd a))) ~ ic
 >  , (SP (ReqR (OpLookup PrdReco prd a))) ~ sp
->  ) => 
+>  ) =>
 >   Require (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a) ctx where
 >   type ReqR (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a)
 >     = ReqR (OpUpdate PrdReco prd
@@ -375,26 +375,26 @@
 > (.+.) = ext
 
 
-> --- Por que tiene que ir aca?
-> --- Intente pasarlo a Require.hs y no compila
-> --- por las overlapping instances.
-> type RequireEq (t1 :: k )(t2 :: k) (ctx:: [ErrorMessage])
->     = (Require (OpEq t1 t2) ctx, t1 ~ t2)
+-- > --- Por que tiene que ir aca?
+-- > --- Intente pasarlo a Require.hs y no compila
+-- > --- por las overlapping instances.
+-- > type RequireEq (t1 :: k )(t2 :: k) (ctx:: [ErrorMessage])
+-- >     = (Require (OpEq t1 t2) ctx, t1 ~ t2)
 
-> data OpEq t1 t2
-
-
-> instance Require (OpEq t t) ctx where
->   type ReqR (OpEq t t) = ()
->   req = undefined
+-- > data OpEq t1 t2
 
 
-> instance Require (OpError (Text "" :<>: ShowT t1 :<>: Text " /= "
->                             :<>: ShowT t2)) ctx
->   => Require (OpEq t1 t2) ctx where
->   type ReqR (OpEq t1 t2) = ()
->   req = undefined
-> -----
+-- > instance Require (OpEq t t) ctx where
+-- >   type ReqR (OpEq t t) = ()
+-- >   req = undefined
+
+
+-- > instance Require (OpError (Text "" :<>: ShowT t1 :<>: Text " /= "
+-- >                             :<>: ShowT t2)) ctx
+-- >   => Require (OpEq t1 t2) ctx where
+-- >   type ReqR (OpEq t1 t2) = ()
+-- >   req = undefined
+-- > -----
 
 > data Lhs
 > lhs :: Label Lhs
@@ -574,10 +574,17 @@
 >           val  = attr #. att
 >       in  Just $ maybe val (op val) $ usechi att prd nts op scr
 
-
-> --use :: (Use att prd nts a sc, LabelSet ( '( att, a) ': sp)) =>
-> --    Label att -> Label prd-> KList nts -> (a -> a -> a) -> a
-> --           -> CRule ctx prd sc ip ic sp ic ( '( att, a) ': sp)
-
 > use att prd nts op unit
 >   = syndef att prd $ \_ fam -> maybe unit id (usechi att prd nts op $ chi fam)
+
+
+> class Uses (att :: Att) (prds :: [Prod]) (nts :: [NT]) a where
+>   type UsesR (att :: Att) (prds :: [Prod]) (nts :: [NT]) a :: Type
+>   uses :: Label att -> KList prds -> KList nts -> (a -> a -> a) -> a
+>        -> UsesR att prds nts a
+
+> --uses att eL nts op unit = emptyAtt
+
+> instance Uses att '[] nts a where
+>   type UsesR att '[] nts a = ()
+>   uses _ _ _ _ _ = undefined

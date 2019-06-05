@@ -39,6 +39,7 @@ val = Label @ P_Val
 type P_Var = 'Prd "p_Var" Nt_Expr
 var = Label @ P_Var
 
+nt_Expr = Label @ Nt_Expr
 
 leftAdd   = Label @ ('Chi "leftAdd"   P_Add ('Left Nt_Expr))
 rightAdd  = Label @ ('Chi "rightAdd"  P_Add ('Left Nt_Expr))
@@ -48,17 +49,19 @@ vname     = Label @ ('Chi "vname"     P_Var ('Right ('T String)))
 eval = Label @ ('Att "eval" Int)
 env  = Label @ ('Att "env"  (Map String Int))
 
-foo = Label @ ('Att "foo" Int)
+--add_eval  =  syndefM eval add  $ (+) <$> at leftAdd eval <*> at rightAdd eval
+--add_eval = syndef eval add (\Proxy (Fam sc ip)-> (+) (sc .# leftAdd #. eval) (sc .# rightAdd #. eval))
 
-add_eval  =  syndefM eval add  $ (+) <$> at leftAdd eval <*> at rightAdd eval
+add_eval = use eval add (nt_Expr .:. eL) (+) 0
+--add_eval  =  syndefM eval add  $ ter ival
+
 val_eval  =  syndefM eval val  $ ter ival
 var_eval  =  syndefM eval var  $ slookup <$> ter vname <*> at lhs env
 
 slookup nm = fromJust . Data.Map.lookup nm
 
-
 aspEval   =  traceAspect (Proxy @ ('Text "eval"))
-          $  add_eval .+: add_eval .+: val_eval .+: var_eval .+: emptyAspect
+          $  add_eval .+: val_eval .+: var_eval .+: emptyAspect
 
 
 add_leftAdd_env  = inhdefM env add leftAdd  $ at lhs env
@@ -66,10 +69,10 @@ add_rightAdd_env = inhdefM env add rightAdd $ at lhs env
 -- val_ival_env = inhdefM env val ival $ at lhs env
 
 aspEnv  =  traceAspect (Proxy @ ('Text "env"))
-        $  add_rightAdd_env .+: emptyAspect 
+        $  add_leftAdd_env .+: add_rightAdd_env .+: emptyAspect 
 
 
-asp = aspEval .:+: aspEval .:+: aspEnv
+asp = aspEval .:+: aspEnv
 
 
 data Expr = Val Int
@@ -88,78 +91,9 @@ sem_Expr asp (Val i)   = knitAspect val asp$
 sem_Expr asp (Var v)   = knitAspect var asp$
                           vname .=. sem_Lit v .*. EmptyRec
 
-{-
 evalExpr e m = sem_Expr asp e (env =. m .*. emptyAtt) #. eval
 
 
 exampleExpr =  Add (Val (-9)) (Add (Var "x") (Val 2))
 exampleEval =  evalExpr exampleExpr (insert "x" 5 Data.Map.empty)
--}
-{-
 
-type P_Let = 'Prd "p_Let" Nt_Expr
-elet = Label @ P_Let
-
-
-exprLet   = Label @ ('Chi "exprLet"   P_Let ('Left Nt_Expr))
-bodyLet   = Label @ ('Chi "bodyLet"   P_Let ('Left Nt_Expr))
-vlet      = Label @ ('Chi "vlet"      P_Let ('Right ('T String)))
-
-
-aspEval2  = traceAspect (Proxy @ ('Text "eval2"))
-          $ syndefM eval elet (at bodyLet eval) .+: aspEval
-
-
-aspEnv2   =   traceAspect (Proxy @ ('Text "env2"))
-          $   inhdefM env elet exprLet (at lhs env)
-         .+:  inhdefM env elet bodyLet (insert  <$> ter vlet
-                                                <*> at exprLet eval
-                                                <*> at lhs env)
-         .+:  aspEnv
-
-
-asp2 = aspEval2 .:+: aspEnv2
-
-data Expr' = Val' Int
-           | Var' String
-           | Add' Expr' Expr'
-           | Let String Expr' Expr'
-       deriving Show
-
-
-
-sem_Expr' asp (Add' l r) = knitAspect add asp
-                           $  leftAdd  .=. sem_Expr' asp l
-                          .*. rightAdd .=. sem_Expr' asp r
-                          .*.  EmptyRec
-sem_Expr' asp (Val' i)   = knitAspect val asp
-                          $ ival  .=. sem_Lit i .*. EmptyRec
-sem_Expr' asp (Var' v)   = knitAspect var asp
-                          $ vname .=. sem_Lit v .*. EmptyRec
-
-sem_Expr' asp (Let v e b) = knitAspect elet asp
-                           $   vlet     .=. sem_Lit v
-                          .*.  exprLet  .=. sem_Expr' asp e
-                          .*.  bodyLet  .=. sem_Expr' asp b
-                          .*.  EmptyRec
-
-evalExpr' e m = sem_Expr' asp2 e (env =. m .*. emptyAtt) #. eval 
-
-exampleExpr' =  Add' (Val' (-9))
-                     (Add' (Var' "x") (Let "x" (Val' 2)
-                                               (Var' "x")))
-exampleEval' =  evalExpr' exampleExpr'
-                          (insert "x" 5 Data.Map.empty)
-
-
-
-val_eval'  =  synmodM eval val  $ abs <$> ter ival
-
-
-evalExpr'' e m = sem_Expr' (val_eval' .+: asp2) e
-                           (env =. m *. emptyAtt) #. eval 
-exampleEval'' =  evalExpr'' exampleExpr'
-                            (insert "x" 5 Data.Map.empty)
-
-
--}
