@@ -100,7 +100,6 @@
 >   = CAspect { mkAspect :: Proxy ctx -> Aspect asp}
 
 
-
 > emptyAspect :: CAspect ctx '[]
 > emptyAspect  = CAspect $ const EmptyRec
 
@@ -578,13 +577,13 @@
 >   = syndef att prd $ \_ fam -> maybe unit id (usechi att prd nts op $ chi fam)
 
 
-> class Uses (att :: Att) (prds :: [Prod]) (nts :: [NT]) a where
->   type UsesR (att :: Att) (prds :: [Prod]) (nts :: [NT]) a :: Type
->   uses :: Label att -> KList prds -> KList nts -> (a -> a -> a) -> a
->        -> UsesR att prds nts a
+-- > class Uses (att :: Att) (prds :: [Prod]) (nts :: [NT]) a where
+-- >   type UsesR (att :: Att) (prds :: [Prod]) (nts :: [NT]) a :: Type
+-- >   uses :: Label att -> KList prds -> KList nts -> (a -> a -> a) -> a
+-- >        -> UsesR att prds nts a
 
-> --uses att eL nts op unit = emptyAtt
+-- > --uses att eL nts op unit = emptyAtt
 
-> instance Uses att '[] nts a where
->   type UsesR att '[] nts a = ()
->   uses _ _ _ _ _ = undefined
+-- > instance Uses att ( prd ': '[]) nts a where
+-- >   type UsesR att ( prd ': '[]) nts a = CAspect '[] ( '(prd, Type) ': '[])
+-- >   uses att (KCons prd prds) nts op unit = use att prd nts op unit .+: emptyAspect

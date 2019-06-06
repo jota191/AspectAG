@@ -223,6 +223,9 @@ data OpNonEmpty (c :: Type) (r :: [(k, k')]) where
   OpNonEmpty :: Rec c r -> OpNonEmpty c r
 
 
-instance Require (OpNonEmpty c ( '(l, v) ': r)) ctx where
-  type ReqR (OpNonEmpty c ( '(l, v) ': r)) = ()
-  req = undefined
+instance Require (OpNonEmpty c ( '(l, v) ': r)) ctx where {}
+
+instance (Require (OpError (Text "Empty " :<>: Text (ShowRec c)
+                          :$$: Text " Required to be nonempty "
+                          )) ctx)
+  => Require (OpNonEmpty c '[]) ctx where {}

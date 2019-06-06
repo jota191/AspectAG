@@ -114,14 +114,14 @@ with three productions:
 
 and four different children:
 
-> leftAdd   = Label @ ('Chi "leftAdd"   P_Add
->                                       ('Left Nt_Expr))
-> rightAdd  = Label @ ('Chi "rightAdd"  P_Add
->                                       ('Left Nt_Expr))
-> ival      = Label @ ('Chi "ival"   P_Val
->                                    ('Right ('T Int)))
-> vname     = Label @ ('Chi "vname"  P_Var
->                                    ('Right ('T String)))
+> leftAdd
+>   = Label @ ('Chi "leftAdd" P_Add  ('Left Nt_Expr))
+> rightAdd
+>   = Label @ ('Chi "rightAdd" P_Add  ('Left Nt_Expr))
+> ival
+>   = Label @ ('Chi "ival" P_Val ('Right ('T Int)))
+> vname
+>   = Label @ ('Chi "vname" P_Var ('Right ('T String)))
 
 %This is simpler than it seems.
 Non-terminals are defined by names (like
@@ -139,9 +139,9 @@ A widely used idiom in type-level programming.
 The abstract syntax tree for this grammar can be implemented in Haskell,
 for example, with the datatype:
 
-> data Expr  =  Val  { ival'    :: Int  }
->            |  Var  { vname'   :: String   }
->            |  Add  { l', r'   :: Expr     }
+> data Expr  =  Val  { ival'                 :: Int  }
+>            |  Var  { vname'                :: String   }
+>            |  Add  { leftAdd', rightAdd'   :: Expr     }
 %
 %if False
 >       deriving Show
@@ -313,7 +313,7 @@ The function:
 returns a list of all literals occurring in the expression, in order.
 
 It is also possible to modify semantics in a modular way.
-If for example we wanted to get the literals in a reverse order,
+For example, If we want to get the literals in a reverse order,
 we can extend the original aspect |aspLits| with a rule
 that redefines the computation of |lits| for the production |add|
 in this way.
@@ -328,7 +328,7 @@ modify an existing attribute instead of defining a new one.
 \subsection{Grammar extension: Adding Productions}
 
 
-To compĺetely tackle the expression problem we must be able to extend our grammar.
+To completely tackle the expression problem we must be able to extend our grammar.
 Suppose that we add a new production to bind local definitions:
 
 < expr     -> let vname = expr_d in expr_i
