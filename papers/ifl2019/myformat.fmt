@@ -12,10 +12,10 @@
 %format P_Var = "P_{Var}"
 %format P_Let = "P_{Let}"
 
-%format expr_l = "expr_l"
-%format expr_r = "expr_r"
-%format expr_d = "expr_d"
-%format expr_i = "expr_i"
+%format expr_l = "\Varid{expr_l}"
+%format expr_r = "\Varid{expr_r}"
+%format expr_d = "\Varid{expr_d}"
+%format expr_i = "\Varid{expr_i}"
 
 %format <$>      = "<\!\!\$\!\!\!>"
 %format <*>      = "\oast"
@@ -31,9 +31,14 @@
 %format @       = "\;@\;"
 
 
-%format add_eval   = " add_{eval} "
-%format var_eval   = " var_{eval} "
-%format val_eval   = " val_{eval} "
+%format add_eval   = "\Varid{add_{eval}}"
+%format var_eval   = "\Varid{var_{eval}}"
+%format val_eval   = "\Varid{val_{eval}}"
+
+%format ival' = "\Varid{ival}"
+%format vname' = "\Varid{vname}"
+%format leftAdd' = "\Varid{leftAdd}"
+%format rightAdd' = "\Varid{rightAdd}"
 
 
 %format pattern     = "{\bf pattern}"
@@ -41,3 +46,12 @@
 %format .*.   = " \: \: .\!\!*\!\!.  \: \: "
 %format .=.   = " \: \: .\!\!=\!\!. \: \: "
 %format ..*.. = "(\: .\!\!*\!\!. \:)"
+
+
+%format add_leftAdd_env = "\Varid{add\_leftAdd_{env}}"
+%format add_rightAdd_env = "\Varid{add\_rightAdd_{env}}"
+
+%format aspEval = "\Varid{asp_{eval}}"
+%format aspEnv = "\Varid{asp_{env}}"
+%format aspLits = "\Varid{asp_{lits}}"
+%format aspLitsRev = "\Varid{asp_{litsRev}}"

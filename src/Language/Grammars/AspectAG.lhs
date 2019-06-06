@@ -100,7 +100,6 @@
 >   = CAspect { mkAspect :: Proxy ctx -> Aspect asp}
 
 
-
 > emptyAspect :: CAspect ctx '[]
 > emptyAspect  = CAspect $ const EmptyRec
 
@@ -585,6 +584,6 @@
 
 > --uses att eL nts op unit = emptyAtt
 
-> instance Uses att '[] nts a where
->   type UsesR att '[] nts a = ()
->   uses _ _ _ _ _ = undefined
+> instance Uses att ( prd ': '[]) nts a where
+>   type UsesR att ( prd ': '[]) nts a = CAspect '[] ( '(prd, Type) ': '[])
+>   uses att (KCons prd prds) nts op unit = use att prd nts op unit .+: emptyAspect
