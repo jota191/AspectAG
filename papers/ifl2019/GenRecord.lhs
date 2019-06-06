@@ -24,20 +24,23 @@
 
 %endif
 
+In this section we present the design of the new \AspectAG.
+In order to provide flexibility and safetely, \AspectAG internals
+are built from strongly typed extensible records.
+Then, for example, mistakes like trying to access to an undefined attribute or child
+are detected at compile time as an incorrect lookup into a given record.
 
-Attribute grammars prove that they are not only useful to implement programming
-language semantics, but as a general purpose programming paradigm. Pitifully an
-attribute grammar is an example of a structure that can be easily illformed. It
-is a common mistake to try to use attributes that are not defined in some
-production. This kind of error can be introduced directly, or by associating
-rules to incorrect productions. As we show in the prevoius section, \AspectAG
-captures common errors and prints them in a readable way. \AspectAG internals
-are built from strongly typed heterogeneous records, so an incorrect lookup
-would be detected at compile time.
 
-Detecting errors is not enough. It is a common problem when implementing
-Embedded DSLs that when a type error occurs, implementation details are leaked
-on error messages. User defined type errors [REF] is a tool introduced to solve
+However, detecting errors is not enough.
+If the error messages are difficult to understand and do not point to their possible sources,
+the library becomes almost unusable.
+The quaility of error messages was an important drawback of the previous version of \AspectAG.
+It is a common problem when implementing
+EDSLs that when a type error occurs, implementation details are leaked
+on error messages.
+As we have shown in the previous section, \AspectAG now
+captures common errors and prints them in a readable way.
+We use user defined type errors [REF]; a tool introduced to solve
 this issue. The family |GHC.TypeLits.TypeError| can be used to print a custom
 error message but it is not clear how to structure the implementation in a
 modular, dependable and scalable way. On section \ref{sec:requirements} we
@@ -56,12 +59,12 @@ associated attribution. Note that in this case
 each field is not a flat value, but a full record by itself. This must be
 reflected on types as our goal is to code strongly kinded.
 \item
-  \emph{Aspects} are a record of rules indexed by productions.
+  \emph{Aspects} are records of rules indexed by productions.
 \item
   Semantic functions are kept on a record (not visible by the user).
 \end{itemize}
 
-Extensible records coded using type level programming are already part of the
+Extensible records coded using type-level programming are already part of the
 folklore in the Haskell community. The {\tt HList}
 library\cite{Kiselyov:2004:STH:1017472.1017488} popularized them. Old versions
 of {\tt HList} originally abused of Multi Parameter Typeclasses[REF] and
@@ -82,8 +85,8 @@ heterogeneous records contain values of kind |Type|. It makes sense since |Type|
 is the kind of inhabited types and records store values. At kind level this is a
 sort of untyped programming; datatype constructors take information with
 expressive kinds and wrap it on a uniform box. In use cases such as our children
-records where we store a full featured attribution we desire to state this on
-kinds. We abstract this notion and code a library of a very polymporphic
+records, where we store a full featured attribution, we desire to state this on
+kinds. We abstract this notion and code a library of a polymporphic
 implementation of extensible records defined as follows:
 
 
@@ -94,15 +97,15 @@ implementation of extensible records defined as follows:
 >             ->  Rec c ( '(l, v) ': r)
 
 
-A record is indexed on a promoted list of pairs |r|. The kind of the first
+A record is indexed by a promoted list of pairs |r|. The kind of the first
 component in each pair is polymorphic since it is not mandatory that the type of
 labels is inhabited; they live only at type level. The second component is also
-polymorphic and it can be an elaborate kind. The |Tagfield| constructor solves
+polymorphic and it can have an elaborate kind. The |Tagfield| constructor solves
 the problem of wrapping and unwrapping some value so that it actually stores
-something with a |Type|, keeping explicitly the information at type level.
+something with kind |Type|, keeping explicitly the information at type level.
 |LabelSet| is a predicate that encodes the fact that there are no repeated
 labels. The parameter |c| is an extra index pointing out wich instance of record
-are we defining, new instances can be defined by the user as we shall see.
+we are defining, new instances can be defined by the user as we shall see.
 |TagField| is a fancier implementation of the well known |Data.Tagged| datatype:
 
 > data TagField (c :: k) (l :: k') (v :: k'') where
@@ -133,7 +136,7 @@ the identity function.
 
 A relevant design decision is the implementation of the |LabelSet| constraint. A
 similar class is introduced on the {\tt HList} library. By using a type class to
-encode a predicate new instances can be defined anytime since classes are open.
+encode a predicate, new instances can be defined anytime since classes are open.
 When an instance is not found, one could argue that does not mean that the
 predicate is |False|, but that the typechecker did not find a proof. In the case
 of |LabelSet|, given a set of labels, once we know how to compare on their kind

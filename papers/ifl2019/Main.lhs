@@ -181,6 +181,8 @@ messages.
   \parbox{\textwidth/3}{TODO: \\ #1}}}
 \newcommand{\note}[1]{\fbox{
   \parbox{\textwidth/3}{NOTE: \\ #1}}}
+\newcommand{\marcos}[1]{\fbox{
+  \parbox{\textwidth/3}{Marcos: \\ #1}}}
 
 \newcommand{\AspectAG}{ { \tt AspectAG }}
 

@@ -46,6 +46,7 @@ type family Or (l :: Bool)(r :: Bool) :: Bool where
   Or False b = b
   Or True b  = 'True
 
+
 -- | And, purely computed at type level
 type family And (l :: Bool)(r :: Bool) :: Bool where
   And False b = False
@@ -119,6 +120,6 @@ type family HasLabel (l :: k) (r :: [(k, k')]) :: Bool where
 
 
 type family Equal (a:: k)(b :: k') :: Bool where
+--  Equal (f a) (g b) = And (Equal f g) (Equal a b) 
   Equal a a = True
   Equal a b = False
-

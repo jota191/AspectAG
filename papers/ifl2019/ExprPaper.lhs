@@ -64,6 +64,12 @@ the attribute values of the children and the parent. Usually attributes are
 classified in at least two sets: synthesized attributes (where information flows
 bottom up) and inherited attibutes (where it flows top down).
 
+\textcolor{red}{Attribute grammars prove that they are not only useful to implement programming
+language semantics, but as a general purpose programming paradigm. Pitifully an
+attribute grammar is an example of a structure that can be easily illformed. It
+is a common mistake to try to use attributes that are not defined in some
+production. This kind of error can be introduced directly, or by associating
+rules to incorrect productions.}\marcos{me traje esto para acá de la seccion de implementación, creo que puede servir}
 
 
 \section{Overview of the library}
