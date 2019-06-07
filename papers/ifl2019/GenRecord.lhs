@@ -126,7 +126,7 @@ The |TagField| constructor uses |Label| arguments to build instances because we
 usually have them avaiable at term level as we saw in the example of section
 [REF], but type applications[REF] -or a much less elegant annotation- would work
 fine. The third argument -of type |WrapField c v|- should be the value that we
-want to tag. Note that |v| is kind polymorphic. For instance a contrete instance
+want to tag. Note that |v| is kind polymorphic. For instance a concrete instance
 of |v| could be something as |[(Att, Type)]| in the case of children. When
 actually creating a field to append in a record an actual value must be stored,
 all this kind information must be Wrapped by a type constructor. The type family

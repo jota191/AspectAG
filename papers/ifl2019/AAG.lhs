@@ -102,7 +102,7 @@ For instance in the example of section[REF], |add_eval| can be rewritten as:
 >   (+) (sc .#. leftAdd .#. eval) (sc .#. rightAdd .#. eval))
 
 where |(.#.)| is the lookup operator. If the programmer prefers, he or she
-cab
+can use this desugarized functions.
 
 
 
@@ -211,7 +211,7 @@ The first is a requirement, using the following operator:
 
 
 
-and builds an understandable error message for label mistmatch otherwise:
+and builds an understandable error message for label mistmatch otherwise.
 
 
 
@@ -227,14 +227,7 @@ of |GenRecord|, defined as:
 > type instance ShowRec PrdReco       =  "Aspect"
 > type instance ShowField PrdReco     =  "production named "
 
-\todo{ hay cierta inconsistencia aca, estamos metiendo las reglas bajo
-el wrapper type. Creo que manejarlas explícitamente sería muy doloroso,
-e incluso creo que podemos tener algun problema para instanciar los kinds
-del argumento extra, La solución puede pasar por decir simplemente
-que lo hacemos así para simplificar (es la realidad), pero hay que ser menos
-enfático antes cada vez que se habla de poner toda la informacion posible en
-los kinds
-}
+In this case we 
 
 Again, to move contexts we introduce the concept of a tagged aspect:
 

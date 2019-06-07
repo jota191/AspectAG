@@ -184,7 +184,7 @@ messages.
 \newcommand{\marcos}[1]{\fbox{
   \parbox{\textwidth/3}{Marcos: \\ #1}}}
 
-\newcommand{\AspectAG}{\texttt{AspectAG}}
+\newcommand{\AspectAG}{\texttt{AspectAG }}
 
 \numbersoff
 
