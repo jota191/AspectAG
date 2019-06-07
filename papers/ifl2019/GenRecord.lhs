@@ -24,7 +24,8 @@
 
 %endif
 
-In this section we present the design of the new \AspectAG.
+
+% In this section we present the design of the new \AspectAG.
 In order to provide flexibility and safetely, \AspectAG internals
 are built from strongly typed extensible records.
 Then, for example, mistakes like trying to access to an undefined attribute or child
@@ -33,18 +34,23 @@ are detected at compile time as an incorrect lookup into a given record.
 
 However, detecting errors is not enough.
 If the error messages are difficult to understand and do not point to their possible sources,
-the library becomes almost unusable.
-The quaility of error messages was an important drawback of the previous version of \AspectAG.
+using the library becomes a painful task.
 It is a common problem when implementing
-EDSLs that when a type error occurs, implementation details are leaked
-on error messages.
-As we have shown in the previous section, \AspectAG now
+EDSLs using type-level programming that when a type error occurs, implementation details are leaked on error messages,
+and this was the case of the previous version of \AspectAG.
+
+As we have shown in the previous section, the library now
 captures common errors and prints them in a readable way.
-We use user defined type errors [REF]; a tool introduced to solve
-this issue. The family |GHC.TypeLits.TypeError| can be used to print a custom
+We use user defined type errors [REF]; a tool introduced to help improving
+the quality of type-level programming error messages.
+The family |GHC.TypeLits.TypeError| can be used to print a custom
 error message but it is not clear how to structure the implementation in a
-modular, dependable and scalable way. On section \ref{sec:requirements} we
-present our solution.
+modular, dependable and scalable way.
+
+In the rest of this section we will show an
+extensible records implementation and introduce a framework
+to encode EDSL type errors.
+%On section \ref{sec:requirements} we present our solution.
 
 
 \subsection{Polymorphic Heterogeneous Records}

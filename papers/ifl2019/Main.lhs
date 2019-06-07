@@ -184,7 +184,7 @@ messages.
 \newcommand{\marcos}[1]{\fbox{
   \parbox{\textwidth/3}{Marcos: \\ #1}}}
 
-\newcommand{\AspectAG}{ { \tt AspectAG }}
+\newcommand{\AspectAG}{\texttt{AspectAG}}
 
 \numbersoff
 
@@ -192,10 +192,11 @@ messages.
 
 %include ./ExprPaper.lhs
 
+\section{Records and Requirements}
 
-\section{Implementation}
 %include ./GenRecord.lhs
 
+\section{Implementation}
 
 %include ./AAG.lhs
 
