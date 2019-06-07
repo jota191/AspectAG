@@ -72,9 +72,12 @@ type family LabelSetF (r :: [(k, k')]) :: Bool where
                                                 (LabelSetF ( '(l, v)   ': r) )
                                                 (LabelSetF ( '(l', v') ': r) )
 
-
+{-
 class LabelSet (r :: [(k, k')]) where {}
 instance LabelSetF r ~ True => LabelSet r
+-}
+
+type LabelSet r = LabelSetF r ~ True
 
 type family And3 (a1 :: Bool) (a2 :: Bool) (a3 :: Bool) where
   And3 True True True  = True
