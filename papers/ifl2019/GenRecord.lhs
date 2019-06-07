@@ -78,7 +78,7 @@ of {\tt HList} originally abused of Multi Parameter Typeclasses[REF] and
 Functional Dependencies[REF] to do the job. Modern GHC Haskell provides
 extensions to the type system to support the encoding of this and more sort-of
 dependent types in a better way. Notably {\tt
-  TypeFamilies}\cite{Chakravarty:2005:ATC:1047659.1040306
+  TypeFamilies}\cite{Chakravarty:2005:ATC:1047659.1040306,
   Chakravarty:2005:ATS:1090189.1086397, Sulzmann:2007:SFT:1190315.1190324}, to define functions at type-level,
 {\tt DataKinds}~\cite{Yorgey:2012:GHP:2103786.2103795}, implementing data promotion,
 {\tt PolyKinds} providing kind polymorphism, and {\tt KindSignatures}\cite{ghcman}.
