@@ -73,6 +73,7 @@ rules to incorrect productions.}\marcos{me traje esto para acá de la seccion de
 
 
 \section{Overview of the library}
+\label{sec:example}
 
 As a running example consider a simple expression language given by the following grammar,
 including integer values (|ival|), variables (|vname|) and addition:

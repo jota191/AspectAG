@@ -1,4 +1,5 @@
 \subsection{Families and Rules}
+\label{sec:rules}
 
 On \AspectAG internals we use the concept of \emph{families} as input and output
 for attribute computations. A family for a given production contains an
@@ -39,6 +40,7 @@ To pass context information printable on type errors we use tagged rules:
 
 
 \subsection{Defining Attributes}
+\label{sec:defs}
 
 The function |syndef| introduces a new synthesized attribute.
 
@@ -101,8 +103,8 @@ For instance in the example of section[REF], |add_eval| can be rewritten as:
 >  (\Proxy (Fam sc ip)->
 >   (+) (sc .#. leftAdd .#. eval) (sc .#. rightAdd .#. eval))
 
-where |(.#.)| is the lookup operator. If the programmer prefers, he or she
-can use this desugarized functions.
+where |(.#.)| is the lookup operator. If the programmer prefers, he or she can
+use this desugarized functions.
 
 
 
@@ -227,162 +229,84 @@ of |GenRecord|, defined as:
 > type instance ShowRec PrdReco       =  "Aspect"
 > type instance ShowField PrdReco     =  "production named "
 
-In this case we 
+\todo{ hay cierta inconsistencia aca, estamos metiendo las reglas bajo
+el wrapper type. Creo que manejarlas explícitamente sería muy doloroso,
+e incluso creo que podemos tener algun problema para instanciar los kinds
+del argumento extra, La solución puede pasar por decir simplemente
+que lo hacemos así para simplificar (es la realidad), pero hay que ser menos
+enfático antes cada vez que se habla de poner toda la informacion posible en
+los kinds
+}
 
-Again, to move contexts we introduce the concept of a tagged aspect:
+As done in section \ref{sec:rules} with rules, to keep track on contexts
+contexts we introduce the concept of a tagged aspect:
 
 > newtype CAspect (ctx :: [ErrorMessage]) (asp :: [(Prod, Type)] )
 >   = CAspect { mkAspect :: Proxy ctx -> Aspect asp}
 
-
+In section \ref{sec:defs} we see that context is extended when an attribute is
+defined usinf |syndef| or |inhdef|. In the running example in section
+\ref{sec:defs} the function |traceAspect| was introduced. |traceAspect| is as a
+tool for the user to place marks visible in the trace when a type error occurs.
+We implement |traceAspect| using a sort of |map| function, traversing the record.
 
 
 > traceAspect (_ :: Proxy (e::ErrorMessage))
->   = mapCAspect $ \(_ :: Proxy ctx) -> Proxy @ ((Text "aspect ":<>: e) : ctx)
-
-> traceRule (_ :: Proxy (e::ErrorMessage))
->   = mapCRule $ \(_ :: Proxy ctx) -> Proxy @ ((Text "rule ":<>: e) : ctx)
+>  = mapCAspect  $   \(_ :: Proxy ctx)
+>                ->  Proxy @ ((Text "aspect ":<>: e) : ctx)
 
 
+
+> mapCAspect fctx (CAspect fasp)
+>   = CAspect $ mapCtxRec fctx . fasp . fctx
+
+where |mapCtxRec| is a dependent function:
+
+> class MapCtxAsp (r :: [(Prod,Type)]) (ctx :: [ErrorMessage])
+>                                      (ctx' :: [ErrorMessage])  where
+>   type ResMapCtx r ctx ctx' :: [(Prod,Type)]
+>   mapCtxRec  :: (Proxy ctx -> Proxy ctx')
+>              -> Aspect r -> Aspect (ResMapCtx r ctx ctx')
+
+whose implementation does not offer new insight.
+
+> (.+:) = extAspect
+> infixr 3 .+:
+
+\begin{table}[t] 
+   \label{tab:ops}
+   \small % text size of table content
+   \centering % center the table
+   \begin{tabular}{lcccc} % alignment of each column data
+   \toprule[\heavyrulewidth] \textbf{{\tt ASCII} op.} & \textbf{Unicode op.} &
+   \textbf{Left arg.} & \textbf{Right arg.} & \textbf{Associativity}\\ \midrule
+   {\tt (.+:)} & |(.+:)| & Rule & Aspect & right \\ \hline
+   {\tt (.:+.)} & |(.:+.)| & Aspect & Rule & left \\ \hline
+      {\tt (.:+:)} & |(.:+:)| & Aspect & Aspect & right \\ \hline
+   {\tt (.+.)} & |(.+.)| & Rule & Rule & --\\
+   \bottomrule[\heavyrulewidth]
+   \end{tabular}
+   \caption{Operators to combine semantics}
+\end{table}
+
+\todo{donde poner esto, capaz no es necesario}
 
 > mapCRule :: (Proxy ctx -> Proxy ctx')
 >           -> CRule ctx' prd sc ip ic sp ic' sp'
 >           -> CRule ctx  prd sc ip ic sp ic' sp'
 > mapCRule fctx (CRule frule) = CRule $ frule . fctx
 
-> mapCAspect fctx (CAspect fasp) = CAspect $ 
->        mapCtxRec fctx . fasp . fctx
-
-> class MapCtxAsp (r :: [(Prod,Type)]) (ctx :: [ErrorMessage])
->                                      (ctx' :: [ErrorMessage])  where
->   type ResMapCtx r ctx ctx' :: [(Prod,Type)]
->   mapCtxRec :: (Proxy ctx -> Proxy ctx')
->             -> Aspect r -> Aspect (ResMapCtx r ctx ctx')
-
-> instance ( MapCtxAsp r ctx ctx' 
->          , ResMapCtx r ctx ctx' ~ r'
->          , LabelSetF ('(l, CRule ctx prd sc ip ic sp ic' sp') : r')
->          ~ True) =>
->   MapCtxAsp ( '(l, CRule ctx' prd sc ip ic sp ic' sp') ': r) ctx ctx' where
->   type ResMapCtx ( '(l, CRule ctx' prd sc ip ic sp ic' sp') ': r) ctx ctx'
->      =  '(l, CRule ctx prd sc ip ic sp ic' sp') ':  ResMapCtx r ctx ctx'
->   mapCtxRec fctx (ConsRec (TagField c l r) rs) = (ConsRec (TagField c l
->                                                             (mapCRule fctx r))
->                                                           (mapCtxRec fctx rs))
-
-> instance MapCtxAsp ('[] :: [(Prod,Type)]) ctx ctx' where
->   type ResMapCtx ('[] :: [(Prod,Type)]) ctx ctx'
->      =  '[]
->   mapCtxRec _ EmptyRec = EmptyRec
-
-> extAspect
->   :: RequireR (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx (Aspect asp)
->   => CRule ctx prd sc ip ic sp ic' sp'
->      -> CAspect ctx a -> CAspect ctx asp
-> extAspect rule (CAspect fasp)
->   = CAspect $ \ctx -> req ctx (OpComRA rule (fasp ctx))
-
-> (.+:) = extAspect
-> infixr 3 .+:
-
+> traceRule (_ :: Proxy (e::ErrorMessage))
+>   = mapCRule  $   \(_ :: Proxy ctx)
+>               ->  Proxy @ ((Text "rule ":<>: e) : ctx)
 
 \subsection{Combining Aspects}
 
-> comAspect ::
->  ( Require (OpComAsp al ar) ctx
->  , ReqR (OpComAsp al ar) ~ Aspect asp)
->  =>  CAspect ctx al -> CAspect ctx ar -> CAspect ctx asp
-> comAspect al ar
->   = CAspect $ \ctx
->     -> req ctx (OpComAsp (mkAspect al ctx) (mkAspect ar ctx))
-
-> (.:+:) = comAspect
-> infixr 4 .:+:
-
-> data OpComAsp  (al :: [(Prod, Type)])
->                (ar :: [(Prod, Type)]) where
->   OpComAsp :: Aspect al -> Aspect ar -> OpComAsp al ar
-
-> instance Require (OpComAsp al '[]) ctx where
->   type ReqR (OpComAsp al '[]) = Aspect al
->   req ctx (OpComAsp al _) = al
-
-> instance
->   ( RequireR (OpComAsp al ar) ctx  (Aspect ar')
->   , Require  (OpComRA ctx prd sc ip ic sp ic' sp' ar') ctx
->   )
->   => Require (OpComAsp al
->        ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar)) ctx where
->   type ReqR (OpComAsp al
->        ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar))
->     = ReqR (OpComRA ctx prd sc ip ic sp ic' sp'
->             (UnWrap (ReqR (OpComAsp al ar))))
->   req ctx (OpComAsp al (ConsRec prdrule ar))
->    = req ctx (OpComRA (untagField prdrule)
->                       (req ctx (OpComAsp al ar)))
-
-
-> data OpComRA  (ctx  :: [ErrorMessage])
->               (prd  :: Prod)
->               (sc   :: [(Child, [(Att, Type)])])
->               (ip   :: [(Att, Type)])
->               (ic   :: [(Child, [(Att, Type)])])
->               (sp   :: [(Att, Type)])
->               (ic'  :: [(Child, [(Att, Type)])])
->               (sp'  :: [(Att, Type)])
->               (a     :: [(Prod, Type)])  where
->   OpComRA :: CRule ctx prd sc ip ic sp ic' sp'
->           -> Aspect a -> OpComRA ctx prd sc ip ic sp ic' sp' a
-
-> data OpComRA' (b :: Bool)
->               (ctx  :: [ErrorMessage])
->               (prd  :: Prod)
->               (sc   :: [(Child, [(Att, Type)])])
->               (ip   :: [(Att, Type)])
->               (ic   :: [(Child, [(Att, Type)])])
->               (sp   :: [(Att, Type)])
->               (ic'  :: [(Child, [(Att, Type)])])
->               (sp'  :: [(Att, Type)])
->               (a     :: [(Prod, Type)])  where
->   OpComRA' :: Proxy b -> CRule ctx prd sc ip ic sp ic' sp'
->           -> Aspect a -> OpComRA' b ctx  prd sc ip ic sp ic' sp' a
-
-
-> instance
->  (Require (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a) ctx)
->   => Require (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx where
->   type ReqR (OpComRA ctx prd sc ip ic sp ic' sp' a)
->      = ReqR (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a)
->   req ctx (OpComRA rule a)
->      = req ctx (OpComRA' (Proxy @ (HasLabel prd a)) rule a)
-
-> instance
->   (Require (OpExtend PrdReco prd (CRule ctx prd sc ip ic sp ic' sp') a)) ctx
->   => Require (OpComRA' 'False ctx prd sc ip ic sp ic' sp' a) ctx where
->   type ReqR (OpComRA' 'False ctx prd sc ip ic sp ic' sp' a)
->     = ReqR (OpExtend PrdReco prd (CRule ctx prd sc ip ic sp ic' sp') a)
->   req ctx (OpComRA' _ (rule :: CRule ctx prd sc ip ic sp ic' sp') asp)
->     = req ctx (OpExtend (Label @ prd) rule asp)
-
-> instance
->  ( Require (OpUpdate PrdReco prd (CRule ctx prd sc ip ic sp ic'' sp'') a) ctx
->  , RequireR (OpLookup PrdReco prd a) ctx (CRule ctx prd sc ip ic sp ic' sp') 
->  , (IC (ReqR (OpLookup PrdReco prd a))) ~ ic
->  , (SP (ReqR (OpLookup PrdReco prd a))) ~ sp
->  ) => 
->   Require (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a) ctx where
->   type ReqR (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a)
->     = ReqR (OpUpdate PrdReco prd
->            (CRule ctx prd sc ip
->              (IC (ReqR (OpLookup PrdReco prd a)))
->              (SP (ReqR (OpLookup PrdReco prd a)))
->             ic'' sp'') a)
->   req ctx (OpComRA' _ rule asp)
->     = let prd     = Label @ prd
->           oldRule = req ctx (OpLookup prd asp)
->           newRule = rule `ext` oldRule
->       in  req ctx (OpUpdate prd newRule asp)
-
+An aspect represents the semantic of one production. To make them extensible it
+is enough to implement an algorithm to merge two aspects, and a way to make an
+aspect from one single rule. Since our most basic primitives |syndef| and
+|inhdef| build a single rule it will usual to add a rule to an aspect. As we
+show in \ref{tab:ops} we provide a set of operators to combine semantics.
 
 
 
