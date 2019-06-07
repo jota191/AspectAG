@@ -151,7 +151,7 @@ data promotion and kind polymorphism, among others, which allows to program in a
 programming at the level of values.
 
 In this paper we redefine AspectAG applying the new type-level programming
-techinques. As a consequence, we obtain a more robust system with better error
+techniques. As a consequence, we obtain a more robust system with better error
 messages.
 \end{abstract}
 
@@ -184,7 +184,7 @@ messages.
 \newcommand{\marcos}[1]{\fbox{
   \parbox{\textwidth/3}{Marcos: \\ #1}}}
 
-\newcommand{\AspectAG}{\texttt{AspectAG }}
+\newcommand{\AspectAG}{\texttt{AspectAG}}
 
 \numbersoff
 
