@@ -302,12 +302,12 @@ whose implementation does not offer new insight.
 
 \subsection{Combining Aspects}
 
-An aspect represents the semantic of one production. To make them extensible it
-is enough to implement an algorithm to merge two aspects, and a way to make an
-aspect from one single rule. Since our most basic primitives |syndef| and
-|inhdef| build a single rule it will usual to add a rule to an aspect. As we
-show in \ref{tab:ops} we provide a set of operators to combine semantics.
-
+An aspect represents the semantic of one production. To make semantics
+extensible it is enough to implement an algorithm to merge two aspects, and a
+way to make an aspect from one single rule. Since our most basic primitives
+|syndef| and |inhdef| build a single rule adding a rule one by one is a common
+operation. As we show in \ref{tab:ops} we provide a set of operators to combine
+semantics.
 
 
 \subsection{Terminals}
