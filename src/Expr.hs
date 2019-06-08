@@ -49,10 +49,10 @@ vname     = Label @ ('Chi "vname"     P_Var ('Right ('T String)))
 eval = Label @ ('Att "eval" Int)
 env  = Label @ ('Att "env"  (Map String Int))
 
---add_eval  =  syndefM eval add  $ (+) <$> at leftAdd eval <*> at rightAdd eval
+add_eval  =  syndefM eval add  $ (+) <$> at leftAdd eval <*> at rightAdd eval
 --add_eval = syndef eval add (\Proxy (Fam sc ip)-> (+) (sc .# leftAdd #. eval) (sc .# rightAdd #. eval))
 
-add_eval = use eval add (nt_Expr .:. eL) (+) 0
+--add_eval = use eval add (nt_Expr .:. eL) (+) 0
 --add_eval  =  syndefM eval add  $ ter ival
 
 val_eval  =  syndefM eval val  $ ter ival

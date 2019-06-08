@@ -311,16 +311,72 @@ aspects. We keep implementing in our |Require| framework.
 
 \subsubsection{Adding a Rule}
 
-We define an operation |OpComRA| (combine a rule, and an aspect).
+We define an operation |OpComRA| (combine a rule, and an aspect). There are two
+possibilities. If the rule is indexed by a production not appearing on the
+aspect, the combination is simply an append. Otherwise we must lookup the
+current rule an update it, combining the inserted rule.
 
 
+> data OpComRA  (ctx  :: [ErrorMessage])
+>               (prd  :: Prod)
+>               (sc   :: [(Child, [(Att, Type)])])
+>               (ip   :: [(Att, Type)])
+>               (ic   :: [(Child, [(Att, Type)])])
+>               (sp   :: [(Att, Type)])
+>               (ic'  :: [(Child, [(Att, Type)])])
+>               (sp'  :: [(Att, Type)])
+>               (a     :: [(Prod, Type)])  where
+>   OpComRA :: CRule ctx prd sc ip ic sp ic' sp'
+>           -> Aspect a -> OpComRA ctx prd sc ip ic sp ic' sp' a
+
+> data OpComRA' (b :: Bool)
+>               (ctx  :: [ErrorMessage])
+>               (prd  :: Prod)
+>               (sc   :: [(Child, [(Att, Type)])])
+>               (ip   :: [(Att, Type)])
+>               (ic   :: [(Child, [(Att, Type)])])
+>               (sp   :: [(Att, Type)])
+>               (ic'  :: [(Child, [(Att, Type)])])
+>               (sp'  :: [(Att, Type)])
+>               (a     :: [(Prod, Type)])  where
+>   OpComRA' :: Proxy b -> CRule ctx prd sc ip ic sp ic' sp'
+>           -> Aspect a -> OpComRA' b ctx  prd sc ip ic sp ic' sp' a
 
 
+> instance
+>  (Require (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a) ctx)
+>   => Require (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx where
+>   type ReqR (OpComRA ctx prd sc ip ic sp ic' sp' a)
+>      = ReqR (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a)
+>   req ctx (OpComRA rule a)
+>      = req ctx (OpComRA' (Proxy @ (HasLabel prd a)) rule a)
 
 
+where |HasLabel| is a type level function:
+
+> type family HasLabel (l :: k) (r :: [(k, k')]) :: Bool where
+>   HasLabel l '[] = False
+>   HasLabel l ( '(l', v) ': r) = Or (l == l') (HasLabel l r)
 
 
+Then, |Require| instances for |OpComRa'| are implemented. The case where
+the first parameter is |'False| is easy, an append. The |'True| case is
+much more verbose, but anyway inmediate.
 
+Finally we define the proper |extAspect| function, that adds a rule to a record,
+now carrying a context.
+
+> extAspect
+>   :: RequireR (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx (Aspect asp)
+>   => CRule ctx prd sc ip ic sp ic' sp'
+>      -> CAspect ctx a -> CAspect ctx asp
+> extAspect rule (CAspect fasp)
+>   = CAspect $ \ctx -> req ctx (OpComRA rule (fasp ctx))
+
+And we implement an operator
+
+> (.+:) = extAspect
+> infixr 3 .+:
 
 \subsubsection{Combining two aspects}
 
@@ -356,106 +412,73 @@ The recursive case is more interesting:
 
 We take the tail of the recursive argument |al|, and call the recursive function
 with |al| and |ar|. We need to combine this big aspect with the head rule. For that,
-we use the previously defined requirement.
+we use the previously defined operation |OpComRA|.
 
 > (.:+:) = comAspect
 > infixr 4 .:+:
 
-
-\subsection{Terminals}
-
-> class SemLit a where
->   sem_Lit :: a -> Attribution ('[] :: [(Att,Type)])
->                -> Attribution [( 'Att "term" a , a)]
->   lit     :: Label ('Att "term" a)
-> instance SemLit a where
->   sem_Lit a _ = (Label =. a) *. emptyAtt
->   lit         = Label @ ('Att "term" a)
+\subsection{Semantic functions}
 
 
 
-\subsection{Monadic interface}
 
-> data Lhs
-> lhs :: Label Lhs
-> lhs = Label
-
-
-> instance
->          ( RequireR (OpLookup AttReco ('Att att t) par) ctx t'
->          , RequireEq t t' ctx
->          )
->  => At Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))  where
->  type ResAt Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))
->     = t
->  at lhs att
->   = liftM (\(ctx, Fam _ par) -> req ctx (OpLookup att par)) ask
-
-
-\subsection{Putting it all together: How the computation is done}
-
-> class Kn (fcr :: [(Child, Type)]) (prd :: Prod) where
->   type ICh fcr :: [(Child, [(Att, Type)])]
->   type SCh fcr :: [(Child, [(Att, Type)])]
->   kn :: Record fcr -> ChAttsRec prd (ICh fcr) -> ChAttsRec prd (SCh fcr)
-
-> instance Kn '[] prod where
->   type ICh '[] = '[]
->   type SCh '[] = '[] 
->   kn _ _ = emptyCh
-
-> instance ( lch ~ 'Chi l prd nt
->          , Kn fc prd
->          , LabelSet ('(lch, sch) : SCh fc)
->          , LabelSet ('(lch, ich) : ICh fc)
->          ) => 
->   Kn ( '(lch , Attribution ich -> Attribution sch) ': fc) prd where
->   type ICh ( '(lch , Attribution ich -> Attribution sch) ': fc)
->     = '(lch , ich) ': ICh fc
->   type SCh ( '(lch , Attribution ich -> Attribution sch) ': fc)
->     = '(lch , sch) ': SCh fc
->   kn ((ConsRec (TagField _ lch fch) (fcr :: Record fc)))
->    = \((ConsCh pich icr) :: ChAttsRec prd ( '(lch, ich) ': ICh fc))
->    -> let scr = kn fcr icr
->           ich = unTaggedChAttr pich
->       in ConsCh (TaggedChAttr lch
->                (fch ich)) scr
-
-
-
-> emptyCtx = Proxy @ '[]
-
-
-> class Empties (fc :: [(Child,Type)]) (prd :: Prod) where
->   type EmptiesR fc :: [(Child, [(Att, Type)])] 
->   empties :: Record fc -> ChAttsRec prd (EmptiesR fc)
-
-> instance Empties '[] prd where
->   type EmptiesR '[] = '[]
->   empties _ = emptyCh
-
-> instance ( Empties fcr prd
->          , chi ~ 'Chi ch prd nt
->          , LabelSet ( '(chi, '[]) ': EmptiesR fcr))
->  => Empties ( '(chi, Attribution e -> Attribution a) ': fcr) prd where
->   type EmptiesR ( '(chi, Attribution e -> Attribution a) ': fcr)
->     = '(chi, '[]) ': EmptiesR fcr
->   empties (ConsRec pch fcr)
->     = let lch = labelTChAtt pch
->       in  (lch .= emptyAtt) .* (empties fcr)
-
-> knit (ctx  :: Proxy ctx)
->      (rule :: CRule ctx prd (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp)
->      (fc   :: Record fc)
->      (ip   :: Attribution ip)
->   = let (Fam ic sp) = mkRule rule ctx
->                        (Fam sc ip) (Fam ec emptyAtt)
->         sc          = kn fc ic
->         ec          = empties fc
->     in  sp
-
+In section
+\ref{sec:example} we show how |sem_Expr| is defined. It takes an aspect, an
+abstract syntax tree (i.e. an |Expr|) and builds a function from the synthesized
+attributes to the inherited attributes. More in general, for the domain
+associated with each non-terminal we take the function mapping its inherited to
+its synthesized attributes. The function |knitAspect| is a wrapper to add
+context
 
 > knitAspect (prd :: Label prd) asp fc ip
 >   = let ctx  = Proxy @ '[]
 >         ctx' = Proxy @ '[Text "knit" :<>: ShowT prd]
 >     in  knit ctx (req ctx' (OpLookup prd ((mkAspect asp) ctx))) fc ip
+
+and the real hard work is done by the funtion |knit|, wich takes the combined
+rules for a node and the semantic functions of the children, and builds a
+function from the inherited attributes of the parent to its synthesized
+attributes.
+
+> knit (ctx   :: Proxy ctx)
+>      (rule  :: CRule ctx prd (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp)
+>      (fc    :: SemFunRec fc)
+>      (ip    :: Attribution ip)
+>   =  let  (Fam ic sp)  = mkRule rule ctx
+>                          (Fam sc ip) (Fam ec emptyAtt)
+>           sc           = kn fc ic
+>           ec           = empties fc
+>      in   sp
+
+where the function |kn| is a dependent |zipWith ($)|, and |empties| builds an
+empty attribution for each child. While they are nice examples of type level
+programming we left the implementation out of this paper, this technique is well
+documented in the literature \cite{Viera:2009:AGF:1596550.1596586,
+  Moor99first-classattribute}.
+
+> class Kn (fcr   :: [(Child,  Type)]) (prd :: Prod) where
+>   type ICh fcr  :: [(Child,  [(Att, Type)])]
+>   type SCh fcr  :: [(Child,  [(Att, Type)])]
+>   kn  :: SemFunRec fcr -> ChAttsRec prd (ICh fcr)
+>       -> ChAttsRec prd (SCh fcr)
+
+
+
+\subsection{Terminals}
+
+A production specifies how a nonterminal symbol can be rewritten. It can rewrite
+to a mix of terminal and nonterminal symbols. From the datatype perspective, one
+constructor can contain recursive and nonrecursive positions. Usually, in
+attribute grammar systems a terminal has only one attribute: itself. On AspectAG
+all children are put in a record, each position containing an attribution.
+
+> class SemLit a where
+>   sem_Lit :: a -> Attribution ('[] :: [(Att,Type)])
+>                -> Attribution [( 'Att "term" a , a)]
+>   lit     :: Label ('Att "term" a)
+
+> instance SemLit a where
+>   sem_Lit a _ = (Label .=. a) *. emptyAtt
+>   lit         = Label @ ('Att "term" a)
+
+

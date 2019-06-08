@@ -35,6 +35,7 @@
 %format add_eval   = "\Varid{add_{eval}}"
 %format var_eval   = "\Varid{var_{eval}}"
 %format val_eval   = "\Varid{val_{eval}}"
+%format sem_Lit    = "\Varid{sem_{Lit}}"
 
 %format ival' = "\Varid{ival}"
 %format vname' = "\Varid{vname}"
