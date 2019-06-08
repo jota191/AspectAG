@@ -200,6 +200,18 @@ messages.
 
 %include ./AAG.lhs
 
+\section{Related Work}
+\lipsum
+\lipsum
+
+\lipsum
+
+\section{Conclusions and Future Work}
+\lipsum
+
+\lipsum
+
+\lipsum
 
 
 \bibliographystyle{ACM-Reference-Format}

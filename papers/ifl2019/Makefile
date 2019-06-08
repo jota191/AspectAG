@@ -11,7 +11,7 @@ view : Main.tex
 	evince Main.pdf&
 
 pdf : Main.lhs myformat.fmt ExprPaper.lhs GenRecord.lhs bib.bib
-	$(LHS2TEX) --poly Main.lhs > Main.tex
+	$(LHS2TEX) Main.lhs > Main.tex
 	$(TEX) Main.tex
 	pdflatex Main.tex
 	bibtex Main

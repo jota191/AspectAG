@@ -1,12 +1,11 @@
 \subsection{Families and Rules}
 \label{sec:rules}
 
-On \AspectAG internals we use the concept of \emph{families} as input and output
+In \AspectAG internals we use the concept of \emph{families} as input and output
 for attribute computations. A family for a given production contains an
-attribution for the parent, and a collection of attributions for children, one
-for each. 
-A family is implemented as a product of |Attribution| and |ChAttsRec|, and it is
-indexed with the production which it belongs:
+attribution for the parent, and a collection of attributions, one for each
+children. A family is implemented as a product of |Attribution|
+and |ChAttsRec|, and it is indexed with the production which it belongs:
 
 > data Fam  (prd  ::  Prod)
 >           (c    ::  [(Child, [(Att, Type)])])
@@ -19,7 +18,8 @@ Attribute computations, or rules are actually functions from an \emph{input
   family} (attributes inherited from the parent and synthesized of the children)
 to an \emph{output family} (attributes synthesized for the parent, inherited to
 children). We implement them with an extra arity to make them composable, this
-trick was introduced in [REF]. Given an imput family we build a function that
+trick was introduced in \cite{Moor99first-classattribute}.
+Given an imput family we build a function that
 updates the output family constructed thus far
 
 > type Rule
@@ -229,14 +229,6 @@ of |GenRecord|, defined as:
 > type instance ShowRec PrdReco       =  "Aspect"
 > type instance ShowField PrdReco     =  "production named "
 
-\todo{ hay cierta inconsistencia aca, estamos metiendo las reglas bajo
-el wrapper type. Creo que manejarlas explícitamente sería muy doloroso,
-e incluso creo que podemos tener algun problema para instanciar los kinds
-del argumento extra, La solución puede pasar por decir simplemente
-que lo hacemos así para simplificar (es la realidad), pero hay que ser menos
-enfático antes cada vez que se habla de poner toda la informacion posible en
-los kinds
-}
 
 As done in section \ref{sec:rules} with rules, to keep track on contexts
 contexts we introduce the concept of a tagged aspect:
@@ -450,11 +442,8 @@ attributes.
 >           ec           = empties fc
 >      in   sp
 
-where the function |kn| is a dependent |zipWith ($)|, and |empties| builds an
-empty attribution for each child. While they are nice examples of type level
-programming we left the implementation out of this paper, this technique is well
-documented in the literature \cite{Viera:2009:AGF:1596550.1596586,
-  Moor99first-classattribute}.
+where the function |kn| is a dependent |zipWith ($)|.
+
 
 > class Kn (fcr   :: [(Child,  Type)]) (prd :: Prod) where
 >   type ICh fcr  :: [(Child,  [(Att, Type)])]
@@ -462,23 +451,57 @@ documented in the literature \cite{Viera:2009:AGF:1596550.1596586,
 >   kn  :: SemFunRec fcr -> ChAttsRec prd (ICh fcr)
 >       -> ChAttsRec prd (SCh fcr)
 
+and |empties| builds an empty attribution for each child.
+
+> class Empties (fc :: [(Child,Type)]) (prd :: Prod) where
+>   type EmptiesR fc :: [(Child, [(Att, Type)])] 
+>   empties :: Record fc -> ChAttsRec prd (EmptiesR fc)
+
+While they are nice examples of type level programming, we left the
+implementation out of this paper, this technique is well documented in the
+literature \cite{Viera:2009:AGF:1596550.1596586, Moor99first-classattribute,
+DBLP:conf/gcse/MoorPW99}.
 
 
 \subsection{Terminals}
 
 A production specifies how a nonterminal symbol can be rewritten. It can rewrite
-to a mix of terminal and nonterminal symbols. From the datatype perspective, one
+to a mix of terminal and nonterminal symbols. From the datatype perspective, a
 constructor can contain recursive and nonrecursive positions. Usually, in
-attribute grammar systems a terminal has only one attribute: itself. On AspectAG
-all children are put in a record, each position containing an attribution.
+attribute grammar systems a terminal has only one attribute: itself. In
+\AspectAG all children are put in a record, each position containing an
+attribution. In old versions of \AspectAG terminals where directly put as a
+children instead of an attribution. This was possible since at type level this
+records were essentialy untyped. We decided to lift the shape of the structure
+to kinds, adding up static guarantees, but losing this flexibility.
+
+There are at least two approaches to treat terminals:
+
+\begin{itemize}
+\item
+  |ChAttsRec| could contain a promoted sum type, each child is either a terminal
+  or nonterminal with an attribution |'(Att, Type)|.
+\item
+  For each terminal there is a child, with a trivial attribution containing only
+  an attribute for the terminal.
+\end{itemize}
+
+The second option was chosen since it is easier and clearer to have a uniform
+structure.
+
+To introduce an attribute the user defines an unique name. As we say, there is a
+trivial attribute for each terminal. To chose a name is not a problem since it
+is isolated behind a children. Accordingly, semantic functions of the children
+can be coded in a polymorphic way.
 
 > class SemLit a where
 >   sem_Lit :: a -> Attribution ('[] :: [(Att,Type)])
 >                -> Attribution [( 'Att "term" a , a)]
 >   lit     :: Label ('Att "term" a)
-
 > instance SemLit a where
 >   sem_Lit a _ = (Label .=. a) *. emptyAtt
 >   lit         = Label @ ('Att "term" a)
 
+All of them are labelled with the |lit| label, and the semantic function simply
+wraps a value in an attribution.
 
