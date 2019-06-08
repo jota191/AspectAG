@@ -76,7 +76,7 @@ infixr 2 .:
 -- | a polykinded heteogeneous list
 data KList (l :: [k]) :: Type where
   KNil :: KList '[]
-  KCons :: f h -> KList l -> KList (h ': l)
+  KCons :: Label h -> KList l -> KList (h ': l)
 
 infixr 2 .:.
 (.:.) = KCons

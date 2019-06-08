@@ -302,12 +302,64 @@ whose implementation does not offer new insight.
 
 \subsection{Combining Aspects}
 
-An aspect represents the semantic of one production. To make semantics
-extensible it is enough to implement an algorithm to merge two aspects, and a
-way to make an aspect from one single rule. Since our most basic primitives
-|syndef| and |inhdef| build a single rule adding a rule one by one is a common
-operation. As we show in \ref{tab:ops} we provide a set of operators to combine
-semantics.
+An aspect models a piece of semantics of a gramamr. To make semantics extensible
+it is enough to implement an algorithm to merge two aspects, and a way to make
+an aspect from one single rule. Since our most basic primitives |syndef| and
+|inhdef| build a single rule adding a rule one by one is a common operation. As
+we show in \ref{tab:ops} we provide a set of operators to combine rules and
+aspects. We keep implementing in our |Require| framework.
+
+\subsubsection{Adding a Rule}
+
+We define an operation |OpComRA| (combine a rule, and an aspect).
+
+
+
+
+
+
+
+
+
+
+\subsubsection{Combining two aspects}
+
+To combine two aspects
+we define the operation |OpComAsp|, which takes two aspects as parameters:
+
+> data OpComAsp  (al :: [(Prod, Type)])
+>                (ar :: [(Prod, Type)]) where
+>   OpComAsp :: Aspect al -> Aspect ar -> OpComAsp al ar
+
+We chose arbitrarly to do the recursion on the second argument. The empty aspect
+is a neutral element:
+
+> instance Require (OpComAsp al '[]) ctx where
+>   type ReqR (OpComAsp al '[]) = Aspect al
+>   req ctx (OpComAsp al _) = al
+
+The recursive case is more interesting:
+
+> instance
+>   ( RequireR (OpComAsp al ar) ctx  (Aspect ar')
+>   , Require  (OpComRA ctx prd sc ip ic sp ic' sp' ar') ctx
+>   )
+>   => Require (OpComAsp al
+>        ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar)) ctx where
+>   type ReqR (OpComAsp al
+>        ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar))
+>     = ReqR (OpComRA ctx prd sc ip ic sp ic' sp'
+>             (UnWrap (ReqR (OpComAsp al ar))))
+>   req ctx (OpComAsp al (ConsRec prdrule ar))
+>    = req ctx (OpComRA (untagField prdrule)
+>                       (req ctx (OpComAsp al ar)))
+
+We take the tail of the recursive argument |al|, and call the recursive function
+with |al| and |ar|. We need to combine this big aspect with the head rule. For that,
+we use the previously defined requirement.
+
+> (.:+:) = comAspect
+> infixr 4 .:+:
 
 
 \subsection{Terminals}

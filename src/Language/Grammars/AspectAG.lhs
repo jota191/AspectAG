@@ -374,27 +374,6 @@
 > (.+.) = ext
 
 
--- > --- Por que tiene que ir aca?
--- > --- Intente pasarlo a Require.hs y no compila
--- > --- por las overlapping instances.
--- > type RequireEq (t1 :: k )(t2 :: k) (ctx:: [ErrorMessage])
--- >     = (Require (OpEq t1 t2) ctx, t1 ~ t2)
-
--- > data OpEq t1 t2
-
-
--- > instance Require (OpEq t t) ctx where
--- >   type ReqR (OpEq t t) = ()
--- >   req = undefined
-
-
--- > instance Require (OpError (Text "" :<>: ShowT t1 :<>: Text " /= "
--- >                             :<>: ShowT t2)) ctx
--- >   => Require (OpEq t1 t2) ctx where
--- >   type ReqR (OpEq t1 t2) = ()
--- >   req = undefined
--- > -----
-
 > data Lhs
 > lhs :: Label Lhs
 > lhs = Label
@@ -574,16 +553,22 @@
 >       in  Just $ maybe val (op val) $ usechi att prd nts op scr
 
 > use att prd nts op unit
->   = syndef att prd $ \_ fam -> maybe unit id (usechi att prd nts op $ chi fam)
+>   = singAsp $ syndef att prd $ \_ fam -> maybe unit id (usechi att prd nts op $ chi fam)
+
+> singAsp r = r .+: emptyAspect
 
 
--- > class Uses (att :: Att) (prds :: [Prod]) (nts :: [NT]) a where
--- >   type UsesR (att :: Att) (prds :: [Prod]) (nts :: [NT]) a :: Type
--- >   uses :: Label att -> KList prds -> KList nts -> (a -> a -> a) -> a
--- >        -> UsesR att prds nts a
+> class Uses (att :: Att) (prds :: [Prod]) (nts :: [NT]) a where
+>   type UsesR (att :: Att) (prds :: [Prod]) (nts :: [NT]) a :: Type
+>   uses :: Label att -> KList prds -> KList nts -> (a -> a -> a) -> a
+>        -> UsesR att prds nts a
 
--- > --uses att eL nts op unit = emptyAtt
 
--- > instance Uses att ( prd ': '[]) nts a where
--- >   type UsesR att ( prd ': '[]) nts a = CAspect '[] ( '(prd, Type) ': '[])
--- >   uses att (KCons prd prds) nts op unit = use att prd nts op unit .+: emptyAspect
+> --instance Uses att ( prd ': '[]) nts a where
+> --  type UsesR att ( prd ': '[]) nts a
+> --    = CAspect '[] '[ '(prd, CRule '[] prd a b c d e f)]
+> --  uses att (KCons prd KNil) nts op unit
+> --    = use att prd nts op unit .+: emptyAspect
+
+
+> --usess (att) (KCons prd KNil) nts op unit = use att prd nts op unit
