@@ -138,7 +138,7 @@ The type family
 %
 computes, depending on the index |c|, the wrapping of |v| under a suitable type
 constructor. Note that if |v| is already inhabitated then |WrapField c| can be
-the identity function.
+the identity (type) function.
 
 %We use some sugar to encode some of our functions as operators, for example,
 %instead of |ConsRec| we usually use an infix operator |..*..|.
@@ -175,8 +175,9 @@ Then we can encode the predicate as the following constraint.
 Most functions over records are implemented over the polykinded implementation
 as part of the record library. Then we implement our actual record-like data
 structures as particular instances of the general datatype. To introduce a
-record we must give an index acting as a name (the ``|c|'' parameter). Then we code the
-family instance |WrapField|. To print pretty and domain specific error messages
+record we must give an index acting as a name (the ``|c|'' parameter),
+and code the family instance |WrapField|.
+To print the domain specific error messages
 we can also need instances for |ShowField| and |ShowRec|, as we shall see
 later.
 
@@ -188,13 +189,14 @@ Also, to be strongly kinded it is useful to specific datatypes for labels.
 > data  NT     = NT Symbol
 > data  T      = T Type
 
-|Att| are used for attributions, |Prod| for productions, and |Child|
-for children. We give some examples.
+|Att| is used for attributions, |Prod| for productions, and |Child|
+for children.
+In the following subsections we give some examples of record instances.
 
 \subsubsection{Example: Attribution}\hfill\break
 
 Attributions are mappings from attribute names to values. To make an index we
-define a datatype as:
+define an empty datatype:
 
 > data AttReco
 
@@ -208,25 +210,24 @@ and fix the polymorphic kinds since Attribution labels are of kind |Att|, and
 fields of kind |Type|.
 
 > type Attribution (attr :: [(Att, Type)]) = Rec AttReco attr
-
+%
 We do not need to actually wrap the fields since they are simply values:
-
+%
 > type instance  WrapField AttReco  (v :: Type) = v
-
+%
 We also use an specific name for fields:
 
 > type Attribute (l :: Att) (v :: Type) = TagField AttReco l v
-> type Attribute        = TagField AttReco
 
-
+%if False
 Pattern matching is a very useful feature in functional programming languages,
-but somewhat incompatible with abstract datatypes. Hiding constructors
-of |GenRecord| is nice but we lose pattern matching.
+but somewhat incompatible with abstract datatypes.
+Hiding constructors of |GenRecord| is nice but we lose pattern matching.
 Fortunately, GHC Haskell implements pattern synonyms.
-
-For each instance of record we can define fake constructors, specialized
-versions of |TagField|, |EmptyRec| an |ConsAtt|. In the case of attributions
-this can be coded as follows:
+%endif
+For each instance of record we can define specialized versions of the constructors
+|TagField|, |EmptyRec| an |ConsAtt|, using the GHC Haskell's pattern synonyms.
+In the case of attributions this can be coded as follows:
 
 > pattern  Attribute     ::  v -> TagField AttReco l v
 > pattern  Attribute v   =   TagField Label Label v
@@ -245,20 +246,22 @@ Again, lets build a new index:
 > data ChiReco (prd :: Prod)
 
 A child is associated to a production. Our instance has itself an index with
-that information. Recall that |Prod| has a name, for the production but also a
+that information. Recall that |Prod| has a name for the production but also a
 name for the non-terminal that it rewrites, so all this information is contained
 on a child and used to check well formedness where it is used.
+In this case the labels are of kind |Child|, and the values have a kind that
+represents the list of associations attribute-value; i.e. an attribution.
 
 > type ChAttsRec prd (chs :: [(Child,[(Att,Type)])])
 >    = Rec (ChiReco prd) chs
-
+%
 |WrapField| takes the type information of the field, which is
 not inhabited, and puts the |Attribution| wrapper.
 
 > type instance  WrapField (ChiReco prd)  (v :: [(Att, Type)])
 >   = Attribution v
 
-Again pattern synonyms are defined.
+%Again pattern synonyms are defined.
 
 
 \subsection{Requirements}
@@ -275,37 +278,16 @@ Given an operation |op|, that takes all the arguments needed for the current
 operation to be performed, |req| extracts the tangible results, whose return
 type depends on the operation. For example, each time we lookup in a record we
 require that some label actually belongs to the record. If this requirement is
-not accomplished an error must be raised at compile time. Some requirements such
+not accomplished an error must be raised at compile time.
+The function |req| also uses some context information (i.e. the |trace| of the error)
+to provide more useful information in the error message.
+
+Some requirements such
 as label equality are only about types, wich means that |req| is not used. It is
 still useful to keep type errors in this framework, and in that case we use only
-the constraint. A call to |OpError| happens when some requirement is not
-fullfilled. Some examples of requirements implemented in our library are shown
-on table ~\ref{tab:req}: A non satisfied requirement means that there will be no
-regular instance of this class and it produces a call to |OpError|.
-
-To pretty print type errors, we define a special operation:
-
-> data OpError (m :: ErrorMessage) where {}
-
-|OpError| is a phantom type containing some useful information to print. When we
-call |req| with this operator the type checker reports an error since there is
-only one instance:
-
-> instance (TypeError (Text "Error: " :<>: m :$$:
->                      Text "from context: " :<>: ShowCTX ctx))
->   => Require (OpError m) ctx where {}
-
-The type family |GHC.TypeLits.TypeError| works like the term level function
-|error|. When it is 'called' a type error is raised. |TypeError| is so
-polymorphic that we can use it as a Constraint. This generic instance is used to
-print all sort of type errors in a unified way, otherwise catching type errors
-case by case would be difficult and error prone. Note that specific information
-of what happened is on |OpError| which is built from a specific instance of
-|Require|, from a given operator and where every type relevant to show the error
-message was in scope. As a running example, we define the lookup operator:
+the |Require| constraint.
 
 \begin{table}[t] 
-   \label{tab:req}
    \small % text size of table content
    \centering % center the table
    \begin{tabular}{lcr} % alignment of each column data
@@ -324,24 +306,50 @@ message was in scope. As a running example, we define the lookup operator:
    \end{center}\end{minipage}}& |RequireEq|
    \\ \bottomrule[\heavyrulewidth]
    \end{tabular}
-   \caption{Example Requirements}
+   \caption{Example Requirements}\label{tab:req}
 \end{table}
 
+To pretty print type errors, we define a special operation:
 
-> data OpLookup  (c  :: Type)
->                (l  :: k)
->                (r  :: [(k, k')]) :: Type where
->   OpLookup  ::  Label l -> Rec c r
->             ->  OpLookup c l r
+> data OpError (m :: ErrorMessage) where {}
+%
+|OpError| is a phantom type containing some useful information to print.
+A call to |OpError| happens when some requirement is not
+fullfilled. Some examples of requirements implemented in our library are shown
+on Table~\ref{tab:req}: A non satisfied requirement means that there will be no
+regular instance of this class and it produces a |OpError| requirement.
+When we call |req| with this operator the type checker reports an error since there is
+only one instance:
 
-which is an algebraic datatype parametric on the record class, the index we are
-looking for, and the proper record. The head label is inspected and depending on
+> instance (TypeError (Text "Error: " :<>: m :$$:
+>                      Text "trace: " :<>: ShowCTX ctx))
+>   => Require (OpError m) ctx where {}
+%
+The type family |GHC.TypeLits.TypeError| works like the value-level function
+|error|. When it is ``called'' a type error is raised, with a given error message
+including a description |m| of the error and the context |ctx| where it occurred.
+|TypeError| is so polymorphic that it can be used as a |Constraint|.
+This generic instance is used to print all sort of type errors in a unified way,
+otherwise catching type errors case by case would be difficult and error prone.
+Note that specific information
+of what happened is on |OpError| which is built from a specific instance of
+|Require|, from a given operator and where every type relevant to show the error
+message was in scope.
+
+As an example, we define the lookup operation.
+
+> data OpLookup  (c  :: Type) (l  :: k) (r  :: [(k, k')]) :: Type where
+>   OpLookup  ::  Label l -> Rec c r ->  OpLookup c l r
+%
+The operation is specified by an algebraic datatype, parametric on:
+the record class, the index we are looking for, and the proper record.
+The head label is inspected and depending on the
 types the head value is returned or a recursive call is performed. To make
-decisions over types and set return types depending on arguments we implement a
--sort of- dependant type function, which is encoded in Haskell with the usual
-idioms of type level programming. For instance, the proof of equality must be
-made explicit using a proxy to help GHC to carry type level information. We
-introduce a new |OpLookup'| with an auxiliar |Bool|ean at type level:
+decisions over types, and set return types depending on arguments, we implement a
+-sort of- dependent type function, which is encoded in Haskell with the usual
+idioms of type-level programming. For instance, the proof of equality must be
+made explicit using a proxy to help GHC to carry this type-level information. We
+introduce a new |OpLookup'| with an auxiliary |Bool|ean at type-level:
 
 > data OpLookup'  (b  :: Bool)
 >                 (c  :: Type)
@@ -351,7 +359,7 @@ introduce a new |OpLookup'| with an auxiliar |Bool|ean at type level:
 >              ->  OpLookup' b c l r
 
 For |OpLookup| we take the head label |l'| -there must be a head, otherwise we
-are on the error instance that we introduce later- and use the auxiliar function
+are on the error instance that we introduce later- and use the auxiliary function
 with the value equal to the predicate of equality of |l'| and the argument label
 |l|:
 
@@ -362,8 +370,9 @@ with the value equal to the predicate of equality of |l'| and the argument label
 >   req ctx (OpLookup l r)
 >     = req ctx (OpLookup' (Proxy @ (l == l')) l r)
 
-Implementing instances for |OpLookup'| is easy. When |b==True| it
-corresponds to a |head| function since we know that the searched label is on
+%Implementing instances for |OpLookup'| is easy.
+The instance of |OpLookup'| when |b==True|
+corresponds to a |head| function, since we know that the searched label is on
 the first position:
 
 > instance Require (OpLookup' 'True c l ( '(l, v) ': r)) ctx where
@@ -371,10 +380,11 @@ the first position:
 >     = WrapField c v
 >   req Proxy (OpLookup' Proxy Label (ConsRec f _))
 >     = untagField f
-
+%
 Note that we set the return type to be |WrapField c v|, which is
 completely generic.
-When |b==True| a call to |OpLookup| on tail is performed:
+
+When |b==True| a call to |OpLookup| on the tail of the record is performed:
 
 > instance (Require (OpLookup c l r) ctx)
 >   => Require (OpLookup' False c l ( '(l', v) ': r)) ctx where
@@ -384,9 +394,10 @@ When |b==True| a call to |OpLookup| on tail is performed:
 >     = req ctx (OpLookup l r)
 
 
-When we lookup on an empty record an error happened: We went over all the record
-and there was no value tagged with the searched label. Here we build a pithy
-instance of |OpError|:
+When we try to lookup into an empty record an error happened:
+We went over all the record
+and there was no value tagged with the searched label.
+Here we build a pithy instance of |OpError|:
 
 > instance Require (OpError
 >     (     Text "field not Found on "  :<>: Text (ShowRec c)
@@ -419,24 +430,20 @@ are working on.
 
 For instance, for attributions we implement:
 
-> type instance ShowRec AttReco
->   = "Attribution"
-> type instance ShowField AttReco
->   = "attribute named "
+> type instance ShowRec    AttReco  = "Attribution"
+> type instance ShowField  AttReco  = "attribute named "
 
 For children:
 
-> type instance ShowRec (ChiReco a)
->   = "Children Map"
-> type instance ShowField (ChiReco a)
->   = "child labelled "
+> type instance ShowRec    (ChiReco a) = "Children Map"
+> type instance ShowField  (ChiReco a) = "child labelled "
 
-The fact that type families can be defined open is very convenient in this
-context, new records can be defined in very custom and modular way. We think
-that |Require| and |GenRecord| trascend the status of internal modules for
-\AspectAG\ and are useful as a standalone library on its own.
+The fact that type families can be open is very convenient in this
+context, new records can be defined in a customized and modular way.
+We think that |Require| and |GenRecord| transcend the status of internal modules for
+\AspectAG\ and are useful as a standalone library on their own.
 
-The |ShowT| family is even more interesting:
+The |ShowT| family is also interesting:
 
 > type family ShowT (t :: k) :: ErrorMessage
 
@@ -456,7 +463,7 @@ time. Therefore, the following definitions are completely legal:
 > type instance  ShowT ('Prd l nt)
 >   =     ShowT nt :<>: Text "::Production "
 >   :<>:  Text l
-
+%
 and so on. Also, we can build an instance for any type of kind |Type|, so
 inhabited types are printed with their standard name:
 
