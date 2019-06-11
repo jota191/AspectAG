@@ -40,11 +40,10 @@ It is a common problem when implementing
 EDSLs using type-level programming that when a type error occurs, implementation details are leaked on error messages,
 and this was the case of the previous version of \AspectAG.
 
-As we have shown in the previous section, the library now
-captures common errors and prints them in a readable way.
-We use user defined type errors [REF]; a tool introduced to help improving
-the quality of type-level programming error messages.
-The family |GHC.TypeLits.TypeError| can be used to print a custom
+As we have shown in the previous section, the library now captures common errors
+and prints them in a readable way. We use user defined type errors; a tool
+introduced in GHC to help improving the quality of type-level programming error
+messages. The family |GHC.TypeLits.TypeError| can be used to print a custom
 error message but it is not clear how to structure the implementation in a
 modular, dependable and scalable way.
 
@@ -61,10 +60,9 @@ We use multiple instances of extensible records:
 \item
   |Attribution|s are mappings from attribute names to values.
 \item
-  For each production, there is a set of children, each one with an
-associated attribution. Note that in this case
-each field is not a flat value, but a full record by itself. This must be
-reflected on types as our goal is to code strongly kinded.
+  For each production, there is a set of children, each one with an associated
+  attribution. Note that in this case each field is not a flat value, but a full
+  record by itself. It would be nice to reflect it on types.
 \item
   \emph{Aspects} are records of rules indexed by productions.
 \item
@@ -74,27 +72,31 @@ reflected on types as our goal is to code strongly kinded.
 Extensible records coded using type-level programming are already part of the
 folklore in the Haskell community. The {\tt HList}
 library\cite{Kiselyov:2004:STH:1017472.1017488} popularized them. Old versions
-of {\tt HList} originally abused of Multi Parameter Typeclasses[REF] and
-Functional Dependencies[REF] to do the job. Modern GHC Haskell provides
-extensions to the type system to support the encoding of this and more sort-of
-dependent types in a better way. Notably {\tt
+of {\tt HList} originally abused of Multi Parameter
+Typeclasses\cite{type-classes-an-exploration-of-the-design-space} and Functional
+Dependencies\cite{DBLP:conf/esop/Jones00} to do the job. Modern GHC Haskell
+provides extensions to the type system to support the encoding of this and more
+sort-of dependent types in a more comfortable way. Notably {\tt
   TypeFamilies}\cite{Chakravarty:2005:ATC:1047659.1040306,
-  Chakravarty:2005:ATS:1090189.1086397, Sulzmann:2007:SFT:1190315.1190324}, to define functions at type-level,
-{\tt DataKinds}~\cite{Yorgey:2012:GHP:2103786.2103795}, implementing data promotion,
-{\tt PolyKinds} providing kind polymorphism, and {\tt KindSignatures}\cite{ghcman}.
-
+  Chakravarty:2005:ATS:1090189.1086397, Sulzmann:2007:SFT:1190315.1190324}, to
+define functions at type-level, {\tt
+  DataKinds}~\cite{Yorgey:2012:GHP:2103786.2103795}, implementing data
+promotion, {\tt PolyKinds} providing kind polymorphism, {\tt
+  KindSignatures}\cite{ghcman} to document and deambiguate kinds, or \break
+{\tt TypeApplications}\cite{conf/esop/EisenbergWA16} to provide visible type
+application. 
 
 Other implementations of Extensible Records such as Vinyl\cite{libvinyl} or
 CTRex\cite{libCTRex} have been introduced. One common way to implement a
 |Record| is using a
 |GADT|\cite{Cheney2003FirstClassPT,Xi:2003:GRD:604131.604150}. Usually
 heterogeneous records contain values of kind |Type|. It makes sense since |Type|
-is the kind of inhabited types, and records store values. At kind level this is a
-sort of untyped programming; datatype constructors take information with
-expressive kinds and wrap it on a uniform box. In use cases such as our children
-records, where we store a full featured attribution, we desire to state this on
-kinds. We abstracted this notion and designed a library of polymporphic
-extensible records, defined as follows:
+is the kind of inhabited types, and records store values. Datatype constructors
+take information with expressive kinds and wrap it on a uniform box. This is
+desirable ins ome situations. In use cases such as our children records, where
+we store a full featured attribution, we wish to state this on kinds. We
+abstracted this notion and designed a library of polymporphic extensible
+records, defined as follows:
 
 
 > data Rec (c :: k) (r :: [(k', k'')]) :: Type where
@@ -175,12 +177,12 @@ Then we can encode the predicate as the following constraint.
 Most functions over records are implemented over the polykinded implementation
 as part of the record library. Then we implement our actual record-like data
 structures as particular instances of the general datatype. To introduce a
-record we must give an index acting as a name (the ``|c|'' parameter). Then we code the
-family instance |WrapField|. To print pretty and domain specific error messages
-we can also need instances for |ShowField| and |ShowRec|, as we shall see
-later.
+record we must give an index acting as a name (the ``|c|'' parameter). Then we
+code the family instance |WrapField|. To print pretty and domain specific error
+messages we can also need instances for |ShowField| and |ShowRec|, as we shall
+see later.
 
-Also, to be strongly kinded it is useful to specific datatypes for labels.
+Also, to code strongly kinded it is useful to specific datatypes for labels.
 
 > data  Att    = Att Symbol Type
 > data  Prod   = Prd Symbol NT
@@ -191,7 +193,7 @@ Also, to be strongly kinded it is useful to specific datatypes for labels.
 |Att| are used for attributions, |Prod| for productions, and |Child|
 for children. We give some examples.
 
-\subsubsection{Example: Attribution}\hfill\break
+\subsubsection{Example: Attribution}
 
 Attributions are mappings from attribute names to values. To make an index we
 define a datatype as:
@@ -199,7 +201,7 @@ define a datatype as:
 > data AttReco
 
 On the definition of |GenRecord| the |c| parameter is polykinded. We use the
-kind |Type| for indexes in our instances since |Type| is a extensible kind.
+kind |Type| for indexes in our instances since |Type| is an extensible kind.
 Fixing the kind of this index the generic record library could allow a closed
 set of records.
 
@@ -220,10 +222,11 @@ We also use an specific name for fields:
 
 
 Pattern matching is a very useful feature in functional programming languages,
-but somewhat incompatible with abstract datatypes. Hiding constructors
-of |GenRecord| is nice but we lose pattern matching.
-Fortunately, GHC Haskell implements pattern synonyms.
+but somewhat incompatible with abstract datatypes. Hiding constructors of
+|GenRecord| is nice but we lose pattern matching.
 
+GHC Haskell implements pattern
+synonyms\cite{pattern-synonyms}.
 For each instance of record we can define fake constructors, specialized
 versions of |TagField|, |EmptyRec| an |ConsAtt|. In the case of attributions
 this can be coded as follows:
@@ -238,16 +241,16 @@ this can be coded as follows:
 > pattern  ConsAtt a as  =   ConsRec att atts
 
 
-\subsubsection{Example: Children Records}\hfill\break
-
-Again, lets build a new index:
+\subsubsection{Example: Children Records}
+Once again, we build an index:
 
 > data ChiReco (prd :: Prod)
 
-A child is associated to a production. Our instance has itself an index with
-that information. Recall that |Prod| has a name, for the production but also a
-name for the non-terminal that it rewrites, so all this information is contained
-on a child and used to check well formedness where it is used.
+It is at the same time indexed by a production.
+Recall that |Prod| has a name for the
+production but also a name for the non-terminal that it rewrites, so all this
+information is contained on a child and used to check well formedness where it
+is used. We are ready to define the children record:
 
 > type ChAttsRec prd (chs :: [(Child,[(Att,Type)])])
 >    = Rec (ChiReco prd) chs
@@ -258,7 +261,7 @@ not inhabited, and puts the |Attribution| wrapper.
 > type instance  WrapField (ChiReco prd)  (v :: [(Att, Type)])
 >   = Attribution v
 
-Again pattern synonyms are defined.
+Again pattern synonyms can be defined.
 
 
 \subsection{Requirements}
@@ -277,7 +280,7 @@ type depends on the operation. For example, each time we lookup in a record we
 require that some label actually belongs to the record. If this requirement is
 not accomplished an error must be raised at compile time. Some requirements such
 as label equality are only about types, wich means that |req| is not used. It is
-still useful to keep type errors in this framework, and in that case we use only
+still useful to keep type errors in this framework, and in that case we only use
 the constraint. A call to |OpError| happens when some requirement is not
 fullfilled. Some examples of requirements implemented in our library are shown
 on table ~\ref{tab:req}: A non satisfied requirement means that there will be no

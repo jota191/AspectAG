@@ -200,18 +200,13 @@ messages.
 \label{sec:aag}
 %include ./AAG.lhs
 
-\section{Related Work}
-\lipsum
-\lipsum
-
-\lipsum
-
 \section{Conclusions and Future Work}
-\lipsum
+This allows us to have better error messages it also cuts out some freedoms;
+some rules would be reusab
 
-\lipsum
+\section{Related Work}
 
-\lipsum
+
 
 
 \bibliographystyle{ACM-Reference-Format}
