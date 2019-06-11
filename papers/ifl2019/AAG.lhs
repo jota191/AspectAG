@@ -1,7 +1,7 @@
 \subsection{Families and Rules}
 \label{sec:rules}
 
-In \AspectAG internals we use the concept of \emph{families} as input and output
+In \AspectAG\ internals we use the concept of \emph{families} as input and output
 for attribute computations. A family for a given production contains an
 attribution for the parent, and a collection of attributions, one for each
 children. A family is implemented as a product of |Attribution|
@@ -17,10 +17,8 @@ and |ChAttsRec|, and it is indexed with the production which it belongs:
 Attribute computations, or rules are actually functions from an \emph{input
   family} (attributes inherited from the parent and synthesized of the children)
 to an \emph{output family} (attributes synthesized for the parent, inherited to
-children). We implement them with an extra arity to make them composable, this
-trick was introduced in \cite{Moor99first-classattribute}.
-Given an imput family we build a function that
-updates the output family constructed thus far
+children). We implement them with an extra arity to make them composable, a
+known trick\cite{Moor99first-classattribute}. 
 
 > type Rule
 >   (prd  :: Prod)
@@ -33,7 +31,11 @@ updates the output family constructed thus far
 >   =   Fam prd sc ip
 >   ->  Fam prd ic sp -> Fam prd ic' sp'
 
-To pass context information printable on type errors we use tagged rules:
+Given an input family we build a function that updates the output family
+constructed thus far. Note that rules are indexed by a production.
+
+To carry context information printable on type errors, most of the time we
+actually manipulate tagged rules:
 
 > newtype CRule (ctx :: [ErrorMessage]) prd sc ip ic sp ic' sp'
 >  = CRule { mkRule :: (Proxy ctx -> Rule prd sc ip ic sp ic' sp')}
@@ -72,7 +74,7 @@ where
 >     -> (Proxy ctx -> (Fam prd chi par) -> a)
 > def = curry . runReader
 
-We define a monadic function |at| to sugarize definitions:
+After we can define the monadic function |at| used to sugarize definitions:
 
 > class At pos att m  where
 >  type ResAt pos att m
@@ -97,7 +99,7 @@ We define a monadic function |at| to sugarize definitions:
 >                in  req ctx (OpLookup att atts))
 >             ask
 
-For instance in the example of section[REF], |add_eval| can be rewritten as:
+For instance in the example of section \ref{sec:example}, |add_eval| can be rewritten as:
 
 > add_eval = syndef eval add
 >  (\Proxy (Fam sc ip)->

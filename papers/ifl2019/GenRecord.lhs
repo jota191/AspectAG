@@ -26,12 +26,12 @@
 
 
 % In this section we present the design of the new \AspectAG.
-In order to provide flexibility and safetely, \AspectAG\ internals
-are built from strongly typed extensible records.
-Then, for example, mistakes like trying to access to an undefined attribute or child
-are detected at compile time as an incorrect lookup into a given record.
-Also, the definition of duplicated attributes results in a type error,
-due to an incorrect record extension.
+\label{sec:records}
+In order to provide flexibility and safety, \AspectAG\ internals are built from
+strongly typed extensible records. Then, mistakes like trying to access to an
+undefined attribute or child are detected at compile time as an incorrect lookup
+into a given record. Also, the definition of duplicated attributes results in a
+type error, due to an incorrect record extension.
 
 However, detecting errors is not enough.
 If the error messages are difficult to understand and do not point to their possible sources,
@@ -40,11 +40,10 @@ It is a common problem when implementing
 EDSLs using type-level programming that when a type error occurs, implementation details are leaked on error messages,
 and this was the case of the previous version of \AspectAG.
 
-As we have shown in the previous section, the library now
-captures common errors and prints them in a readable way.
-We use user defined type errors [REF]; a tool introduced to help improving
-the quality of type-level programming error messages.
-The family |GHC.TypeLits.TypeError| can be used to print a custom
+As we have shown in the previous section, the library now captures common errors
+and prints them in a readable way. We use user defined type errors; a tool
+introduced in GHC to help improving the quality of type-level programming error
+messages. The family |GHC.TypeLits.TypeError| can be used to print a custom
 error message but it is not clear how to structure the implementation in a
 modular, dependable and scalable way.
 
@@ -61,10 +60,9 @@ We use multiple instances of extensible records:
 \item
   |Attribution|s are mappings from attribute names to values.
 \item
-  For each production, there is a set of children, each one with an
-associated attribution. Note that in this case
-each field is not a flat value, but a full record by itself. This must be
-reflected on types as our goal is to code strongly kinded.
+  For each production, there is a set of children, each one with an associated
+  attribution. Note that in this case each field is not a flat value, but a full
+  record by itself. It would be nice to reflect it on types.
 \item
   \emph{Aspects} are records of rules indexed by productions.
 \item
@@ -74,27 +72,31 @@ reflected on types as our goal is to code strongly kinded.
 Extensible records coded using type-level programming are already part of the
 folklore in the Haskell community. The {\tt HList}
 library\cite{Kiselyov:2004:STH:1017472.1017488} popularized them. Old versions
-of {\tt HList} originally abused of Multi Parameter Typeclasses[REF] and
-Functional Dependencies[REF] to do the job. Modern GHC Haskell provides
-extensions to the type system to support the encoding of this and more sort-of
-dependent types in a better way. Notably {\tt
+of {\tt HList} originally abused of Multi Parameter
+Typeclasses\cite{type-classes-an-exploration-of-the-design-space} and Functional
+Dependencies\cite{DBLP:conf/esop/Jones00} to do the job. Modern GHC Haskell
+provides extensions to the type system to support the encoding of this and more
+sort-of dependent types in a more comfortable way. Notably {\tt
   TypeFamilies}\cite{Chakravarty:2005:ATC:1047659.1040306,
-  Chakravarty:2005:ATS:1090189.1086397, Sulzmann:2007:SFT:1190315.1190324}, to define functions at type-level,
-{\tt DataKinds}~\cite{Yorgey:2012:GHP:2103786.2103795}, implementing data promotion,
-{\tt PolyKinds} providing kind polymorphism, and {\tt KindSignatures}\cite{ghcman}.
-
+  Chakravarty:2005:ATS:1090189.1086397, Sulzmann:2007:SFT:1190315.1190324}, to
+define functions at type-level, {\tt
+  DataKinds}~\cite{Yorgey:2012:GHP:2103786.2103795}, implementing data
+promotion, {\tt PolyKinds} providing kind polymorphism, {\tt
+  KindSignatures}\cite{ghcman} to document and deambiguate kinds, or \break
+{\tt TypeApplications}\cite{conf/esop/EisenbergWA16} to provide visible type
+application. 
 
 Other implementations of Extensible Records such as Vinyl\cite{libvinyl} or
 CTRex\cite{libCTRex} have been introduced. One common way to implement a
 |Record| is using a
 |GADT|\cite{Cheney2003FirstClassPT,Xi:2003:GRD:604131.604150}. Usually
 heterogeneous records contain values of kind |Type|. It makes sense since |Type|
-is the kind of inhabited types, and records store values. At kind level this is a
-sort of untyped programming; datatype constructors take information with
-expressive kinds and wrap it on a uniform box. In use cases such as our children
-records, where we store a full featured attribution, we desire to state this on
-kinds. We abstracted this notion and designed a library of polymporphic
-extensible records, defined as follows:
+is the kind of inhabited types, and records store values. Datatype constructors
+take information with expressive kinds and wrap it on a uniform box. This is
+desirable ins ome situations. In use cases such as our children records, where
+we store a full featured attribution, we wish to state this on kinds. We
+abstracted this notion and designed a library of polymporphic extensible
+records, defined as follows:
 
 
 > data Rec (c :: k) (r :: [(k', k'')]) :: Type where
@@ -181,7 +183,7 @@ To print the domain specific error messages
 we can also need instances for |ShowField| and |ShowRec|, as we shall see
 later.
 
-Also, to be strongly kinded it is useful to specific datatypes for labels.
+Also, to code strongly kinded it is useful to specific datatypes for labels.
 
 > data  Att    = Att Symbol Type
 > data  Prod   = Prd Symbol NT
@@ -193,7 +195,7 @@ Also, to be strongly kinded it is useful to specific datatypes for labels.
 for children.
 In the following subsections we give some examples of record instances.
 
-\subsubsection{Example: Attribution}\hfill\break
+\subsubsection{Example: Attribution}
 
 Attributions are mappings from attribute names to values. To make an index we
 define an empty datatype:
@@ -201,7 +203,7 @@ define an empty datatype:
 > data AttReco
 
 On the definition of |GenRecord| the |c| parameter is polykinded. We use the
-kind |Type| for indexes in our instances since |Type| is a extensible kind.
+kind |Type| for indexes in our instances since |Type| is an extensible kind.
 Fixing the kind of this index the generic record library could allow a closed
 set of records.
 
@@ -226,7 +228,7 @@ Hiding constructors of |GenRecord| is nice but we lose pattern matching.
 Fortunately, GHC Haskell implements pattern synonyms.
 %endif
 For each instance of record we can define specialized versions of the constructors
-|TagField|, |EmptyRec| an |ConsAtt|, using the GHC Haskell's pattern synonyms.
+|TagField|, |EmptyRec| an |ConsAtt|, using the GHC Haskell's pattern synonyms\cite{pattern-synonyms}.
 In the case of attributions this can be coded as follows:
 
 > pattern  Attribute     ::  v -> TagField AttReco l v
@@ -239,9 +241,8 @@ In the case of attributions this can be coded as follows:
 > pattern  ConsAtt a as  =   ConsRec att atts
 
 
-\subsubsection{Example: Children Records}\hfill\break
-
-Again, lets build a new index:
+\subsubsection{Example: Children Records}
+Once again, we build an index:
 
 > data ChiReco (prd :: Prod)
 
