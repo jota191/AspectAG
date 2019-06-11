@@ -105,9 +105,8 @@ For instance in the example of section \ref{sec:example}, |add_eval| can be rewr
 >  (\Proxy (Fam sc ip)->
 >   (+) (sc .#. leftAdd .#. eval) (sc .#. rightAdd .#. eval))
 
-where |(.#.)| is the lookup operator. If the programmer prefers, he or she can
+where |(.#.)| is the lookup operator. If the programmer prefers, she can
 use this desugarized functions.
-
 
 
 To define an inherited attribute we can use the function |inhdef|. This time
@@ -145,27 +144,22 @@ we present this definition omiting the constraints.
 >               catts'= req ctx (OpExtend  att (f Proxy inp) catts)
 >           in  Fam ic' sp
 
-Inherited attribute definitions are also related to a child. Again, the monadic
+Inherited attribute definitions are indexed by a child. Again, the monadic
 alternative |inhdefM| is provided. Functions to define synthesized and inherited
 attributes are neccesary to compose nontrivial attribute grammar. More
-constructs are useful in practice. In section[REF] |synmod| was used and proved
-to be useful to change semantics. Its inherited counterpart |inhmod| is also
-provided. On top of this we implement some common patterns that generate rules
-from higher level specifications.
-\todo{}
-
-
-
-
+constructs are useful in practice. In section\ref{sec:example} |synmod| was used
+and proved to be useful to change semantics. Its inherited counterpart |inhmod|
+is also provided. On top of this we implement some common patterns that generate
+rules from higher level specifications.
 
 \subsection{Combining Rules.}
 
 Functions as |syndef| or |inhdef| build rules from scratch defining how to
 compute one single new attribute from a given family using functions of the host
 language. A full rule is usually more complex, since it builds a full output
-family, where many attributes are computed in many ways. To build a big rule we
-compose smaller rules. Composing them is easy once since we encoded them using
-the extra arity trick:
+family, where usually many attributes are computed in many ways. To build a big
+rule we compose smaller rules. Composing them is easy once since we encoded them
+using the extra arity trick:
 
 > ext' ::  CRule ctx prd sc ip ic sp ic' sp'
 >      ->  CRule ctx prd sc ip a b ic sp
@@ -177,8 +171,8 @@ Note that to compose rules they must be tagged from the same productions
 |prd|. If we use |ext'| and try to combine two rules from different
 productions, we get a huge type error where the type mismatch is
 obfuscated on hundreds of lines of error code, where every record such as
-|ic| or |sp| are printed, and every clas constraint such as |Require|s is
-printed (each one printing again some record and so on). We need a clear
+|ic| or |sp| are printed, and every class constraint such as |Require| is
+printed. We need a clear
 and small type error and this can be done by using the following definition:
 
 > ext ::  RequireEq prd prd' (Text "ext":ctx)
@@ -186,11 +180,8 @@ and small type error and this can be done by using the following definition:
 >      -> CRule ctx prd' sc ip a b ic sp
 >      -> CRule ctx prd sc ip a b ic' sp'
 > ext = ext'
-> infixr 6 .+.
-> (.+.) = ext
 
 Here we use |RequireEq| wich is actually a sugar for a couple of constraints:
-
 
 > type RequireEq (t1 :: k )(t2 :: k) (ctx:: [ErrorMessage])
 >     = (Require (OpEq t1 t2) ctx, t1 ~ t2)
@@ -198,24 +189,22 @@ Here we use |RequireEq| wich is actually a sugar for a couple of constraints:
 The first is a requirement, using the following operator:
 
 > data OpEq t1 t2
-
-
 > instance RequireEqRes t1 t2 ctx
 >   => Require (OpEq t1 t2) ctx where
 >   type ReqR (OpEq t1 t2) = ()
 >   req = undefined
 
-> type family RequireEqRes  (t1 :: k) (t2 :: k)
->                           (ctx :: [ErrorMessage]) ::  Constraint where
->   RequireEqRes t1 t2 ctx
->   = If            (t1 `Equal` t2)
->         {-then-}  (() :: Constraint)
->         {-else-}  (Require (OpError (Text "" :<>: ShowT t1
->                             :<>: Text " /= " :<>: ShowT t2)) ctx)
+The type family |RequireEqRes| is a type level function computing a constraint.
+It reduces to the requirement of an |OpError| if $t1 \neq t2$, building a
+readable error message, or to the trivial (Top) constraint otherwise.
 
 
-
-and builds an understandable error message for label mistmatch otherwise.
+> type family  RequireEqRes (t1 :: k) (t2 :: k)
+>              (ctx :: [ErrorMessage]) ::  Constraint where
+>   RequireEqRes t1 t2 ctx = If   (t1 `Equal` t2)
+>                                 (() :: Constraint)
+>                                 (Require (OpError (Text "" :<>: ShowT t1
+>                                 :<>: Text " /= " :<>: ShowT t2)) ctx)
 
 
 
@@ -233,14 +222,14 @@ of |GenRecord|, defined as:
 
 
 As done in section \ref{sec:rules} with rules, to keep track on contexts
-contexts we introduce the concept of a tagged aspect:
+we introduce the concept of a tagged aspect:
 
 > newtype CAspect (ctx :: [ErrorMessage]) (asp :: [(Prod, Type)] )
 >   = CAspect { mkAspect :: Proxy ctx -> Aspect asp}
 
 In section \ref{sec:defs} we see that context is extended when an attribute is
-defined usinf |syndef| or |inhdef|. In the running example in section
-\ref{sec:defs} the function |traceAspect| was introduced. |traceAspect| is as a
+defined using |syndef| or |inhdef|. In the running example in section
+\ref{sec:example} the function |traceAspect| was introduced. |traceAspect| is as a
 tool for the user to place marks visible in the trace when a type error occurs.
 We implement |traceAspect| using a sort of |map| function, traversing the record.
 
@@ -248,9 +237,6 @@ We implement |traceAspect| using a sort of |map| function, traversing the record
 > traceAspect (_ :: Proxy (e::ErrorMessage))
 >  = mapCAspect  $   \(_ :: Proxy ctx)
 >                ->  Proxy @ ((Text "aspect ":<>: e) : ctx)
-
-
-
 > mapCAspect fctx (CAspect fasp)
 >   = CAspect $ mapCtxRec fctx . fasp . fctx
 
@@ -264,35 +250,22 @@ where |mapCtxRec| is a dependent function:
 
 whose implementation does not offer new insight.
 
-> (.+:) = extAspect
-> infixr 3 .+:
-
 \begin{table}[t] 
    \label{tab:ops}
    \small % text size of table content
    \centering % center the table
-   \begin{tabular}{lcccc} % alignment of each column data
-   \toprule[\heavyrulewidth] \textbf{{\tt ASCII} op.} & \textbf{Unicode op.} &
-   \textbf{Left arg.} & \textbf{Right arg.} & \textbf{Associativity}\\ \midrule
-   {\tt (.+:)} & |(.+:)| & Rule & Aspect & right \\ \hline
-   {\tt (.:+.)} & |(.:+.)| & Aspect & Rule & left \\ \hline
-      {\tt (.:+:)} & |(.:+:)| & Aspect & Aspect & right \\ \hline
-   {\tt (.+.)} & |(.+.)| & Rule & Rule & --\\
+   \begin{tabular}{lccccc} % alignment of each column data
+   \toprule[\heavyrulewidth] \textbf{op.} & \textbf{Unicode op.} &
+   \textbf{larg} & \textbf{rarg} & \textbf{Assoc.}& \textbf{impl.}\\ \midrule
+   {\tt (.+:)} & |(.+:)| & Rule & Aspect & right& |extAspect| \\ \hline
+   {\tt (.:+.)} & |(.:+.)| & Aspect & Rule & left& |flip extAspect|\\ \hline
+      {\tt (.:+:)} & |(.:+:)| & Aspect & Aspect & right& |comAspect|\\ \hline
+   {\tt (.+.)} & |(.+.)| & Rule & Rule & right & |ext|\\
    \bottomrule[\heavyrulewidth]
    \end{tabular}
    \caption{Operators to combine semantics}
 \end{table}
 
-\todo{donde poner esto, capaz no es necesario}
-
-> mapCRule :: (Proxy ctx -> Proxy ctx')
->           -> CRule ctx' prd sc ip ic sp ic' sp'
->           -> CRule ctx  prd sc ip ic sp ic' sp'
-> mapCRule fctx (CRule frule) = CRule $ frule . fctx
-
-> traceRule (_ :: Proxy (e::ErrorMessage))
->   = mapCRule  $   \(_ :: Proxy ctx)
->               ->  Proxy @ ((Text "rule ":<>: e) : ctx)
 
 \subsection{Combining Aspects}
 
@@ -301,7 +274,11 @@ it is enough to implement an algorithm to merge two aspects, and a way to make
 an aspect from one single rule. Since our most basic primitives |syndef| and
 |inhdef| build a single rule adding a rule one by one is a common operation. As
 we show in \ref{tab:ops} we provide a set of operators to combine rules and
-aspects. We keep implementing in our |Require| framework.
+aspects. We already introduced |ext|, which combines two rules of the same
+production into a bigger rule.
+
+Within the |Require| framework, we implement operations to append rules to an
+aspect, and to combine Aspects.
 
 \subsubsection{Adding a Rule}
 
@@ -310,6 +287,7 @@ possibilities. If the rule is indexed by a production not appearing on the
 aspect, the combination is simply an append. Otherwise we must lookup the
 current rule an update it, combining the inserted rule.
 
+Let |OpComRA| be an operation to this append.
 
 > data OpComRA  (ctx  :: [ErrorMessage])
 >               (prd  :: Prod)
@@ -322,6 +300,9 @@ current rule an update it, combining the inserted rule.
 >               (a     :: [(Prod, Type)])  where
 >   OpComRA :: CRule ctx prd sc ip ic sp ic' sp'
 >           -> Aspect a -> OpComRA ctx prd sc ip ic sp ic' sp' a
+
+Again, it actually wraps to a lower level operator where the truth value of
+the label membership test we use to decide is explicit.
 
 > data OpComRA' (b :: Bool)
 >               (ctx  :: [ErrorMessage])
@@ -336,6 +317,8 @@ current rule an update it, combining the inserted rule.
 >   OpComRA' :: Proxy b -> CRule ctx prd sc ip ic sp ic' sp'
 >           -> Aspect a -> OpComRA' b ctx  prd sc ip ic sp ic' sp' a
 
+Then, |OpComRA| calls |OpComRA'| instantiating the proxy with the type level
+result of the label membership predicate.
 
 > instance
 >  (Require (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a) ctx)
@@ -346,31 +329,29 @@ current rule an update it, combining the inserted rule.
 >      = req ctx (OpComRA' (Proxy @ (HasLabel prd a)) rule a)
 
 
-where |HasLabel| is a type level function:
+The type level function |HasLabel| is simply coded as follows:
 
 > type family HasLabel (l :: k) (r :: [(k, k')]) :: Bool where
 >   HasLabel l '[] = False
 >   HasLabel l ( '(l', v) ': r) = Or (l == l') (HasLabel l r)
 
 
-Then, |Require| instances for |OpComRa'| are implemented. The case where
-the first parameter is |'False| is easy, an append. The |'True| case is
-much more verbose, but anyway inmediate.
+Then, |Require| instances for |OpComRA'| are implemented. The case where the
+first parameter is |'False| is easy, an append. The |'True| case is a little bit
+more verbose, but anyway inmediate (we lookup the rule at the original espect,
+we extend the rule with the one as argument, and uodate the aspect with the
+resulting rule).
 
 Finally we define the proper |extAspect| function, that adds a rule to a record,
 now carrying a context.
 
 > extAspect
->   :: RequireR (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx (Aspect asp)
->   => CRule ctx prd sc ip ic sp ic' sp'
->      -> CAspect ctx a -> CAspect ctx asp
+>   ::  RequireR (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx (Aspect asp)
+>   =>  CRule ctx prd sc ip ic sp ic' sp'
+>   ->  CAspect ctx a -> CAspect ctx asp
 > extAspect rule (CAspect fasp)
 >   = CAspect $ \ctx -> req ctx (OpComRA rule (fasp ctx))
 
-And we implement an operator
-
-> (.+:) = extAspect
-> infixr 3 .+:
 
 \subsubsection{Combining two aspects}
 
@@ -405,17 +386,13 @@ The recursive case is more interesting:
 >                       (req ctx (OpComAsp al ar)))
 
 We take the tail of the recursive argument |al|, and call the recursive function
-with |al| and |ar|. We need to combine this big aspect with the head rule. For that,
-we use the previously defined operation |OpComRA|.
+with |al| and |ar|. We need to combine this big aspect with the head rule. For
+that, we use the previously defined operation |OpComRA|.
 
-> (.:+:) = comAspect
-> infixr 4 .:+:
+For all cases we define some infix operators, with an appropiate associativity
+and precedence so we can have readable code.
 
 \subsection{Semantic functions}
-
-
-
-
 In section
 \ref{sec:example} we show how |sem_Expr| is defined. It takes an aspect, an
 abstract syntax tree (i.e. an |Expr|) and builds a function from the synthesized
