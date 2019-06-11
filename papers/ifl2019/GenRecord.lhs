@@ -26,12 +26,12 @@
 
 
 % In this section we present the design of the new \AspectAG.
-In order to provide flexibility and safetely, \AspectAG\ internals
-are built from strongly typed extensible records.
-Then, for example, mistakes like trying to access to an undefined attribute or child
-are detected at compile time as an incorrect lookup into a given record.
-Also, the definition of duplicated attributes results in a type error,
-due to an incorrect record extension.
+\label{sec:records}
+In order to provide flexibility and safety, \AspectAG\ internals are built from
+strongly typed extensible records. Then, mistakes like trying to access to an
+undefined attribute or child are detected at compile time as an incorrect lookup
+into a given record. Also, the definition of duplicated attributes results in a
+type error, due to an incorrect record extension.
 
 However, detecting errors is not enough.
 If the error messages are difficult to understand and do not point to their possible sources,

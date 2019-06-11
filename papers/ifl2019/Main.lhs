@@ -66,7 +66,7 @@
 % two authors, and the "authornote" and "authornotemark" commands used to denote
 % shared contribution to the research.
 
-\author{Juan Garcia Garland}
+\author{Juan García Garland}
 \affiliation{%
   \institution{Instituto de Computación\\Universidad de la República}
   \streetaddress{P.O. Box 1212}
@@ -144,8 +144,8 @@ flexibility is achieved through the use of extensible records, which are
 implemented as heterogeneous lists by using type-level programming techniques.
 %; i.e. multi-parameter type classes and functional dependencies.
 
-Type-level programming in Haskell has evolved in a very important way since the
-first version of AspectAG was designed; having incorporated new extensions like
+Type-level programming support has remarkably evolved in Haskell since the
+first version of AspectAG was designed; having incorporated new features like
 data promotion and kind polymorphism, among others, which allows to program in a
 ``strongly typed'' way at the level of types in a similar way as when
 programming at the level of values.
@@ -197,7 +197,7 @@ messages.
 %include ./GenRecord.lhs
 
 \section{Implementation}
-
+\label{sec:aag}
 %include ./AAG.lhs
 
 \section{Related Work}
