@@ -1,57 +1,59 @@
+In this section we show how we put records and requirements to
+work in the implementation of \AspectAG.
+
 \subsection{Families and Rules}
 \label{sec:rules}
 
-In \AspectAG\ internals we use the concept of \emph{families} as input and output
+We use the concept of \emph{families} as input and output
 for attribute computations. A family for a given production contains an
 attribution for the parent, and a collection of attributions, one for each
-children. A family is implemented as a product of |Attribution|
-and |ChAttsRec|, and it is indexed with the production which it belongs:
+of the children. A family is implemented as a product of |Attribution|
+and |ChAttsRec|, and it is indexed with the production to which it belongs:
 
 > data Fam  (prd  ::  Prod)
 >           (c    ::  [(Child, [(Att, Type)])])
 >           (p    ::  [(Att, Type)])  :: Type where
->   Fam  ::  ChAttsRec prd c -> Attribution p
->        ->  Fam prd c p
+>   Fam  ::  ChAttsRec prd c -> Attribution p ->  Fam prd c p
 
 
-Attribute computations, or rules are actually functions from an \emph{input
+Attribute computations, or rules, are actually functions from an \emph{input
   family} (attributes inherited from the parent and synthesized of the children)
 to an \emph{output family} (attributes synthesized for the parent, inherited to
 children). We implement them with an extra arity to make them composable, a
-known trick\cite{Moor99first-classattribute}. 
+well-known trick\cite{Moor99first-classattribute}. 
 
-> type Rule
->   (prd  :: Prod)
->   (sc   :: [(Child, [(Att, Type)])])
->   (ip   :: [(Att,       Type)])
->   (ic   :: [(Child, [(Att, Type)])])
->   (sp   :: [(Att,       Type)])
->   (ic'  :: [(Child, [(Att, Type)])])
->   (sp'  :: [(Att,       Type)])
->   =   Fam prd sc ip
->   ->  Fam prd ic sp -> Fam prd ic' sp'
+> type Rule  (prd  :: Prod)
+>            (sc   :: [(Child, [(Att, Type)])])
+>            (ip   :: [(Att,       Type)])
+>            (ic   :: [(Child, [(Att, Type)])])
+>            (sp   :: [(Att,       Type)])
+>            (ic'  :: [(Child, [(Att, Type)])])
+>            (sp'  :: [(Att,       Type)])
+>   =   Fam prd sc ip ->  Fam prd ic sp -> Fam prd ic' sp'
 
 Given an input family we build a function that updates the output family
-constructed thus far. Note that rules are indexed by a production.
+constructed thus far. Note that the rules are indexed by a production.
 
 To carry context information printable on type errors, most of the time we
-actually manipulate tagged rules:
+actually manipulate \emph{tagged} rules:
 
 > newtype CRule (ctx :: [ErrorMessage]) prd sc ip ic sp ic' sp'
->  = CRule { mkRule :: (Proxy ctx -> Rule prd sc ip ic sp ic' sp')}
+>  = CRule {mkRule :: Proxy ctx -> Rule prd sc ip ic sp ic' sp'}
 
 
 \subsection{Defining Attributes}
 \label{sec:defs}
 
-The function |syndef| introduces a new synthesized attribute.
+The function |syndef| introduces a new synthesized attribute;
+i.e. a rule that extends the attribution for the parent in the
+output family, provided that some requirements are fullfiled.
 
 > syndef  ::  (   RequireEq t t' ctx'
->             ,   RequireR  ( OpExtend AttReco ('Att att t) t sp)
->                             ctx (Attribution sp')
->             ,   ctx'  ~     ((Text "syndef("
->                             :<>:  ShowT ('Att att t) :<>: Text ", "
->                             :<>:  ShowT prd :<>: Text ")") ': ctx) )
+>             ,   RequireR   (OpExtend AttReco ('Att att t) t sp) ctx
+>                            (Attribution sp')
+>             ,   ctx' ~ (  (  Text "syndef(" :<>:  ShowT ('Att att t) :<>:
+>                              Text ", " :<>:  ShowT prd :<>: Text ")")
+>                           ': ctx) )
 >         =>  Label ('Att att t) ->  Label prd
 >         ->  (Proxy ctx' -> Fam prd sc ip -> t')
 >         ->  CRule ctx prd sc ip ic sp ic sp'
@@ -63,11 +65,24 @@ It takes an attribute name |att|, a production |prd|, and a function |f| that
 computes the value of the attribute in terms of the input family. |f| takes
 an extra |proxy| argument to carry context information. It appends information
 about the current definition to the existing context of the attribution being
-extended.
-In practice it is useful to use a monadic version of |syndef|
+extended. \todo{acá hay que hablar de |ctx|, |ctx'|, y como se aplican en los distintos |Require|}
+
+> type RequireR (op :: Type ) (ctx:: [ErrorMessage]) (res :: Type)
+>     = (Require op ctx, ReqR op ~ res)
+
+
+Thus, for example, we can define the rule |add_eval| of Section~\ref{sec:example} using |syndef|:
+
+> add_eval = syndef eval add
+>  (\Proxy (Fam sc ip)->
+>   (+) (sc .#. leftAdd .#. eval) (sc .#. rightAdd .#. eval))
+%
+where |(.#.)| is the lookup operator. 
+In practice it is useful to use a monadic version of |syndef|,
+which is the one we used in Section~\ref{sec:example}:
 
 > syndefM att prd = syndef att prd . def
-
+%
 where
 
 > def :: Reader (Proxy ctx, Fam prd chi par) a
@@ -99,14 +114,6 @@ After we can define the monadic function |at| used to sugarize definitions:
 >                in  req ctx (OpLookup att atts))
 >             ask
 
-For instance in the example of section \ref{sec:example}, |add_eval| can be rewritten as:
-
-> add_eval = syndef eval add
->  (\Proxy (Fam sc ip)->
->   (+) (sc .#. leftAdd .#. eval) (sc .#. rightAdd .#. eval))
-
-where |(.#.)| is the lookup operator. If the programmer prefers, she can
-use this desugarized functions.
 
 
 To define an inherited attribute we can use the function |inhdef|. This time
