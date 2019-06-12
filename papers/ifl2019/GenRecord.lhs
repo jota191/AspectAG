@@ -337,7 +337,8 @@ of what happened is on |OpError| which is built from a specific instance of
 |Require|, from a given operator and where every type relevant to show the error
 message was in scope.
 
-As an example, we define the lookup operation.
+\subsubsection{Record Requirements: Lookup}
+As an example of record requirements, we define the lookup operation.
 
 > data OpLookup  (c  :: Type) (l  :: k) (r  :: [(k, k')]) :: Type where
 >   OpLookup  ::  Label l -> Rec c r ->  OpLookup c l r
@@ -471,4 +472,36 @@ inhabited types are printed with their standard name:
 > type instance ShowT (t :: Type)
 >   = ShowType t
 
+
+
+\subsubsection{Label Equality Requirements}
+
+We use |RequireEq| to require label (and thus type) equality,
+wich is actually a sugar for a couple of constraints:
+
+> type RequireEq (t1 :: k )(t2 :: k) (ctx:: [ErrorMessage])
+>     = (Require (OpEq t1 t2) ctx, t1 ~ t2)
+
+The first is a requirement, using the following operator:
+
+> data OpEq t1 t2
+> instance RequireEqRes t1 t2 ctx
+>   => Require (OpEq t1 t2) ctx where
+>   type ReqR (OpEq t1 t2) = ()
+>   req = undefined
+
+Notice that in this case we do not define an implementation for the function
+|req|, since this requirement is used only at type-level.
+The type family |RequireEqRes| is a type-level function computing a constraint.
+It reduces to the requirement of an |OpError| if $t1 \neq t2$, building a
+readable error message, or to the trivial (Top) constraint otherwise.
+
+
+> type family  RequireEqRes (t1 :: k) (t2 :: k)
+>              (ctx :: [ErrorMessage]) ::  Constraint where
+>   RequireEqRes t1 t2 ctx
+>           = If   (t1 `Equal` t2)
+>                  (() :: Constraint)
+>                  (Require (OpError  (Text "" :<>: ShowT t1
+>                                     :<>: Text " /= " :<>: ShowT t2)) ctx)
 

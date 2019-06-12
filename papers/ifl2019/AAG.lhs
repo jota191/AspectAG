@@ -181,31 +181,6 @@ and small type error and this can be done by using the following definition:
 >      -> CRule ctx prd sc ip a b ic' sp'
 > ext = ext'
 
-Here we use |RequireEq| wich is actually a sugar for a couple of constraints:
-
-> type RequireEq (t1 :: k )(t2 :: k) (ctx:: [ErrorMessage])
->     = (Require (OpEq t1 t2) ctx, t1 ~ t2)
-
-The first is a requirement, using the following operator:
-
-> data OpEq t1 t2
-> instance RequireEqRes t1 t2 ctx
->   => Require (OpEq t1 t2) ctx where
->   type ReqR (OpEq t1 t2) = ()
->   req = undefined
-
-The type family |RequireEqRes| is a type level function computing a constraint.
-It reduces to the requirement of an |OpError| if $t1 \neq t2$, building a
-readable error message, or to the trivial (Top) constraint otherwise.
-
-
-> type family  RequireEqRes (t1 :: k) (t2 :: k)
->              (ctx :: [ErrorMessage]) ::  Constraint where
->   RequireEqRes t1 t2 ctx = If   (t1 `Equal` t2)
->                                 (() :: Constraint)
->                                 (Require (OpError (Text "" :<>: ShowT t1
->                                 :<>: Text " /= " :<>: ShowT t2)) ctx)
-
 
 
 \subsection{Aspects}
