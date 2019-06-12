@@ -270,6 +270,19 @@
 >   = CRule $ \ctx inp (Fam ic sp)
 >    ->  Fam ic $ req ctx (OpExtend att (f Proxy inp) sp)
 
+
+> syndefM
+>   :: ( RequireEq t t' ctx'
+>      , RequireR (OpExtend AttReco ('Att att t) t sp) ctx (Attribution sp')
+>      , ctx'
+>          ~ ((Text "syndef("
+>              :<>: ShowT ('Att att t) :<>: Text ", "
+>              :<>: ShowT prd :<>: Text ")") ': ctx)
+>      )
+>      => Label ('Att att t)
+>      -> Label prd
+>      -> Reader (Proxy ctx', Fam prd sc ip) t'
+>      -> CRule ctx prd sc ip ic sp ic sp'
 > syndefM att prd = syndef att prd . def
 
 

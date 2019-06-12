@@ -283,6 +283,11 @@ not accomplished an error must be raised at compile time.
 The function |req| also uses some context information (i.e. the |trace| of the error)
 to provide more useful information in the error message.
 
+We collect the constraints imposed to a |Require| instance
+in |RequireR|:
+> type RequireR (op :: Type ) (ctx:: [ErrorMessage]) (res :: Type)
+>     = (Require op ctx, ReqR op ~ res)
+
 Some requirements such
 as label equality are only about types, wich means that |req| is not used. It is
 still useful to keep type errors in this framework, and in that case we use only

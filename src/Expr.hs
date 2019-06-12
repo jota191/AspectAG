@@ -57,6 +57,7 @@ add_eval  =  syndefM eval add  $ (+) <$> at leftAdd eval <*> at rightAdd eval
 
 val_eval  =  syndefM eval val  $ ter ival
 var_eval  =  syndefM eval var  $ slookup <$> ter vname <*> at lhs env
+--var_eval  =  syndef eval var  $ \Proxy (Fam sc ip) ->  Data.Map.lookup  (sc .# vname #. (lit @ String)) (ip #. env)
 
 slookup nm = fromJust . Data.Map.lookup nm
 

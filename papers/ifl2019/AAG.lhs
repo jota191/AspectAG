@@ -48,12 +48,12 @@ The function |syndef| introduces a new synthesized attribute;
 i.e. a rule that extends the attribution for the parent in the
 output family, provided that some requirements are fullfiled.
 
-> syndef  ::  (   RequireEq t t' ctx'
->             ,   RequireR   (OpExtend AttReco ('Att att t) t sp) ctx
->                            (Attribution sp')
->             ,   ctx' ~ (  (  Text "syndef(" :<>:  ShowT ('Att att t) :<>:
+> syndef  ::  (   ctx' ~ (  (  Text "syndef(" :<>:  ShowT ('Att att t) :<>:
 >                              Text ", " :<>:  ShowT prd :<>: Text ")")
->                           ': ctx) )
+>                           ': ctx)
+>             ,   RequireEq t t' ctx'
+>             ,   RequireR   (OpExtend AttReco ('Att att t) t sp) ctx
+>                            (Attribution sp') )
 >         =>  Label ('Att att t) ->  Label prd
 >         ->  (Proxy ctx' -> Fam prd sc ip -> t')
 >         ->  CRule ctx prd sc ip ic sp ic sp'
@@ -62,16 +62,25 @@ output family, provided that some requirements are fullfiled.
 >      ->  Fam ic $ req ctx (OpExtend att (f Proxy inp) sp)
 
 It takes an attribute name |att|, a production |prd|, and a function |f| that
-computes the value of the attribute in terms of the input family. |f| takes
-an extra |proxy| argument to carry context information. It appends information
-about the current definition to the existing context of the attribution being
-extended. \todo{acá hay que hablar de |ctx|, |ctx'|, y como se aplican en los distintos |Require|}
+computes the value of the attribute in terms of the input family.
+The function |f| takes an extra |proxy| argument to carry context
+information. In this case, we extend the current context |ctx|
+to a new one (|ctx'|) including information about the |syndef| definition
+where it was called.
+We require the type |t'| of the value returned by |f|
+to be equal to the type |t| of the attribute,
+using a |RequireEq| requirement.
+Notice that we could have implemented this restriction by using the same
+type variable |t| for |t| and |t'|. But in this case we
+would not have a customized error message.
+The last requirement (|OpExtend|) states that we have to be able to extend
+the attribution indexed by |sp| with the attribute |att| and the result is
+an attribution with index sp'. This requirement imposes the constraint that
+assures that this insertion does not duplicate the attribute |att|.
+Since this requirement is not internal to the computation defined in |syndef|,
+que use the current context |ctx| instead of |ctx'|.
 
-> type RequireR (op :: Type ) (ctx:: [ErrorMessage]) (res :: Type)
->     = (Require op ctx, ReqR op ~ res)
-
-
-Thus, for example, we can define the rule |add_eval| of Section~\ref{sec:example} using |syndef|:
+Using |syndef| we can define rules like |add_eval| of Section~\ref{sec:example}:
 
 > add_eval = syndef eval add
 >  (\Proxy (Fam sc ip)->
@@ -89,32 +98,35 @@ where
 >     -> (Proxy ctx -> (Fam prd chi par) -> a)
 > def = curry . runReader
 
-After we can define the monadic function |at| used to sugarize definitions:
-
+We defined the monadic function |at| used to sugarize definitions:
 > class At pos att m  where
 >  type ResAt pos att m
 >  at :: Label pos -> Label att -> m (ResAt pos att m)
-
+%
+with instances for looking up attributes into the attribution of the parent (|lhs|)
+or the attribution of a given child. The following is the instance for
+the case of children:
 > instance
->  (  RequireR  (OpLookup  (ChiReco prd) ('Chi ch prd nt) chi)
->               ctx (Attribution r)
->  ,  RequireR  (OpLookup AttReco ('Att att t) r) ctx t'
->  ,  RequireEq prd prd' ctx
->  ,  RequireEq t t' ctx
->  )
->  => At ('Chi ch prd nt) ('Att att t)
->        (Reader (Proxy ctx, Fam prd' chi par))  where
->  type ResAt ('Chi ch prd nt) ('Att att t)
->             (Reader (Proxy ctx, Fam prd' chi par))
->    = t
->  at  (ch :: Label ('Chi ch prd nt))
->      (att :: Label ('Att att t))
->   =  liftM  (\(ctx, Fam chi _)  ->
->                let atts = req ctx (OpLookup ch chi)
->                in  req ctx (OpLookup att atts))
->             ask
-
-
+>   ( RequireR  (OpLookup   (ChiReco prd) ('Chi ch prd nt) chi)
+>                           ctx (Attribution r)
+>   , RequireR  (OpLookup   AttReco ('Att att t) r) ctx t'
+>   , RequireEq  prd prd' ctx
+>   , RequireEq  t t' ctx
+>   , RequireEq  ('Chi ch prd nt) ('Chi ch prd ('Left ('NT n)))  ctx)
+>       => At  ('Chi ch prd nt) ('Att att t)
+>              (Reader (Proxy ctx, Fam prd' chi par))  where
+>  type ResAt  ('Chi ch prd nt) ('Att att t)
+>              (Reader (Proxy ctx, Fam prd' chi par))
+>          = t 
+>  at ch att
+>   = liftM  (\(ctx,  Fam chi _)
+>                     ->  let  atts = req ctx (OpLookup ch chi)
+>                         in   req ctx (OpLookup att atts))
+>            ask
+In this case there are two lookups involved, because we have to find the
+child in the record of children and then the attribute in its attribution.
+We also require some equalities, including the fact that the child
+has to be a non-terminal |('Left ('NT n))|.
 
 To define an inherited attribute we can use the function |inhdef|. This time
 we present this definition omiting the constraints.
@@ -140,10 +152,10 @@ we present this definition omiting the constraints.
 
 > inhdef :: ( ... )
 >      => Label ('Att att t)
->      -> Label ('Prd prd nt)
->      -> Label ('Chi chi ('Prd prd nt) ntch)
->      -> (Proxy ctx' -> Fam ('Prd prd nt) sc ip -> t')
->      -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
+>      -> Label prd
+>      -> Label ('Chi chi prd ntch)
+>      -> (Proxy ctx' -> Fam prd sc ip -> t')
+>      -> CRule ctx prd sc ip ic sp ic' sp
 > inhdef  att prd chi f
 >   = CRule $ \ctx inp (Fam ic sp)
 >        -> let ic'   = req ctx (OpUpdate chi catts' ic)
