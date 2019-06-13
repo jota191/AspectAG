@@ -201,18 +201,30 @@ messages.
 %include ./AAG.lhs
 
 \section{Related Work}
-Attribute grammars encoded in functional languages have a long history,
-starting with Johnson[REF].
+Attribute grammars encoded in functional languages have a long history, starting
+with Johnson[REF]. 
 
-First class implementations of Attibute grammars in Haskell were introduced by
-[Moor], with a lightweight approach missing from type safety. Viera \emph{et al}
+DBLP:conf/ifl/VieraBP18 First class implementations of Attibute grammars in
+Haskell were introduced by Moor \cite{Moor99first-classattribute} with a
+lightweight approach missing from type safety. Viera \emph{et al}
 \cite{Viera:2009:AGF:1596550.1596586} in the original design og
 \AspectAG\ introduced a type safe approach. We push a towards the direction of
-type safety making types strongly kinded. Other implementations such as
-[Balestrieri,?] can be cited. In both cases, error messages were a weakness.
+type safety making types strongly kinded. 
 
-Managing type errors on EDSLs is an old problem to the community.
-Research in type errors for EDSLs is an active area.
+The {\tt uuagc} (Uthrech University Attribute grammar compiler) is probably the
+most known example. Other implementations \cite{DBLP:phd/ethos/Balestrieri15,
+  DBLP:conf/ifl/VieraBP18} can be cited. In all cases, error messages were a
+weakness.
+
+
+Managing type errors on EDSLs is an old problem to the community. Research in
+type errors for EDSLs is an active area. The idea of transforming a typing
+problem into a constraint problem is not recent \cite{10635_42131,
+  improvingtypeerror}.
+
+
+Serrano Mena \emph{et al}
+\cite{DBLP:phd/basesearch/Serrano18, DBLP:conf/ifl/SerranoH17}
 
 REFS:
 {Jeremy Wazny thesis "Type inference and type error di
