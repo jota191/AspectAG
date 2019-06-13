@@ -266,20 +266,20 @@ whose implementation does not offer new insights.
 
 \subsection{Combining Aspects}
 
-An aspect models a piece of semantics of a gramamr. To make semantics extensible
+An aspect models a piece of semantics of a grammar. To make semantics extensible
 it is enough to implement an algorithm to merge two aspects, and a way to make
 an aspect from one single rule. Since our most basic primitives |syndef| and
-|inhdef| build a single rule adding a rule one by one is a common operation. As
+|inhdef| build a single rule, adding rules one by one to an aspect is a common operation. As
 we show in Table~\ref{tab:ops} we provide a set of operators to combine rules and
 aspects. We already introduced |ext|, which combines two rules of the same
-production into a bigger rule.
+production.
 
 Within the |Require| framework, we implement operations to append rules to an
 aspect, and to combine Aspects.
 
 \subsubsection{Adding a Rule}
 
-We define an operation |OpComRA| (combine a rule, and an aspect). There are two
+We define an operation |OpComRA| (combine a rule with an aspect). There are two
 possibilities. If the rule is indexed by a production not appearing on the
 aspect, the combination is simply an append. Otherwise we must lookup the
 current rule an update it, combining the inserted rule.
@@ -301,27 +301,31 @@ Let |OpComRA| be an operation to this append.
 Again, it actually wraps to a lower level operator where the truth value of
 the label membership test we use to decide is explicit.
 
-> data OpComRA' (b :: Bool)
->               (ctx  :: [ErrorMessage])
->               (prd  :: Prod)
->               (sc   :: [(Child, [(Att, Type)])])
->               (ip   :: [(Att, Type)])
->               (ic   :: [(Child, [(Att, Type)])])
->               (sp   :: [(Att, Type)])
->               (ic'  :: [(Child, [(Att, Type)])])
->               (sp'  :: [(Att, Type)])
->               (a     :: [(Prod, Type)])  where
+> data OpComRA'  (b :: Bool)
+>                (ctx  :: [ErrorMessage])
+>                (prd  :: Prod)
+>                (sc   :: [(Child, [(Att, Type)])])
+>                (ip   :: [(Att, Type)])
+>                (ic   :: [(Child, [(Att, Type)])])
+>                (sp   :: [(Att, Type)])
+>                (ic'  :: [(Child, [(Att, Type)])])
+>                (sp'  :: [(Att, Type)])
+>                (a     :: [(Prod, Type)])  where
 >   OpComRA' :: Proxy b -> CRule ctx prd sc ip ic sp ic' sp'
->           -> Aspect a -> OpComRA' b ctx  prd sc ip ic sp ic' sp' a
+>            -> Aspect a -> OpComRA' b ctx  prd sc ip ic sp ic' sp' a
 
 Then, |OpComRA| calls |OpComRA'| instantiating the proxy with the type level
 result of the label membership predicate.
 
 > instance
->  (Require (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a) ctx)
->   => Require (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx where
+>  (Require (  OpComRA'  (HasLabel prd a)
+>                        ctx prd sc ip ic sp ic' sp' a)
+>              ctx)
+>   => Require (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx
+>         where
 >   type ReqR (OpComRA ctx prd sc ip ic sp ic' sp' a)
->      = ReqR (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a)
+>      = ReqR (OpComRA'   (HasLabel prd a)
+>                         ctx prd sc ip ic sp ic' sp' a)
 >   req ctx (OpComRA rule a)
 >      = req ctx (OpComRA' (Proxy @ (HasLabel prd a)) rule a)
 
@@ -329,8 +333,8 @@ result of the label membership predicate.
 The type level function |HasLabel| is simply coded as follows:
 
 > type family HasLabel (l :: k) (r :: [(k, k')]) :: Bool where
->   HasLabel l '[] = False
->   HasLabel l ( '(l', v) ': r) = Or (l == l') (HasLabel l r)
+>   HasLabel l '[]               = False
+>   HasLabel l ( '(l', v) ': r)  = Or (l == l') (HasLabel l r)
 
 
 Then, |Require| instances for |OpComRA'| are implemented. The case where the
@@ -343,7 +347,8 @@ Finally we define the proper |extAspect| function, that adds a rule to a record,
 now carrying a context.
 
 > extAspect
->   ::  RequireR (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx (Aspect asp)
+>   ::  RequireR  (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx
+>                 (Aspect asp)
 >   =>  CRule ctx prd sc ip ic sp ic' sp'
 >   ->  CAspect ctx a -> CAspect ctx asp
 > extAspect rule (CAspect fasp)
