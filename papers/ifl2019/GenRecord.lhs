@@ -327,8 +327,8 @@ regular instance of this class and it produces a |OpError| requirement.
 When we call |req| with this operator the type checker reports an error since there is
 only one instance:
 
-> instance (TypeError (Text "Error: " :<>: m :$$:
->                      Text "trace: " :<>: ShowCTX ctx))
+> instance (TypeError (  Text "Error: " :<>: m :$$:
+>                        Text "trace: " :<>: ShowCTX ctx))
 >   => Require (OpError m) ctx where {}
 %
 The type family |GHC.TypeLits.TypeError| works like the value-level function
@@ -342,7 +342,7 @@ of what happened is on |OpError| which is built from a specific instance of
 |Require|, from a given operator and where every type relevant to show the error
 message was in scope.
 
-\subsubsection{Record Requirements: Lookup}
+\subsubsection{Record Requirements: Lookup}\label{sec:lookup}
 As an example of record requirements, we define the lookup operation.
 
 > data OpLookup  (c  :: Type) (l  :: k) (r  :: [(k, k')]) :: Type where
@@ -465,17 +465,14 @@ on them as using {\bf |typeOf|} in languages where types are avaiable at run
 time. Therefore, the following definitions are completely legal:
 
 > type instance  ShowT ('Att l t)
->   =     Text  "Attribute "  :<>: Text l
->   :<>:  Text  ":"           :<>: ShowT t
+>   =  Text "Attribute " :<>: Text l :<>: Text  ":" :<>: ShowT t
 > type instance  ShowT ('Prd l nt)
->   =     ShowT nt :<>: Text "::Production "
->   :<>:  Text l
+>   =  ShowT nt :<>: Text "::Production " :<>:  Text l
 %
 and so on. Also, we can build an instance for any type of kind |Type|, so
 inhabited types are printed with their standard name:
 
-> type instance ShowT (t :: Type)
->   = ShowType t
+> type instance ShowT (t :: Type)  = ShowType t
 
 
 

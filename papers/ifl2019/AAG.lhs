@@ -82,9 +82,8 @@ que use the current context |ctx| instead of |ctx'|.
 
 Using |syndef| we can define rules like |add_eval| of Section~\ref{sec:example}:
 
-> add_eval = syndef eval add
->  (\Proxy (Fam sc ip)->
->   (+) (sc .#. leftAdd .#. eval) (sc .#. rightAdd .#. eval))
+> add_eval = syndef eval add $ \Proxy (Fam sc ip)->
+>   (+) (sc .#. leftAdd .#. eval) (sc .#. rightAdd .#. eval)
 %
 where |(.#.)| is the lookup operator. 
 In practice it is useful to use a monadic version of |syndef|,
@@ -150,18 +149,17 @@ For simplicity reasons we omit the constraints.
 >      =>
 %endif
 
-> inhdef :: ( ... )
->      => Label ('Att att t)
->      -> Label prd
->      -> Label ('Chi chi prd ntch)
->      -> (Proxy ctx' -> Fam prd sc ip -> t')
->      -> CRule ctx prd sc ip ic sp ic' sp
+> inhdef :: ( ... )  => Label ('Att att t)
+>                    -> Label prd
+>                    -> Label ('Chi chi prd ntch)
+>                    -> (Proxy ctx' -> Fam prd sc ip -> t')
+>                    -> CRule ctx prd sc ip ic sp ic' sp
 > inhdef  att prd chi f
 >   = CRule $ \ctx inp (Fam ic sp)
->        -> let  catts   = req ctx (OpLookup chi ic)
->                catts'  = req ctx (OpExtend  att (f Proxy inp) catts)
->                ic'     = req ctx (OpUpdate chi catts' ic)
->           in  Fam ic' sp
+>        ->  let  catts   = req ctx (OpLookup chi ic)
+>                 catts'  = req ctx (OpExtend  att (f Proxy inp) catts)
+>                 ic'     = req ctx (OpUpdate chi catts' ic)
+>            in   Fam ic' sp
 
 An inherited attribute |att| is defined in a production |prd| for
 a given child |chi|. In this case we have to lookup the attribution of the child into
@@ -274,17 +272,12 @@ we show in Table~\ref{tab:ops} we provide a set of operators to combine rules an
 aspects. We already introduced |ext|, which combines two rules of the same
 production.
 
-Within the |Require| framework, we implement operations to append rules to an
-aspect, and to combine Aspects.
+%Within the |Require| framework, we implement operations to append rules to an
+%aspect, and to combine Aspects.
 
 \subsubsection{Adding a Rule}
 
-We define an operation |OpComRA| (combine a rule with an aspect). There are two
-possibilities. If the rule is indexed by a production not appearing on the
-aspect, the combination is simply an append. Otherwise we must lookup the
-current rule an update it, combining the inserted rule.
-
-Let |OpComRA| be an operation to this append.
+We define an operation |OpComRA| to combine a rule with an aspect. 
 
 > data OpComRA  (ctx  :: [ErrorMessage])
 >               (prd  :: Prod)
@@ -297,9 +290,12 @@ Let |OpComRA| be an operation to this append.
 >               (a     :: [(Prod, Type)])  where
 >   OpComRA :: CRule ctx prd sc ip ic sp ic' sp'
 >           -> Aspect a -> OpComRA ctx prd sc ip ic sp ic' sp' a
-
-Again, it actually wraps to a lower level operator where the truth value of
-the label membership test we use to decide is explicit.
+%
+This operation has two cases. If the rule is indexed by a production not appearing on the
+aspect, the combination is simply an append. Otherwise we must lookup the
+current rule an update it, combining the inserted rule.
+We implement these cases in a lower level operation |OpComRA'|, where the truth value of
+the production membership is explicit.
 
 > data OpComRA'  (b :: Bool)
 >                (ctx  :: [ErrorMessage])
@@ -313,10 +309,11 @@ the label membership test we use to decide is explicit.
 >                (a     :: [(Prod, Type)])  where
 >   OpComRA' :: Proxy b -> CRule ctx prd sc ip ic sp ic' sp'
 >            -> Aspect a -> OpComRA' b ctx  prd sc ip ic sp ic' sp' a
-
-Then, |OpComRA| calls |OpComRA'| instantiating the proxy with the type level
-result of the label membership predicate.
-
+%
+Then, |OpComRA| calls |OpComRA'| instantiating the proxy with the type-level
+result of the label membership predicate, in a similar way as we have done
+for the lookup operation in Section~\ref{sec:lookup}.
+%if False
 > instance
 >  (Require (  OpComRA'  (HasLabel prd a)
 >                        ctx prd sc ip ic sp ic' sp' a)
@@ -328,29 +325,27 @@ result of the label membership predicate.
 >                         ctx prd sc ip ic sp ic' sp' a)
 >   req ctx (OpComRA rule a)
 >      = req ctx (OpComRA' (Proxy @ (HasLabel prd a)) rule a)
-
-
-The type level function |HasLabel| is simply coded as follows:
+%endif
+In this case the predicate is the type-level function |HasLabel|:
 
 > type family HasLabel (l :: k) (r :: [(k, k')]) :: Bool where
 >   HasLabel l '[]               = False
 >   HasLabel l ( '(l', v) ': r)  = Or (l == l') (HasLabel l r)
 
 
-Then, |Require| instances for |OpComRA'| are implemented. The case where the
-first parameter is |'False| is easy, an append. The |'True| case is a little bit
-more verbose, but anyway inmediate (we lookup the rule at the original espect,
-we extend the rule with the one as argument, and uodate the aspect with the
-resulting rule).
+The |Require| instance for |OpComRA'| in the case where the
+first parameter is |'False| implements an append. The |'True| case is a little bit
+more verbose, but anyway inmediate: we lookup the rule at the original aspect,
+extend the rule with the one as argument, and update the aspect with the
+resulting rule.
 
-Finally we define the proper |extAspect| function, that adds a rule to a record,
-now carrying a context.
+Finally, we define the proper |extAspect| function, that adds a
+tagged rule to a tagged Aspect.
 
-> extAspect
->   ::  RequireR  (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx
->                 (Aspect asp)
->   =>  CRule ctx prd sc ip ic sp ic' sp'
->   ->  CAspect ctx a -> CAspect ctx asp
+%> extAspect  :: RequireR  (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx
+%>                         (Aspect asp)
+%>            =>  CRule ctx prd sc ip ic sp ic' sp'
+%>            ->  CAspect ctx a -> CAspect ctx asp
 > extAspect rule (CAspect fasp)
 >   = CAspect $ \ctx -> req ctx (OpComRA rule (fasp ctx))
 
@@ -360,8 +355,7 @@ now carrying a context.
 To combine two aspects
 we define the operation |OpComAsp|, which takes two aspects as parameters:
 
-> data OpComAsp  (al :: [(Prod, Type)])
->                (ar :: [(Prod, Type)]) where
+> data OpComAsp  (al :: [(Prod, Type)]) (ar :: [(Prod, Type)]) where
 >   OpComAsp :: Aspect al -> Aspect ar -> OpComAsp al ar
 
 We chose arbitrarly to do the recursion on the second argument. The empty aspect
@@ -371,12 +365,13 @@ is a neutral element:
 >   type ReqR (OpComAsp al '[]) = Aspect al
 >   req ctx (OpComAsp al _) = al
 
-The recursive case is more interesting:
+In the recursive case, we take the tail |ar| of the recursive argument,
+and call the recursive function with |al| and |ar|.
+The resulting aspect is combined with the head rule
+using the operation |OpComRA|.
 
-> instance
->   ( RequireR (OpComAsp al ar) ctx  (Aspect ar')
->   , Require  (OpComRA ctx prd sc ip ic sp ic' sp' ar') ctx
->   )
+> instance  ( RequireR (OpComAsp al ar) ctx  (Aspect ar')
+>           , Require  (OpComRA ctx prd sc ip ic sp ic' sp' ar') ctx)
 >   => Require (OpComAsp al
 >        ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar)) ctx where
 >   type ReqR (OpComAsp al
@@ -387,16 +382,13 @@ The recursive case is more interesting:
 >    = req ctx (OpComRA (untagField prdrule)
 >                       (req ctx (OpComAsp al ar)))
 
-We take the tail of the recursive argument |al|, and call the recursive function
-with |al| and |ar|. We need to combine this big aspect with the head rule. For
-that, we use the previously defined operation |OpComRA|.
-
-For all cases we define some infix operators, with an appropiate associativity
-and precedence so we can have readable code.
+Thus, the function that combines two tagged aspects is:
+> comAspect al ar
+>   = CAspect $ \ctx -> req ctx (OpComAsp  (mkAspect al ctx)
+>                                          (mkAspect ar ctx))
 
 \subsection{Semantic functions}
-In section
-\ref{sec:example} we show how |sem_Expr| is defined. It takes an aspect, an
+In Section~\ref{sec:example} we show how |sem_Expr| is defined. It takes an aspect, an
 abstract syntax tree (i.e. an |Expr|) and builds a function from the synthesized
 attributes to the inherited attributes. More in general, for the domain
 associated with each non-terminal we take the function mapping its inherited to
@@ -404,12 +396,12 @@ its synthesized attributes. The function |knitAspect| is a wrapper to add
 context
 
 > knitAspect (prd :: Label prd) asp fc ip
->   = let ctx  = Proxy @ '[]
->         ctx' = Proxy @ '[Text "knit" :<>: ShowT prd]
->     in  knit ctx
->         (req ctx' (OpLookup prd ((mkAspect asp) ctx))) fc ip
+>   =  let  ctx   = Proxy @ '[]
+>           ctx'  = Proxy @ '[Text "knit" :<>: ShowT prd]
+>      in   knit ctx
+>           (req ctx' (OpLookup prd ((mkAspect asp) ctx))) fc ip
 
-and the real hard work is done by the funtion |knit|, wich takes the combined
+and the real work is done by the circular funtion |knit|, wich takes the combined
 rules for a node and the semantic functions of the children, and builds a
 function from the inherited attributes of the parent to its synthesized
 attributes.
@@ -418,8 +410,8 @@ attributes.
 >      (rule  :: CRule ctx prd (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp)
 >      (fc    :: SemFunRec fc)
 >      (ip    :: Attribution ip)
->   =  let  (Fam ic sp)  = mkRule rule ctx
->                          (Fam sc ip) (Fam ec emptyAtt)
+>   =  let  (Fam ic sp)  = mkRule rule ctx  (Fam sc ip)
+>                                           (Fam ec emptyAtt)
 >           sc           = kn fc ic
 >           ec           = empties fc
 >      in   sp
@@ -439,8 +431,8 @@ and |empties| builds an empty attribution for each child.
 >   type EmptiesR fc :: [(Child, [(Att, Type)])] 
 >   empties :: Record fc -> ChAttsRec prd (EmptiesR fc)
 
-While they are nice examples of type level programming, we left the
-implementation out of this paper, this technique is well documented in the
+While they are nice examples of type-level programming, we left the
+implementation out of this paper, since this technique is well documented in the
 literature \cite{Viera:2009:AGF:1596550.1596586, Moor99first-classattribute,
 DBLP:conf/gcse/MoorPW99}.
 
@@ -452,11 +444,12 @@ to a mix of terminal and nonterminal symbols. From the datatype perspective, a
 constructor can contain recursive and nonrecursive positions. Usually, in
 attribute grammar systems a terminal has only one attribute: itself. In
 \AspectAG\ all children are put in a record, each position containing an
-attribution. In old versions of \AspectAG\ terminals where directly put as a
-children instead of an attribution. This was possible since at type level this
+attribution. In previous versions of \AspectAG\ terminals where directly put as a
+children instead of an attributions. This was possible since at type-level this
 records were essentialy untyped. We decided to lift the shape of the structure
 to kinds, adding up static guarantees, but losing this flexibility.
-There are at least two approaches to treat terminals:
+There are at least two approaches to treat terminals,
+of which we choose the second for simplicity:
 
 \begin{itemize}
 \item
@@ -466,11 +459,9 @@ There are at least two approaches to treat terminals:
   GADT.
 
 \item
-  As we did, we model all children as a record of attributions, with a trivial
-  attribution containing only an attribute for the terminal case.
+  Model all children as a record of attributions, with a trivial
+  attribution containing only one attribute for the terminal case.
 \end{itemize}
-
-The second option was chosen for simplicity.
 
 As seen before, to introduce an attribute the user defines a unique name (a
 label). As we say, there is a trivial attribute for each terminal. To chose a
