@@ -178,29 +178,22 @@ rules from higher level specifications.
 Functions as |syndef| or |inhdef| build rules from scratch defining how to
 compute one single new attribute from a given family using functions of the host
 language. A full rule is usually more complex, since it builds a full output
-family, where usually many attributes are computed in many ways. To build a big
-rule we compose smaller rules. Composing them is easy once since we encoded them
-using the extra arity trick:
+family, where usually many attributes are computed in many ways. To build such
+rules we compose smaller rules. Composing them is easy, given the extra arity trick:
 
-> ext' ::  CRule ctx prd sc ip ic sp ic' sp'
->      ->  CRule ctx prd sc ip a b ic sp
+> ext  ::  RequireEq prd prd' (Text "ext":ctx)
+>      =>  CRule ctx prd sc ip ic sp ic' sp'
+>      ->  CRule ctx prd' sc ip a b ic sp
 >      ->  CRule ctx prd sc ip a b ic' sp'
-> (CRule f) `ext'` (CRule g)
+> (CRule f) `ext` (CRule g)
 >  = CRule $ \ctx input -> f ctx input . g ctx input
 
-Note that to compose rules they must be tagged from the same productions
-|prd|. If we use |ext'| and try to combine two rules from different
-productions, we get a huge type error where the type mismatch is
-obfuscated on hundreds of lines of error code, where every record such as
-|ic| or |sp| are printed, and every class constraint such as |Require| is
-printed. We need a clear
-and small type error and this can be done by using the following definition:
-
-> ext ::  RequireEq prd prd' (Text "ext":ctx)
->      => CRule ctx prd sc ip ic sp ic' sp'
->      -> CRule ctx prd' sc ip a b ic sp
->      -> CRule ctx prd sc ip a b ic' sp'
-> ext = ext'
+Note that we require the rules to be tagged from the same production.
+If instead of using |RequireEq| we unify |prd| and |prd'| to the same type variable,
+and try to combine two rules from different productions,
+we get a huge type error where the type mismatch is
+obfuscated on hundreds of lines of error code, printing every record, such as
+|ic| or |sp|, and every class constraint, such as |Require|. 
 
 
 
@@ -295,51 +288,21 @@ This operation has two cases. If the rule is indexed by a production not appeari
 aspect, the combination is simply an append. Otherwise we must lookup the
 current rule an update it, combining the inserted rule.
 We implement these cases in a lower level operation |OpComRA'|, where the truth value of
-the production membership is explicit.
-
-> data OpComRA'  (b :: Bool)
->                (ctx  :: [ErrorMessage])
->                (prd  :: Prod)
->                (sc   :: [(Child, [(Att, Type)])])
->                (ip   :: [(Att, Type)])
->                (ic   :: [(Child, [(Att, Type)])])
->                (sp   :: [(Att, Type)])
->                (ic'  :: [(Child, [(Att, Type)])])
->                (sp'  :: [(Att, Type)])
->                (a     :: [(Prod, Type)])  where
->   OpComRA' :: Proxy b -> CRule ctx prd sc ip ic sp ic' sp'
->            -> Aspect a -> OpComRA' b ctx  prd sc ip ic sp ic' sp' a
-%
-Then, |OpComRA| calls |OpComRA'| instantiating the proxy with the type-level
-result of the label membership predicate, in a similar way as we have done
+the production membership is explicit, in a similar way as we have done
 for the lookup operation in Section~\ref{sec:lookup}.
-%if False
-> instance
->  (Require (  OpComRA'  (HasLabel prd a)
->                        ctx prd sc ip ic sp ic' sp' a)
->              ctx)
->   => Require (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx
->         where
->   type ReqR (OpComRA ctx prd sc ip ic sp ic' sp' a)
->      = ReqR (OpComRA'   (HasLabel prd a)
->                         ctx prd sc ip ic sp ic' sp' a)
->   req ctx (OpComRA rule a)
->      = req ctx (OpComRA' (Proxy @ (HasLabel prd a)) rule a)
-%endif
 In this case the predicate is the type-level function |HasLabel|:
 
 > type family HasLabel (l :: k) (r :: [(k, k')]) :: Bool where
 >   HasLabel l '[]               = False
 >   HasLabel l ( '(l', v) ': r)  = Or (l == l') (HasLabel l r)
-
-
+%
 The |Require| instance for |OpComRA'| in the case where the
 first parameter is |'False| implements an append. The |'True| case is a little bit
 more verbose, but anyway inmediate: we lookup the rule at the original aspect,
 extend the rule with the one as argument, and update the aspect with the
 resulting rule.
 
-Finally, we define the proper |extAspect| function, that adds a
+With this operation, we define the proper |extAspect| function, that adds a
 tagged rule to a tagged Aspect.
 
 %> extAspect  :: RequireR  (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx
@@ -472,6 +435,7 @@ semantic functions of the children can be coded in a polymorphic way.
 >   sem_Lit :: a -> Attribution ('[] :: [(Att,Type)])
 >                -> Attribution [( 'Att "term" a , a)]
 >   lit     :: Label ('Att "term" a)
+
 > instance SemLit a where
 >   sem_Lit a _ = (Label .=. a) *. emptyAtt
 >   lit         = Label @ ('Att "term" a)

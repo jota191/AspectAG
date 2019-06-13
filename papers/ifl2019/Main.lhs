@@ -202,14 +202,15 @@ messages.
 
 \section{Related Work}
 Attribute grammars encoded in functional languages have a long history, starting
-with Johnson[REF]. 
+with Johnson \cite{652508}. 
 
-DBLP:conf/ifl/VieraBP18 First class implementations of Attibute grammars in
+First class implementations of Attibute grammars in
 Haskell were introduced by Moor \cite{Moor99first-classattribute} with a
 lightweight approach missing from type safety. Viera \emph{et al}
 \cite{Viera:2009:AGF:1596550.1596586} in the original design og
 \AspectAG\ introduced a type safe approach. We push a towards the direction of
 type safety making types strongly kinded. 
+\cite{DBLP:conf/ifl/VieraBP18}
 
 The {\tt uuagc} (Uthrech University Attribute grammar compiler) is probably the
 most known example. Other implementations \cite{DBLP:phd/ethos/Balestrieri15,

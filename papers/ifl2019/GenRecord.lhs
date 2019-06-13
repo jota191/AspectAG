@@ -160,9 +160,9 @@ For both arguments a
 Boolean type family seems the way to go.
 %
 > type family LabelSetF (r :: [(k, k')]) :: Bool where
->   LabelSetF '[]          = True
->   LabelSetF [(l, v)]     = True
->   LabelSetF ( '(l, v) ': '(l', v') ': r)
+>   LabelSetF '[]                    = True
+>   LabelSetF ( '(l, v)  ': '[])     = True
+>   LabelSetF ( '(l, v)  ': '(l', v') ': r)
 >    = And3  (Not (l == l')) 
 >            (LabelSetF ( '(l, v)   ': r) )
 >            (LabelSetF ( '(l', v') ': r) )
