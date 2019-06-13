@@ -205,15 +205,16 @@ Attribute grammars encoded in functional languages have a long history,
 starting with Johnson[REF].
 
 First class implementations of Attibute grammars in Haskell were introduced by
-[Moor], with a lightweight approach missing from type safety. [Viera] et al in
-the original design og \AspectAG\ introduced a type safe approach. We push a
-while towards the direction of type safety making types strongly kinded. Other
-implementations such as [Balestrieri, ] can be cited. In both cases, error
-messages were a weakness.
+[Moor], with a lightweight approach missing from type safety. Viera \emph{et al}
+\cite{Viera:2009:AGF:1596550.1596586} in the original design og
+\AspectAG\ introduced a type safe approach. We push a towards the direction of
+type safety making types strongly kinded. Other implementations such as
+[Balestrieri,?] can be cited. In both cases, error messages were a weakness.
 
 Managing type errors on EDSLs is an old problem to the community.
 Research in type errors for EDSLs is an active area.
 
+REFS:
 {Jeremy Wazny thesis "Type inference and type error di
   agnosis for Hindley/Milner with extensions" and
   Bastiaan Heeren in his thesis "Top Quality Error Messages"
@@ -223,11 +224,16 @@ Serrano Mena paper
 
 
 
-\section{Conclusions and Future Work}
+\section{Conclusion}
 
-We do not completely avoid implementation leaks but we
-do offer precise type errors.
-To have clear error messages have some tradeoffs.
+In this paper we presented a library of first class strongly kinded attribute
+grammars. Using type level programming we achieved to get precise domain
+specific type errors, although we do not completely avoid implementation leaks.
+
+To get clear error messages we have to deal with some tradeoffs. It requires
+careful managment
+
+
 We loose some flexibility tagging Rules with productions.
 
 
