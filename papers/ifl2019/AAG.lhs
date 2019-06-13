@@ -212,22 +212,21 @@ Aspects are collections of rules, indexed by productions. They are an instance
 of |GenRecord|, defined as:
 
 > data PrdReco
-> type instance  WrapField PrdReco (rule :: Type)
->   = rule
-> type Aspect (asp :: [(Prod, Type)]) =  Rec PrdReco asp
-> type instance ShowRec PrdReco       =  "Aspect"
-> type instance ShowField PrdReco     =  "production named "
+> type instance  WrapField PrdReco (rule :: Type) = rule
+> type Aspect (asp :: [(Prod, Type)])  =  Rec PrdReco asp
+> type instance ShowRec PrdReco        =  "Aspect"
+> type instance ShowField PrdReco      =  "production named "
 
 
-As done in section \ref{sec:rules} with rules, to keep track on contexts
+As done in Section~\ref{sec:rules} with rules, to keep track on contexts
 we introduce the concept of a tagged aspect:
 
 > newtype CAspect (ctx :: [ErrorMessage]) (asp :: [(Prod, Type)] )
 >   = CAspect { mkAspect :: Proxy ctx -> Aspect asp}
 
-In section \ref{sec:defs} we see that context is extended when an attribute is
-defined using |syndef| or |inhdef|. In the running example in section
-\ref{sec:example} the function |traceAspect| was introduced. |traceAspect| is as a
+In Section~\ref{sec:defs} we saw how that context is extended when an attribute is
+defined using |syndef| or |inhdef|. In the running example in Section~\ref{sec:example}
+the function |traceAspect| was introduced as a
 tool for the user to place marks visible in the trace when a type error occurs.
 We implement |traceAspect| using a sort of |map| function, traversing the record.
 
@@ -237,19 +236,18 @@ We implement |traceAspect| using a sort of |map| function, traversing the record
 >                ->  Proxy @ ((Text "aspect ":<>: e) : ctx)
 > mapCAspect fctx (CAspect fasp)
 >   = CAspect $ mapCtxRec fctx . fasp . fctx
-
+%
 where |mapCtxRec| is a dependent function:
 
-> class MapCtxAsp (r :: [(Prod,Type)]) (ctx :: [ErrorMessage])
->                                      (ctx' :: [ErrorMessage])  where
+> class MapCtxAsp (r :: [(Prod,Type)])  (ctx :: [ErrorMessage])
+>                                       (ctx' :: [ErrorMessage])  where
 >   type ResMapCtx r ctx ctx' :: [(Prod,Type)]
 >   mapCtxRec  :: (Proxy ctx -> Proxy ctx')
 >              -> Aspect r -> Aspect (ResMapCtx r ctx ctx')
-
-whose implementation does not offer new insight.
+%
+whose implementation does not offer new insights.
 
 \begin{table}[t] 
-   \label{tab:ops}
    \small % text size of table content
    \centering % center the table
    \begin{tabular}{lccccc} % alignment of each column data
@@ -262,6 +260,7 @@ whose implementation does not offer new insight.
    \bottomrule[\heavyrulewidth]
    \end{tabular}
    \caption{Operators to combine semantics}
+   \label{tab:ops}
 \end{table}
 
 
@@ -271,7 +270,7 @@ An aspect models a piece of semantics of a gramamr. To make semantics extensible
 it is enough to implement an algorithm to merge two aspects, and a way to make
 an aspect from one single rule. Since our most basic primitives |syndef| and
 |inhdef| build a single rule adding a rule one by one is a common operation. As
-we show in \ref{tab:ops} we provide a set of operators to combine rules and
+we show in Table~\ref{tab:ops} we provide a set of operators to combine rules and
 aspects. We already introduced |ext|, which combines two rules of the same
 production into a bigger rule.
 
