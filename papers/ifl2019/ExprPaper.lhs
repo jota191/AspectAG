@@ -372,36 +372,46 @@ programmer may make. In this subsection we show some examples of such error
 messages.
 
 
-A possible error when defining an attribute,
-is to define a computation that returns a value of a different type
-than the type of the attribute.
+A possible error when defining an attribute, is to have type errors
+in the expressions that define the computation.
+For example if in Line~\ref{line:add_eval} we use an attribute of different
+type than the expected (|env| instead of |eval|):
+%
+< add_eval  =  syndefM eval add  $ (+)  <$>  at leftAdd eval
+<                                       <*>  at rightAdd env
+%
+we obtain a |GHC| type error, pointing at this position in the code,
+with the message:
+%
+\begin{Verbatim}[fontsize=\small]
+Couldn't match type 'Map String Int' with 'Int'
+\end{Verbatim}
+Similar messages are obtained if the expression has other internal type errors,
+like writing |pure (2 + False)|.
+
+
+Another possible error is to define a computation that returns
+a value of a different type than the type of the attribute.
 For example, if in Figure~\ref{fig:eval}, instead of Line~\ref{line:var_eval}
 we have the following declaration that uses |lookup| instead of |slookup|:
 %
 < var_eval  =  syndefM eval var
 <           $  lookup <$> ter vname <*> at lhs env
 %
-We obtain a |GHC| type error, pointing at this position in the code,
-with the message:
+we get the error:
 \begin{Verbatim}[fontsize=\small]
-Couldn't match type 'Maybe Int' with 'Int'
+Error: Int /= Maybe Int
+trace: syndef( Attribute eval:Int
+             , Non-Terminal Expr::Production p_Var)
 \end{Verbatim}
 %
 expressing that we provided a |Maybe Int| where an |Int| was expected.
-Similar messages are obtained if the expression has internal type errors,
-like writing |pure False| instead of |at lhs env|.
-Such errors can also be caused by the use of an attribute of different
-type than the expected. For example, if in Line~\ref{line:add_eval}
-we use |env| instead of |eval|:
-%
-< add_eval  =  syndefM eval add  $ (+)  <$>  at leftAdd eval
-<                                       <*>  at rightAdd env
-%
-we get the error:
-%
-\begin{Verbatim}[fontsize=\small]
-Couldn't match type 'Map String Int' with 'Int'
-\end{Verbatim}
+There is also some \verb"trace" information, showing the context where
+the error appears.
+In this case it is not necessary, since the source of the error and the place where
+the error is detected are the same. But we will see later in this section some
+examples where this information will guide us to the possible source of an
+error that is produced in a later stage.
 
 
 A more AG-specific error is to try to access to a child
@@ -422,12 +432,6 @@ trace: syndef( Attribute eval:Int
 %
 expressing that the production of type |p_Val| (of the non-terminal |Expr|) is
 not equal to the expected production of type |p_Add| (of the non-terminal |Expr|).
-There is also some \verb"trace" information, showing the context where
-the error appears.
-In this case is not necessary, since the source of the error and the place where
-the error is detected are the same. But we will see later in this section some
-examples where this information will guide us to the possible source of an
-error that is produced in a later stage.
 
 Another mistake, similar to the previous one, is to treat a non-terminal as a terminal,
 or the other way around.

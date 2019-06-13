@@ -1,57 +1,59 @@
+In this section we show how we put records and requirements to
+work in the implementation of \AspectAG.
+
 \subsection{Families and Rules}
 \label{sec:rules}
 
-In \AspectAG\ internals we use the concept of \emph{families} as input and output
+We use the concept of \emph{families} as input and output
 for attribute computations. A family for a given production contains an
 attribution for the parent, and a collection of attributions, one for each
-children. A family is implemented as a product of |Attribution|
-and |ChAttsRec|, and it is indexed with the production which it belongs:
+of the children. A family is implemented as a product of |Attribution|
+and |ChAttsRec|, and it is indexed with the production to which it belongs:
 
 > data Fam  (prd  ::  Prod)
 >           (c    ::  [(Child, [(Att, Type)])])
 >           (p    ::  [(Att, Type)])  :: Type where
->   Fam  ::  ChAttsRec prd c -> Attribution p
->        ->  Fam prd c p
+>   Fam  ::  ChAttsRec prd c -> Attribution p ->  Fam prd c p
 
 
-Attribute computations, or rules are actually functions from an \emph{input
+Attribute computations, or rules, are actually functions from an \emph{input
   family} (attributes inherited from the parent and synthesized of the children)
 to an \emph{output family} (attributes synthesized for the parent, inherited to
 children). We implement them with an extra arity to make them composable, a
-known trick\cite{Moor99first-classattribute}. 
+well-known trick\cite{Moor99first-classattribute}. 
 
-> type Rule
->   (prd  :: Prod)
->   (sc   :: [(Child, [(Att, Type)])])
->   (ip   :: [(Att,       Type)])
->   (ic   :: [(Child, [(Att, Type)])])
->   (sp   :: [(Att,       Type)])
->   (ic'  :: [(Child, [(Att, Type)])])
->   (sp'  :: [(Att,       Type)])
->   =   Fam prd sc ip
->   ->  Fam prd ic sp -> Fam prd ic' sp'
+> type Rule  (prd  :: Prod)
+>            (sc   :: [(Child, [(Att, Type)])])
+>            (ip   :: [(Att,       Type)])
+>            (ic   :: [(Child, [(Att, Type)])])
+>            (sp   :: [(Att,       Type)])
+>            (ic'  :: [(Child, [(Att, Type)])])
+>            (sp'  :: [(Att,       Type)])
+>   =   Fam prd sc ip ->  Fam prd ic sp -> Fam prd ic' sp'
 
 Given an input family we build a function that updates the output family
-constructed thus far. Note that rules are indexed by a production.
+constructed thus far. Note that the rules are indexed by a production.
 
 To carry context information printable on type errors, most of the time we
-actually manipulate tagged rules:
+actually manipulate \emph{tagged} rules:
 
 > newtype CRule (ctx :: [ErrorMessage]) prd sc ip ic sp ic' sp'
->  = CRule { mkRule :: (Proxy ctx -> Rule prd sc ip ic sp ic' sp')}
+>  = CRule {mkRule :: Proxy ctx -> Rule prd sc ip ic sp ic' sp'}
 
 
 \subsection{Defining Attributes}
 \label{sec:defs}
 
-The function |syndef| introduces a new synthesized attribute.
+The function |syndef| introduces a new synthesized attribute;
+i.e. a rule that extends the attribution for the parent in the
+output family, provided that some requirements are fullfiled.
 
-> syndef  ::  (   RequireEq t t' ctx'
->             ,   RequireR  ( OpExtend AttReco ('Att att t) t sp)
->                             ctx (Attribution sp')
->             ,   ctx'  ~     ((Text "syndef("
->                             :<>:  ShowT ('Att att t) :<>: Text ", "
->                             :<>:  ShowT prd :<>: Text ")") ': ctx) )
+> syndef  ::  (   ctx' ~ (  (  Text "syndef(" :<>:  ShowT ('Att att t) :<>:
+>                              Text ", " :<>:  ShowT prd :<>: Text ")")
+>                           ': ctx)
+>             ,   RequireEq t t' ctx'
+>             ,   RequireR   (OpExtend AttReco ('Att att t) t sp) ctx
+>                            (Attribution sp') )
 >         =>  Label ('Att att t) ->  Label prd
 >         ->  (Proxy ctx' -> Fam prd sc ip -> t')
 >         ->  CRule ctx prd sc ip ic sp ic sp'
@@ -60,57 +62,74 @@ The function |syndef| introduces a new synthesized attribute.
 >      ->  Fam ic $ req ctx (OpExtend att (f Proxy inp) sp)
 
 It takes an attribute name |att|, a production |prd|, and a function |f| that
-computes the value of the attribute in terms of the input family. |f| takes
-an extra |proxy| argument to carry context information. It appends information
-about the current definition to the existing context of the attribution being
-extended.
-In practice it is useful to use a monadic version of |syndef|
+computes the value of the attribute in terms of the input family.
+The function |f| takes an extra |proxy| argument to carry context
+information. In this case, we extend the current context |ctx|
+to a new one (|ctx'|) including information about the |syndef| definition
+where it was called.
+We require the type |t'| of the value returned by |f|
+to be equal to the type |t| of the attribute,
+using a |RequireEq| requirement.
+Notice that we could have implemented this restriction by using the same
+type variable |t| for |t| and |t'|. But in this case we
+would not have a customized error message.
+The last requirement (|OpExtend|) states that we have to be able to extend
+the attribution indexed by |sp| with the attribute |att| and the result is
+an attribution with index sp'. This requirement imposes the constraint that
+assures that this insertion does not duplicate the attribute |att|.
+Since this requirement is not internal to the computation defined in |syndef|,
+que use the current context |ctx| instead of |ctx'|.
+
+Using |syndef| we can define rules like |add_eval| of Section~\ref{sec:example}:
+
+> add_eval = syndef eval add
+>  (\Proxy (Fam sc ip)->
+>   (+) (sc .#. leftAdd .#. eval) (sc .#. rightAdd .#. eval))
+%
+where |(.#.)| is the lookup operator. 
+In practice it is useful to use a monadic version of |syndef|,
+which is the one we used in Section~\ref{sec:example}:
 
 > syndefM att prd = syndef att prd . def
-
+%
 where
 
 > def :: Reader (Proxy ctx, Fam prd chi par) a
 >     -> (Proxy ctx -> (Fam prd chi par) -> a)
 > def = curry . runReader
 
-After we can define the monadic function |at| used to sugarize definitions:
-
+We defined the monadic function |at| used to sugarize definitions:
 > class At pos att m  where
 >  type ResAt pos att m
 >  at :: Label pos -> Label att -> m (ResAt pos att m)
-
+%
+with instances for looking up attributes into the attribution of the parent (|lhs|)
+or the attribution of a given child. The following is the instance for
+the case of children:
 > instance
->  (  RequireR  (OpLookup  (ChiReco prd) ('Chi ch prd nt) chi)
->               ctx (Attribution r)
->  ,  RequireR  (OpLookup AttReco ('Att att t) r) ctx t'
->  ,  RequireEq prd prd' ctx
->  ,  RequireEq t t' ctx
->  )
->  => At ('Chi ch prd nt) ('Att att t)
->        (Reader (Proxy ctx, Fam prd' chi par))  where
->  type ResAt ('Chi ch prd nt) ('Att att t)
->             (Reader (Proxy ctx, Fam prd' chi par))
->    = t
->  at  (ch :: Label ('Chi ch prd nt))
->      (att :: Label ('Att att t))
->   =  liftM  (\(ctx, Fam chi _)  ->
->                let atts = req ctx (OpLookup ch chi)
->                in  req ctx (OpLookup att atts))
->             ask
+>   ( RequireR  (OpLookup   (ChiReco prd) ('Chi ch prd nt) chi)
+>                           ctx (Attribution r)
+>   , RequireR  (OpLookup   AttReco ('Att att t) r) ctx t'
+>   , RequireEq  prd prd' ctx
+>   , RequireEq  t t' ctx
+>   , RequireEq  ('Chi ch prd nt) ('Chi ch prd ('Left ('NT n)))  ctx)
+>       => At  ('Chi ch prd nt) ('Att att t)
+>              (Reader (Proxy ctx, Fam prd' chi par))  where
+>  type ResAt  ('Chi ch prd nt) ('Att att t)
+>              (Reader (Proxy ctx, Fam prd' chi par))
+>          = t 
+>  at ch att
+>   = liftM  (\(ctx,  Fam chi _)
+>                     ->  let  atts = req ctx (OpLookup ch chi)
+>                         in   req ctx (OpLookup att atts))
+>            ask
+In this case there are two lookups involved, because we have to find the
+child in the record of children and then the attribute in its attribution.
+We also require some equalities, including the fact that the child
+has to be a non-terminal |('Left ('NT n))|.
 
-For instance in the example of section \ref{sec:example}, |add_eval| can be rewritten as:
-
-> add_eval = syndef eval add
->  (\Proxy (Fam sc ip)->
->   (+) (sc .#. leftAdd .#. eval) (sc .#. rightAdd .#. eval))
-
-where |(.#.)| is the lookup operator. If the programmer prefers, she can
-use this desugarized functions.
-
-
-To define an inherited attribute we can use the function |inhdef|. This time
-we present this definition omiting the constraints.
+The function |inhdef| defines an inherited attribute.
+For simplicity reasons we omit the constraints.
 
 %if False
 > inhdef
@@ -133,23 +152,27 @@ we present this definition omiting the constraints.
 
 > inhdef :: ( ... )
 >      => Label ('Att att t)
->      -> Label ('Prd prd nt)
->      -> Label ('Chi chi ('Prd prd nt) ntch)
->      -> (Proxy ctx' -> Fam ('Prd prd nt) sc ip -> t')
->      -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
+>      -> Label prd
+>      -> Label ('Chi chi prd ntch)
+>      -> (Proxy ctx' -> Fam prd sc ip -> t')
+>      -> CRule ctx prd sc ip ic sp ic' sp
 > inhdef  att prd chi f
 >   = CRule $ \ctx inp (Fam ic sp)
->        -> let ic'   = req ctx (OpUpdate chi catts' ic)
->               catts = req ctx (OpLookup chi ic)
->               catts'= req ctx (OpExtend  att (f Proxy inp) catts)
+>        -> let  catts   = req ctx (OpLookup chi ic)
+>                catts'  = req ctx (OpExtend  att (f Proxy inp) catts)
+>                ic'     = req ctx (OpUpdate chi catts' ic)
 >           in  Fam ic' sp
 
-Inherited attribute definitions are indexed by a child. Again, the monadic
+An inherited attribute |att| is defined in a production |prd| for
+a given child |chi|. In this case we have to lookup the attribution of the child into
+the inherited attributes of the children |ic|, then extend it and update |ic|.
+
+Again, the monadic
 alternative |inhdefM| is provided. Functions to define synthesized and inherited
-attributes are neccesary to compose nontrivial attribute grammar. More
-constructs are useful in practice. In section\ref{sec:example} |synmod| was used
-and proved to be useful to change semantics. Its inherited counterpart |inhmod|
-is also provided. On top of this we implement some common patterns that generate
+attributes are neccesary to compose nontrivial attribute grammars. More
+constructs are useful in practice. In Section~\ref{sec:example} |synmod| (that modifies an attribute instead of adding it)
+was used and proved to be useful to change semantics. Its inherited counterpart |inhmod|
+is also provided. On top of this we can implement some common patterns that generate
 rules from higher level specifications.
 
 \subsection{Combining Rules.}
@@ -181,31 +204,6 @@ and small type error and this can be done by using the following definition:
 >      -> CRule ctx prd sc ip a b ic' sp'
 > ext = ext'
 
-Here we use |RequireEq| wich is actually a sugar for a couple of constraints:
-
-> type RequireEq (t1 :: k )(t2 :: k) (ctx:: [ErrorMessage])
->     = (Require (OpEq t1 t2) ctx, t1 ~ t2)
-
-The first is a requirement, using the following operator:
-
-> data OpEq t1 t2
-> instance RequireEqRes t1 t2 ctx
->   => Require (OpEq t1 t2) ctx where
->   type ReqR (OpEq t1 t2) = ()
->   req = undefined
-
-The type family |RequireEqRes| is a type level function computing a constraint.
-It reduces to the requirement of an |OpError| if $t1 \neq t2$, building a
-readable error message, or to the trivial (Top) constraint otherwise.
-
-
-> type family  RequireEqRes (t1 :: k) (t2 :: k)
->              (ctx :: [ErrorMessage]) ::  Constraint where
->   RequireEqRes t1 t2 ctx = If   (t1 `Equal` t2)
->                                 (() :: Constraint)
->                                 (Require (OpError (Text "" :<>: ShowT t1
->                                 :<>: Text " /= " :<>: ShowT t2)) ctx)
-
 
 
 \subsection{Aspects}
@@ -214,22 +212,21 @@ Aspects are collections of rules, indexed by productions. They are an instance
 of |GenRecord|, defined as:
 
 > data PrdReco
-> type instance  WrapField PrdReco (rule :: Type)
->   = rule
-> type Aspect (asp :: [(Prod, Type)]) =  Rec PrdReco asp
-> type instance ShowRec PrdReco       =  "Aspect"
-> type instance ShowField PrdReco     =  "production named "
+> type instance  WrapField PrdReco (rule :: Type) = rule
+> type Aspect (asp :: [(Prod, Type)])  =  Rec PrdReco asp
+> type instance ShowRec PrdReco        =  "Aspect"
+> type instance ShowField PrdReco      =  "production named "
 
 
-As done in section \ref{sec:rules} with rules, to keep track on contexts
+As done in Section~\ref{sec:rules} with rules, to keep track on contexts
 we introduce the concept of a tagged aspect:
 
 > newtype CAspect (ctx :: [ErrorMessage]) (asp :: [(Prod, Type)] )
 >   = CAspect { mkAspect :: Proxy ctx -> Aspect asp}
 
-In section \ref{sec:defs} we see that context is extended when an attribute is
-defined using |syndef| or |inhdef|. In the running example in section
-\ref{sec:example} the function |traceAspect| was introduced. |traceAspect| is as a
+In Section~\ref{sec:defs} we saw how that context is extended when an attribute is
+defined using |syndef| or |inhdef|. In the running example in Section~\ref{sec:example}
+the function |traceAspect| was introduced as a
 tool for the user to place marks visible in the trace when a type error occurs.
 We implement |traceAspect| using a sort of |map| function, traversing the record.
 
@@ -239,19 +236,18 @@ We implement |traceAspect| using a sort of |map| function, traversing the record
 >                ->  Proxy @ ((Text "aspect ":<>: e) : ctx)
 > mapCAspect fctx (CAspect fasp)
 >   = CAspect $ mapCtxRec fctx . fasp . fctx
-
+%
 where |mapCtxRec| is a dependent function:
 
-> class MapCtxAsp (r :: [(Prod,Type)]) (ctx :: [ErrorMessage])
->                                      (ctx' :: [ErrorMessage])  where
+> class MapCtxAsp (r :: [(Prod,Type)])  (ctx :: [ErrorMessage])
+>                                       (ctx' :: [ErrorMessage])  where
 >   type ResMapCtx r ctx ctx' :: [(Prod,Type)]
 >   mapCtxRec  :: (Proxy ctx -> Proxy ctx')
 >              -> Aspect r -> Aspect (ResMapCtx r ctx ctx')
-
-whose implementation does not offer new insight.
+%
+whose implementation does not offer new insights.
 
 \begin{table}[t] 
-   \label{tab:ops}
    \small % text size of table content
    \centering % center the table
    \begin{tabular}{lccccc} % alignment of each column data
@@ -264,25 +260,26 @@ whose implementation does not offer new insight.
    \bottomrule[\heavyrulewidth]
    \end{tabular}
    \caption{Operators to combine semantics}
+   \label{tab:ops}
 \end{table}
 
 
 \subsection{Combining Aspects}
 
-An aspect models a piece of semantics of a gramamr. To make semantics extensible
+An aspect models a piece of semantics of a grammar. To make semantics extensible
 it is enough to implement an algorithm to merge two aspects, and a way to make
 an aspect from one single rule. Since our most basic primitives |syndef| and
-|inhdef| build a single rule adding a rule one by one is a common operation. As
-we show in \ref{tab:ops} we provide a set of operators to combine rules and
+|inhdef| build a single rule, adding rules one by one to an aspect is a common operation. As
+we show in Table~\ref{tab:ops} we provide a set of operators to combine rules and
 aspects. We already introduced |ext|, which combines two rules of the same
-production into a bigger rule.
+production.
 
 Within the |Require| framework, we implement operations to append rules to an
 aspect, and to combine Aspects.
 
 \subsubsection{Adding a Rule}
 
-We define an operation |OpComRA| (combine a rule, and an aspect). There are two
+We define an operation |OpComRA| (combine a rule with an aspect). There are two
 possibilities. If the rule is indexed by a production not appearing on the
 aspect, the combination is simply an append. Otherwise we must lookup the
 current rule an update it, combining the inserted rule.
@@ -304,27 +301,31 @@ Let |OpComRA| be an operation to this append.
 Again, it actually wraps to a lower level operator where the truth value of
 the label membership test we use to decide is explicit.
 
-> data OpComRA' (b :: Bool)
->               (ctx  :: [ErrorMessage])
->               (prd  :: Prod)
->               (sc   :: [(Child, [(Att, Type)])])
->               (ip   :: [(Att, Type)])
->               (ic   :: [(Child, [(Att, Type)])])
->               (sp   :: [(Att, Type)])
->               (ic'  :: [(Child, [(Att, Type)])])
->               (sp'  :: [(Att, Type)])
->               (a     :: [(Prod, Type)])  where
+> data OpComRA'  (b :: Bool)
+>                (ctx  :: [ErrorMessage])
+>                (prd  :: Prod)
+>                (sc   :: [(Child, [(Att, Type)])])
+>                (ip   :: [(Att, Type)])
+>                (ic   :: [(Child, [(Att, Type)])])
+>                (sp   :: [(Att, Type)])
+>                (ic'  :: [(Child, [(Att, Type)])])
+>                (sp'  :: [(Att, Type)])
+>                (a     :: [(Prod, Type)])  where
 >   OpComRA' :: Proxy b -> CRule ctx prd sc ip ic sp ic' sp'
->           -> Aspect a -> OpComRA' b ctx  prd sc ip ic sp ic' sp' a
+>            -> Aspect a -> OpComRA' b ctx  prd sc ip ic sp ic' sp' a
 
 Then, |OpComRA| calls |OpComRA'| instantiating the proxy with the type level
 result of the label membership predicate.
 
 > instance
->  (Require (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a) ctx)
->   => Require (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx where
+>  (Require (  OpComRA'  (HasLabel prd a)
+>                        ctx prd sc ip ic sp ic' sp' a)
+>              ctx)
+>   => Require (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx
+>         where
 >   type ReqR (OpComRA ctx prd sc ip ic sp ic' sp' a)
->      = ReqR (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a)
+>      = ReqR (OpComRA'   (HasLabel prd a)
+>                         ctx prd sc ip ic sp ic' sp' a)
 >   req ctx (OpComRA rule a)
 >      = req ctx (OpComRA' (Proxy @ (HasLabel prd a)) rule a)
 
@@ -332,8 +333,8 @@ result of the label membership predicate.
 The type level function |HasLabel| is simply coded as follows:
 
 > type family HasLabel (l :: k) (r :: [(k, k')]) :: Bool where
->   HasLabel l '[] = False
->   HasLabel l ( '(l', v) ': r) = Or (l == l') (HasLabel l r)
+>   HasLabel l '[]               = False
+>   HasLabel l ( '(l', v) ': r)  = Or (l == l') (HasLabel l r)
 
 
 Then, |Require| instances for |OpComRA'| are implemented. The case where the
@@ -346,7 +347,8 @@ Finally we define the proper |extAspect| function, that adds a rule to a record,
 now carrying a context.
 
 > extAspect
->   ::  RequireR (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx (Aspect asp)
+>   ::  RequireR  (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx
+>                 (Aspect asp)
 >   =>  CRule ctx prd sc ip ic sp ic' sp'
 >   ->  CAspect ctx a -> CAspect ctx asp
 > extAspect rule (CAspect fasp)

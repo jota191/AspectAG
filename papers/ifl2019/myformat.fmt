@@ -30,6 +30,7 @@
 %format :$$:    = ":\!\!\$\!\$\!\!:"
 
 %format @       = "\;@\;"
+%format ~       = "\;\sim\;"
 
 
 %format add_eval   = "\Varid{add_{eval}}"

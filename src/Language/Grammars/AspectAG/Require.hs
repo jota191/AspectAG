@@ -34,7 +34,7 @@ class Require (op   :: Type)
    req :: Proxy ctx -> op -> ReqR op
 
 instance (TypeError (Text "Error: " :<>: m :$$:
-                     Text "from context: " :<>: ShowCTX ctx))
+                     Text "trace: " :<>: ShowCTX ctx))
   => Require (OpError m) ctx where {}
 
 data OpError (m :: ErrorMessage) where {}
