@@ -128,8 +128,8 @@ child in the record of children and then the attribute in its attribution.
 We also require some equalities, including the fact that the child
 has to be a non-terminal |('Left ('NT n))|.
 
-To define an inherited attribute we can use the function |inhdef|. This time
-we present this definition omiting the constraints.
+The function |inhdef| defines an inherited attribute.
+For simplicity reasons we omit the constraints.
 
 %if False
 > inhdef
@@ -158,17 +158,21 @@ we present this definition omiting the constraints.
 >      -> CRule ctx prd sc ip ic sp ic' sp
 > inhdef  att prd chi f
 >   = CRule $ \ctx inp (Fam ic sp)
->        -> let ic'   = req ctx (OpUpdate chi catts' ic)
->               catts = req ctx (OpLookup chi ic)
->               catts'= req ctx (OpExtend  att (f Proxy inp) catts)
+>        -> let  catts   = req ctx (OpLookup chi ic)
+>                catts'  = req ctx (OpExtend  att (f Proxy inp) catts)
+>                ic'     = req ctx (OpUpdate chi catts' ic)
 >           in  Fam ic' sp
 
-Inherited attribute definitions are indexed by a child. Again, the monadic
+An inherited attribute |att| is defined in a production |prd| for
+a given child |chi|. In this case we have to lookup the attribution of the child into
+the inherited attributes of the children |ic|, then extend it and update |ic|.
+
+Again, the monadic
 alternative |inhdefM| is provided. Functions to define synthesized and inherited
-attributes are neccesary to compose nontrivial attribute grammar. More
-constructs are useful in practice. In section\ref{sec:example} |synmod| was used
-and proved to be useful to change semantics. Its inherited counterpart |inhmod|
-is also provided. On top of this we implement some common patterns that generate
+attributes are neccesary to compose nontrivial attribute grammars. More
+constructs are useful in practice. In Section~\ref{sec:example} |synmod| (that modifies an attribute instead of adding it)
+was used and proved to be useful to change semantics. Its inherited counterpart |inhmod|
+is also provided. On top of this we can implement some common patterns that generate
 rules from higher level specifications.
 
 \subsection{Combining Rules.}
