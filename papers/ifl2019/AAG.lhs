@@ -404,7 +404,8 @@ context
 > knitAspect (prd :: Label prd) asp fc ip
 >   = let ctx  = Proxy @ '[]
 >         ctx' = Proxy @ '[Text "knit" :<>: ShowT prd]
->     in  knit ctx (req ctx' (OpLookup prd ((mkAspect asp) ctx))) fc ip
+>     in  knit ctx
+>         (req ctx' (OpLookup prd ((mkAspect asp) ctx))) fc ip
 
 and the real hard work is done by the funtion |knit|, wich takes the combined
 rules for a node and the semantic functions of the children, and builds a
@@ -448,30 +449,31 @@ A production specifies how a nonterminal symbol can be rewritten. It can rewrite
 to a mix of terminal and nonterminal symbols. From the datatype perspective, a
 constructor can contain recursive and nonrecursive positions. Usually, in
 attribute grammar systems a terminal has only one attribute: itself. In
-\AspectAG all children are put in a record, each position containing an
-attribution. In old versions of \AspectAG terminals where directly put as a
+\AspectAG\ all children are put in a record, each position containing an
+attribution. In old versions of \AspectAG\ terminals where directly put as a
 children instead of an attribution. This was possible since at type level this
 records were essentialy untyped. We decided to lift the shape of the structure
 to kinds, adding up static guarantees, but losing this flexibility.
-
 There are at least two approaches to treat terminals:
 
 \begin{itemize}
 \item
-  |ChAttsRec| could contain a promoted sum type, each child is either a terminal
-  or nonterminal with an attribution |'(Att, Type)|.
+  |ChAttsRec| could be a record containing a promoted sum type, each child is
+  either a terminal, or a nonterminal with an index attribution of kind |[(Att,
+    Type)]|. At term level, constructors for inhabitants can be build using a
+  GADT.
+
 \item
-  For each terminal there is a child, with a trivial attribution containing only
-  an attribute for the terminal.
+  As we did, we model all children as a record of attributions, with a trivial
+  attribution containing only an attribute for the terminal case.
 \end{itemize}
 
-The second option was chosen since it is easier and clearer to have a uniform
-structure.
+The second option was chosen for simplicity.
 
-To introduce an attribute the user defines an unique name. As we say, there is a
-trivial attribute for each terminal. To chose a name is not a problem since it
-is isolated behind a children. Accordingly, semantic functions of the children
-can be coded in a polymorphic way.
+As seen before, to introduce an attribute the user defines a unique name (a
+label). As we say, there is a trivial attribute for each terminal. To chose a
+name is not a problem since it is isolated behind a children. Accordingly,
+semantic functions of the children can be coded in a polymorphic way.
 
 > class SemLit a where
 >   sem_Lit :: a -> Attribution ('[] :: [(Att,Type)])
@@ -481,6 +483,7 @@ can be coded in a polymorphic way.
 >   sem_Lit a _ = (Label .=. a) *. emptyAtt
 >   lit         = Label @ ('Att "term" a)
 
-All of them are labelled with the |lit| label, and the semantic function simply
-wraps a value in an attribution.
+All of them are labelled with the attribute named |"Term"|, accesible using
+the |lit| expression, and the semantic function simply wraps a value in an
+attribution.
 

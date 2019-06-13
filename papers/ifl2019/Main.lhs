@@ -200,12 +200,35 @@ messages.
 \label{sec:aag}
 %include ./AAG.lhs
 
-\section{Conclusions and Future Work}
-This allows us to have better error messages it also cuts out some freedoms;
-some rules would be reusab
-
 \section{Related Work}
+Attribute grammars encoded in functional languages have a long history,
+starting with Johnson[REF].
 
+First class implementations of Attibute grammars in Haskell were introduced by
+[Moor], with a lightweight approach missing from type safety. [Viera] et al in
+the original design og \AspectAG\ introduced a type safe approach. We push a
+while towards the direction of type safety making types strongly kinded. Other
+implementations such as [Balestrieri, ] can be cited. In both cases, error
+messages were a weakness.
+
+Managing type errors on EDSLs is an old problem to the community.
+Research in type errors for EDSLs is an active area.
+
+{Jeremy Wazny thesis "Type inference and type error di
+  agnosis for Hindley/Milner with extensions" and
+  Bastiaan Heeren in his thesis "Top Quality Error Messages"
+  focus on this same problem.}
+Serrano Mena paper
+
+
+
+
+\section{Conclusions and Future Work}
+
+We do not completely avoid implementation leaks but we
+do offer precise type errors.
+To have clear error messages have some tradeoffs.
+We loose some flexibility tagging Rules with productions.
 
 
 
