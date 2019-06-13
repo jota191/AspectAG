@@ -297,11 +297,21 @@
 >               : ctx)
 >          -> Fam prd sc ip -> t)
 >      -> CRule ctx prd sc ip ic' r ic' sp'
-
 > synmod att prd f
 >   = CRule $ \ctx  inp (Fam ic sp)
 >            -> Fam ic $ req ctx (OpUpdate att (f Proxy inp) sp)
 
+
+> synmodM
+>   :: RequireR (OpUpdate AttReco ('Att att t) t r) ctx (Attribution sp')
+>   => Label ('Att att t)
+>      -> Label prd
+>      -> Reader ( Proxy ((('Text "synmod(" ':<>: ShowT ('Att att t)) :<>: Text ", "
+>                                           ':<>: ShowT prd :<>: Text ")")
+>                        : ctx)
+>                , Fam prd sc ip)
+>                t
+>      -> CRule ctx prd sc ip ic' r ic' sp'
 > synmodM att prd = synmod att prd . def
 
 
@@ -334,6 +344,30 @@
 >               catts'= req ctx (OpExtend  att (f Proxy inp) catts)
 >           in  Fam ic' sp
 
+
+
+> inhdefM
+>   :: ( RequireEq t t' ctx'
+>      -- , RequireR  (OpExtend AttReco ('Att att t) t r) ctx (Attribution v2)
+>      , RequireR  (OpExtend' (LabelSetF ('( 'Att att t, t) : r)) AttReco ('Att att t) t r) ctx (Attribution v2)
+>      , RequireR (OpUpdate (ChiReco ('Prd prd nt))
+>                 ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
+>                 (ChAttsRec ('Prd prd nt) ic')
+>      , RequireR (OpLookup (ChiReco ('Prd prd nt))
+>                 ('Chi chi ('Prd prd nt) ntch) ic) ctx
+>                 (Attribution r)
+>      , RequireEq ntch ('Left n) ctx'
+>      , ctx' ~ ((Text "inhdef("
+>                 :<>: ShowT ('Att att t')  :<>: Text ", "
+>                 :<>: ShowT ('Prd prd nt) :<>: Text ", "
+>                 :<>: ShowT ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
+>                 ': ctx))
+>      =>
+>      Label ('Att att t)
+>      -> Label ('Prd prd nt)
+>      -> Label ('Chi chi ('Prd prd nt) ntch)
+>      -> Reader (Proxy ctx', Fam ('Prd prd nt) sc ip) t'
+>      -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp 
 > inhdefM att prd chi = inhdef att prd chi . def
 
 
@@ -368,6 +402,29 @@
 >               catts'= req ctx (OpUpdate  att (f Proxy inp) catts)
 >           in  Fam ic' sp
 
+
+> inhmodM
+>   :: ( RequireEq t t' ctx'
+>      , RequireR (OpUpdate AttReco ('Att att t) t r) ctx
+>                 (Attribution v2)
+>      , RequireR (OpUpdate (ChiReco ('Prd prd nt))
+>                 ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
+>                 (ChAttsRec ('Prd prd nt) ic')
+>      , RequireR (OpLookup (ChiReco ('Prd prd nt))
+>                 ('Chi chi ('Prd prd nt) ntch) ic) ctx
+>                 (Attribution r)
+>      , RequireEq ntch ('Left n) ctx'
+>      , ctx' ~ ((Text "inhmod("
+>                 :<>: ShowT ('Att att t)  :<>: Text ", "
+>                 :<>: ShowT ('Prd prd nt) :<>: Text ", "
+>                 :<>: ShowT ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
+>                 ': ctx))
+>      =>
+>      Label ('Att att t)
+>      -> Label ('Prd prd nt)
+>      -> Label ('Chi chi ('Prd prd nt) ntch)
+>      -> Reader (Proxy ctx', Fam ('Prd prd nt) sc ip) t'
+>      -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
 > inhmodM att prd chi = inhmod att prd chi . def
 
 > ext' ::  CRule ctx prd sc ip ic sp ic' sp'
