@@ -188,9 +188,15 @@ messages.
 
 \numbersoff
 
-\section{Introduction}
+%% Introduction
 
-%include ./ExprPaper.lhs
+%include Intro.lhs
+
+%% Overview of teh library
+
+%include OverviewLibrary.lhs
+
+%%%%%%include ./ExprPaper.lhs
 
 \section{Records and Requirements}
 
