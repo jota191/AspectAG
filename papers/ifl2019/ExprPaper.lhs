@@ -52,7 +52,7 @@ object oriented programing is good to define new data: one could implement
 algebraic datatypes with a composite design pattern, and simply add a new class.
 However, to define a new function for a data type, we have to inspect all the
 existing subclasses and add a new method. This problem was first noted by
-Reynolds [REF] and later referred to as “the expression problem” by Wadler
+Reynolds\cite{REYNOLDS75B} and later referred to as “the expression problem” by Wadler
 \cite{ExpressionProblem}. Attribute grammars offer an aproach to solve this
 issue.
 
