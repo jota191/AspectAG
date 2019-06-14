@@ -201,75 +201,10 @@ messages.
 %include ./AAG.lhs
 
 \section{Related Work}
-Attribute grammars encoded in functional languages have a long history, starting
-with Johnson \cite{652508}. 
-
-
-Related to Haskell, the {\tt uuagc} (Uthrech University Attribute Grammar
-Compiler) is probably the most well known example. 
-
-First class implementations of Attibute grammars in Haskell were introduced by
-Moor \cite{Moor99first-classattribute} with a lightweight approach missing from
-type safety. Viera \emph{et al} \cite{Viera:2009:AGF:1596550.1596586} in the
-original design og \AspectAG\ introduced a type safe approach. Other embedded
-implementations existed \cite{DBLP:phd/ethos/Balestrieri15}. Error messages were
-a weakness. Also, we push a towards the direction of type safety making types
-strongly kinded. \cite{DBLP:conf/ifl/VieraBP18}
-
-Other embedded implementations \cite{DBLP:conf/ifl/VieraBP18} solve the type
-diagnostic problem at the cost of making it staged.
-
-Managing type errors on EDSLs is an old problem to the community and an active
-research area. The idea of transforming a typing problem into a constraint
-problem is not recent \cite{10635_42131, improvingtypeerror}.
-
-Compiler support added with the |TypeError| was essential, but further support
-would be desirable, in particular to control class constraint solving and avoid
-leaks an non readable messages. Research by Heeren
-{DBLP:phd/basesearch/Heeren05} was implemented it for the Helium compiler.
-Recently, Serrano Mena \emph{et al} \cite{DBLP:phd/basesearch/Serrano18,
-  DBLP:conf/ifl/SerranoH17} developed a set of techniques for customizing type
-error diagnosis gor GHC. Unfortunately this implementation was not merged in
-main tree.
-
-
-
-
-
-
+%include ./Related.lhs
 
 \section{Conclusion and Future Work}
-
-In this paper we presented a library of first class strongly kinded attribute
-grammars. Using type level programming we achieved to get precise domain
-specific type errors, although we do not completely avoid implementation leaks.
-
-We inherite all the advantages of an embedding. All Haskell ecosystem and
-language features are avaiable to the user when implementing grammars.
-
-Even though Template Haskell can be used to scrap some boilerplate,
-automatically generating labels and semantic functions, the library can be used
-as a pure embedding within the host language, with no preprocessing or
-postprocessing. This represents an advantage, since a staged compilation makes
-interactive development and debugging difficult.
-
-To get clear error messages we have to deal with some tradeoffs. It requires
-careful management of context information annotated in types, and explicit term
-level proxy arguments to carry type information during type checking.
-Nevertheless, this implementation details are transparent to the user. We have
-lost some flexibilities. For example, rules are related to a production, this
-was not this way in old versions of \AspectAG, allowing us to reuse some rules
-out of the box. Anyway, this can be shallowed since the host language provides
-type -and kind- polymorphism.
-
-To effectively solve the expression problem we presented a deforestated
-approach. Grammars don't need to be tied to a datatype. Reusing an AG in an
-extended datatype is nice, but the semantic function must be implemented twice.
-This is not a problem of our implementation, but of Haskell's expresiveness. To
-explore how to integrate our library with extensible datatypes is left as an
-open problem.
-
-
+%include ./Conclusion.lhs
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{bib}
