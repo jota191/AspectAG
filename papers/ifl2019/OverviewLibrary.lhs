@@ -271,12 +271,9 @@ We implement it with these definition:
 > type P_Let = 'Prd "Let" Nt_Expr
 > elet = Label @ P_Let
 >
-> exprLet   = Label @ ('Chi "exprLet"   P_Let
->                                       ('Left Nt_Expr))
-> bodyLet   = Label @ ('Chi "bodyLet"   P_Let
->                                       ('Left Nt_Expr))
-> vlet      = Label @ ('Chi "vlet"      P_Let
->                                       ('Right ('T String)))
+> exprLet   = Label @ ('Chi "exprLet"   P_Let  ('Left Nt_Expr))
+> bodyLet   = Label @ ('Chi "bodyLet"   P_Let  ('Left Nt_Expr))
+> vlet      = Label @ ('Chi "vlet"      P_Let  ('Right ('T String)))
 
 We extend the aspects we had with the definition of
 the attributes for the new production:
