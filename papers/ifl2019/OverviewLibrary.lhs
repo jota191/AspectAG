@@ -105,7 +105,7 @@ Summing up the information just provided, we can see that our grammar declaratio
 
 %|Add (Add (Var "x") (Val 5)) (Val 2)|.
 
-In our library we provide some Template Haskell~\cite{Sheard:2002:TMH:636517.636528} functions that can be used to generate a grammar definition as the one above (non-terminals, productions and children) out of a datatype representation of the ASTs (like |Expr|). \alb{despues vemos si esto queda}{However, our grammar representation is independent of such datatypes, which is actually useful to solve the expression problem, as we shall discuss later.}
+In our library we provide some Template Haskell~\cite{Sheard:2002:TMH:636517.636528} functions that can be used to generate a grammar definition as the one above (non-terminals, productions and children) out of a datatype representation of the ASTs (like |Expr|). However, our grammar representation is independent of such datatypes. %, which is actually useful to solve the expression problem, as we shall discuss later.
 
 Notice the use we do of algebraic datakinds constructors%
 \footnote{Throughout the paper, we say datakind when we refer to promoted datatypes}
@@ -281,13 +281,12 @@ the attributes for the new production:
 > aspEval2  =  traceAspect (Proxy @ ('Text "eval2"))
 >           $  syndefM eval elet (at bodyLet eval) .+: aspEval
 >
-> aspEnv2
->   =    traceAspect (Proxy @ ('Text "env2"))
->   $    inhdefM env elet exprLet (at lhs env)
->   .+:  inhdefM env elet bodyLet (insert   <$>  ter vlet
->                                           <*>  at exprLet eval
->                                           <*>  at lhs env)
->   .+:  aspEnv
+> aspEnv2  =    traceAspect (Proxy @ ('Text "env2"))
+>          $    inhdefM env elet exprLet (at lhs env)
+>          .+:  inhdefM env elet bodyLet (insert   <$>  ter vlet
+>                                                  <*>  at exprLet eval
+>                                                  <*>  at lhs env)
+>          .+:  aspEnv
 %
 %
 and again combine them: 
