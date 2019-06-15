@@ -72,7 +72,9 @@ We use multiple instances of extensible records:
 
 Extensible records coded using type-level programming are already part of the
 folklore in the Haskell community. The {\tt HList}
-library\cite{Kiselyov:2004:STH:1017472.1017488} popularized them. Old versions
+library\cite{Kiselyov:2004:STH:1017472.1017488} popularized them.
+%if False
+Old versions
 of {\tt HList} originally abused of Multi Parameter
 Typeclasses \cite{type-classes-an-exploration-of-the-design-space} and Functional
 Dependencies \cite{DBLP:conf/esop/Jones00} to do the job. Modern GHC Haskell
@@ -87,11 +89,12 @@ promotion, {\tt PolyKinds} providing kind polymorphism, {\tt
 {\tt TypeApplications}\cite{conf/esop/EisenbergWA16} to provide visible type
 application. 
 
-%Other implementations of Extensible Records such as Vinyl\cite{libvinyl} or
-%CTRex\cite{libCTRex} have been introduced.
+Other implementations of Extensible Records such as Vinyl\cite{libvinyl} or
+CTRex\cite{libCTRex} have been introduced.
+%endif
 One common way to implement a |Record| is using a
-|GADT|\cite{Cheney2003FirstClassPT,Xi:2003:GRD:604131.604150}. Usually
-heterogeneous records contain values of kind |Type|. It makes sense since |Type|
+|GADT|. %\cite{Cheney2003FirstClassPT,Xi:2003:GRD:604131.604150}.
+Usually heterogeneous records contain values of kind |Type|. It makes sense since |Type|
 is the kind of inhabited types, and records store values. Datatype constructors
 take information with expressive kinds and wrap it on a uniform box. This is
 desirable ins ome situations. In use cases such as our children records, where
