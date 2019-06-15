@@ -40,7 +40,7 @@ We start with a simple expression language formed by integer values, variables a
 which we then extend syntactic- and semantically in order to show the different operations supported by the library.
 
 \subsubsection*{Grammar declaration} 
-The abstract syntax of the expression language is given the following grammar:
+The abstract syntax of the expression language is given by the following grammar:
 
 <  expr    ->  ival
 <  expr    ->  vname
@@ -162,7 +162,7 @@ On the |add| production (Line~\ref{line:add_eval}) we compute |eval| as the sum
 of the denotation of subexpressions. On each subexpression there is a proper
 attribute |eval| that contains its value. Attribute |eval| is defined using function |syndefM|, which is the library operation to define synthesized attributes. It takes an attribute (the one for which the semantics is being defined), a production (where it is being defined), and the respective computation rule for the attribute. 
 %and the proper definition.
-Using an applicative interface~\cite{applicative}, we take the values of |eval| at children
+Using an applicative interface, we take the values of |eval| at children
 |leftAdd| and |rightAdd|, and combine them with the operator |(+)|.
 By means of the opertion |at leftAdd eval| we pick up the attribute |eval| from the collection of synthesized attributes of the child |leftAdd|.
 We refer to these collections of attributes as \emph{attributions}.
