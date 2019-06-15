@@ -36,36 +36,41 @@ attributes (where information flows bottom up) and inherited attibutes (where it
 flows top down). AGs have proven not being only useful to implement
 programming language semantics, but as a general purpose programming paradigm.
 
-Domain Specific Languages (DSLs) are a useful abstraction tool to solve problems
-using specialized domain terms. DSLs can be implemented as a standalone language,
-introducing a full compiler toolchain, or embedded as a library in a host
-language (Embedded DSLs, EDSLs for short).
+%Domain Specific Languages (DSLs) are a useful abstraction tool to solve problems
+%using specialized domain terms. DSLs can be implemented as a standalone language,
+%introducing a full compiler toolchain, or embedded as a library in a host
+%language (Embedded DSLs, EDSLs for short).
 %The latter approach has some advantages.
 %All constructs of the host language and its libraries are avaiable
 %to users. Also, the amount of work required compared to the standalone approach
 %is minimal.
-In higher order functional programming languages such as Haskell,
-the embedded approach is common and successful.
-However, one important drawback is
-that since the EDSL is simply a library, when type errors occur they do not
-refer to domain terms, and they leak implementation details. This breaks all the
-abstraction mechanism that the technique introduces.
-The problem is even worse if we use type level programming techniques to
-implement the DSL.
+%In higher order functional programming languages such as Haskell,
+%the embedded approach is common and successful.
 
-\AspectAG\ is an EDSL implementing first class attribute grammars, first
+\AspectAG\ is a Haskell EDSL (Embedded Domain Specific Language) implementing first class attribute grammars,
 introduced by Viera \emph{et al} in 2009 \cite{Viera:2009:AGF:1596550.1596586}. It uses
 extensible polymorphic records and predicates encoded using old fashioned type
 level programming (i.e. Multi Parameter Typeclasses \cite{type-classes-an-exploration-of-the-design-space} and Functional
 Dependencies \cite{DBLP:conf/esop/Jones00}),
-to ensure well formedness of AGs at compile time. Type errors
-were of course a weakness, aggravated by the fact that an AG is a structure that
-can be easily illformed.
+to ensure well formedness of AGs at compile time.
+
+One important drawback of EDSLs in general, and \AspectAG\ in particular,
+is that since is simply a library, when type errors occur they do not
+refer to domain terms, and they leak implementation details. This breaks all the
+abstraction mechanism that the technique introduces.
+The problem is even worse if we use type level programming techniques to
+implement the DSL.
+%
+%Type errors
+%were of course a weakness, aggravated by the fact that an AG is a structure that
+%can be easily illformed.
 %For instance, for the grammar implementator it is a
 %common mistake to try to use attributes that are not defined in some production.
-Moreover, at that time, type level programming was really ad-hoc, exploiting
+Moreover, type level programming used in \AspectAG\ was really ad-hoc, exploiting
 extensions originally introduced for other uses. In particular, at type level,
 programming was essentialy untyped.
+
+
 
 Modern GHC Haskell
 provides extensions to the type system to support the encoding of more
