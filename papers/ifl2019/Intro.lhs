@@ -53,8 +53,8 @@ abstraction mechanism that the technique introduces.
 The problem is even worse if we use type level programming techniques to
 implement the DSL.
 
-\AspectAG\ is an EDSL implementing first class attribute grammars, firstly
-introduced by Viera et al in 2009 \cite{Viera:2009:AGF:1596550.1596586}. It uses
+\AspectAG\ is an EDSL implementing first class attribute grammars, first
+introduced by Viera \emph{et al} in 2009 \cite{Viera:2009:AGF:1596550.1596586}. It uses
 extensible polymorphic records and predicates encoded using old fashioned type
 level programming (i.e. Multi Parameter Typeclasses \cite{type-classes-an-exploration-of-the-design-space} and Functional
 Dependencies \cite{DBLP:conf/esop/Jones00}),
