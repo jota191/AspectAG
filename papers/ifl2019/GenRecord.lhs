@@ -78,33 +78,13 @@ The implementation of the library is strongly based on the use of extensible rec
 Extensible records coded using type-level programming are already part of the
 folklore in the Haskell community. The {\tt HList}
 library~\cite{Kiselyov:2004:STH:1017472.1017488} popularized them.
-%if False
-Old versions
-of {\tt HList} originally abused of Multi Parameter
-Typeclasses \cite{type-classes-an-exploration-of-the-design-space} and Functional
-Dependencies \cite{DBLP:conf/esop/Jones00} to do the job. Modern GHC Haskell
-provides extensions to the type system to support the encoding of this and more
-sort-of dependent types in a more comfortable way. Notably {\tt
-  TypeFamilies}\cite{Chakravarty:2005:ATC:1047659.1040306,
-  Chakravarty:2005:ATS:1090189.1086397, Sulzmann:2007:SFT:1190315.1190324}, to
-define functions at type-level, {\tt
-  DataKinds}~\cite{Yorgey:2012:GHP:2103786.2103795}, implementing data
-promotion, {\tt PolyKinds} providing kind polymorphism, {\tt
-  KindSignatures}\cite{ghcman} to document and deambiguate kinds, or \break
-{\tt TypeApplications}\cite{conf/esop/EisenbergWA16} to provide visible type
-application. 
-
-Other implementations of Extensible Records such as Vinyl\cite{libvinyl} or
-CTRex\cite{libCTRex} have been introduced.
-%endif
-One common way to implement a record is by using a GADT.
-%\cite{Cheney2003FirstClassPT,Xi:2003:GRD:604131.604150}.
-
-Heterogeneous records usually contain values of kind |Type|. It makes sense since |Type|
-is the kind of inhabited types, and records store values. Datatype constructors
-take information with expressive kinds and wrap it on a uniform box. This is
-desirable ins ome situations. In use cases such as our children records, where
-we store a full featured attribution, we wish to state this on kinds. We
+One common way to implement a record is by using a GADT
+indexed by the list of types of the values stored in its fields.
+These types are usually of kind |Type|, what makes sense since |Type|
+is the kind of inhabited types, and records store values.
+In cases such as our children records, where
+we store a full featured attribution that are also represented by an indexed GADT,
+we wish to keep some of this index information on the kinds. We
 abstracted this notion and designed a library of polymporphic extensible
 records, defined as follows:
 
@@ -117,16 +97,18 @@ records, defined as follows:
 
 
 A record is indexed by a parameter |c|, pointing out wich instance of record
-we are defining, and a promoted list of pairs |r|. The kind of the first
-component in each pair is polymorphic, since it is not mandatory that the type of
-labels is inhabited; they need to live only at type level.
-The second component is also polymorphic and it can have an elaborate kind.
-|LabelSet| is a predicate that encodes the fact that there are no repeated
-labels. 
-|Tagfield| solves
-the problem of wrapping and unwrapping some value so that each field actually stores
-something with kind |Type|, keeping explicitly the information at type level.
-%|TagField| is a fancier implementation of the well known |Data.Tagged| datatype:
+we are defining (e.g. attribution, set of children, aspect, etc.),
+and a promoted list of pairs |r| representing the fields.
+The first component of each pair is the label.
+The kind is polymorphic |k'|, since it is not mandatory to the type of
+labels to be inhabited; they need to live only at type level.
+The second component is also polymorphic |k''| and it can have an elaborate kind.
+By doing this, in the cases where the type of a stored value is an indexed GADT, we
+can use its index as the index that represents the field.
+|Tagfield| is the type of the fields of our records.
+%solves
+%the problem of wrapping and unwrapping some value so that each field actually stores
+%something with kind |Type|, keeping explicitly the information at type level.
 
 > data TagField (c :: k) (l :: k') (v :: k'') where
 >   TagField  ::  Label c -> Label l -> WrapField c v
@@ -136,10 +118,11 @@ where labels are proxies
 
 > data Label (l :: k) = Label
 
-The |TagField| constructor uses |Label| arguments to build instances because we
-usually have them avaiable at term level, as we saw in the example of Section~\ref{sec:example},
-but type applications\cite{conf/esop/EisenbergWA16} -or a much less elegant annotation- would work
-fine. The third argument -of type |WrapField c v|- should be the value that we
+%The |TagField| constructor uses |Label| arguments to build instances because we
+%usually have them avaiable at term level, as we saw in the example of Section~\ref{sec:example},
+%but type applications\cite{conf/esop/EisenbergWA16} -or a much less elegant annotation- would work
+%fine.
+The third argument -of type |WrapField c v|- should be the value that we
 want to tag. Note that |v| is kind polymorphic. For instance, a concrete instance
 of |v| can be something like |[(Att, Type)]| in the case of children. When
 actually creating a field to append in a record, an actual value must be stored;
@@ -155,6 +138,8 @@ the identity (type) function.
 %We use some sugar to encode some of our functions as operators, for example,
 %instead of |ConsRec| we usually use an infix operator |..*..|.
 
+|LabelSet| is a predicate that encodes the fact that there are no repeated
+labels. 
 A relevant design decision is the implementation of the |LabelSet| constraint.
 A similar type class is introduced on the {\tt HList} library,
 where the property of non duplication of labels is implemented by the (recursive) instances of the class.
