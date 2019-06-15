@@ -62,6 +62,7 @@
 
 
 %format 'NT = "\tk\!\Varid{NT}"
+%format 'Att = "\tk\!\Varid{Att}"
 %format 'Prd = "\tk\!\Varid{Prd}"
 %format 'Chi = "\tk\!\Varid{Chi}"
 %format 'Left = "\tk\!\Varid{Left}"
