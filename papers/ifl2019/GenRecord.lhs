@@ -29,29 +29,30 @@
 \label{sec:records}
 In order to provide flexibility and safety, \AspectAG\ internals are built from
 strongly typed extensible records. Then, mistakes like trying to access to an
-undefined attribute or child are detected at compile time as an incorrect lookup
-into a given record. Also, the definition of duplicated attributes results in a
+undefined attribute or child are detected at compile time as an incorrect look up
+in a given record. Also, the definition of duplicated attributes results in a
 type error, due to an incorrect record extension.
 
 However, detecting errors is not enough.
 If the error messages are difficult to understand and do not point to their possible sources,
 using the library becomes a painful task.
-It is a common problem when implementing
-EDSLs using type-level programming that when a type error occurs, implementation details are leaked on error messages,
-and this was the case of the previous version of \AspectAG.
+A common problem of type-level programming implementations of EDSLs is the leakage of implementation details in error messages. This was the case of the previous version of \AspectAG.
 
-As we have shown in the previous section, the library now captures common errors
-and prints them in a readable way. We use user defined type errors; a tool
-introduced in GHC to help improving the quality of type-level programming error
-messages. The family |GHC.TypeLits.TypeError| can be used to print a custom
-error message but it is not clear how to structure the implementation in a
+%It is a common problem when implementing EDSLs using type-level programming that when a type
+% error occurs, implementation details are leaked on error messages,
+% and this was the case of the previous version of \AspectAG.
+
+As we have shown in the previous section, the new version of the library
+now captures common errors and prints them out in a readable way.
+We use user-defined type errors, a tool introduced in GHC to help improving
+the quality of type-level programming error messages.
+Custom error messages are printed out using the type family |GHC.TypeLits.TypeError|.
+However, using this tool it is not clear how to structure the implementation in a
 modular, dependable and scalable way.
 
-In the rest of this section we will show an
-extensible records implementation and introduce a framework
-to encode EDSL type errors.
+In this section we show an implementation of extensible records and introduce a framework
+to encode EDSL type errors. \alb{decir algo mas sobre el framework}{} 
 %On section \ref{sec:requirements} we present our solution.
-
 
 \subsection{Polymorphic Heterogeneous Records}
 We use multiple instances of extensible records:
