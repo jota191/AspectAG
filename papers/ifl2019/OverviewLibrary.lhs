@@ -281,13 +281,12 @@ the attributes for the new production:
 > aspEval2  =  traceAspect (Proxy @ ('Text "eval2"))
 >           $  syndefM eval elet (at bodyLet eval) .+: aspEval
 >
-> aspEnv2
->   =    traceAspect (Proxy @ ('Text "env2"))
->   $    inhdefM env elet exprLet (at lhs env)
->   .+:  inhdefM env elet bodyLet (insert   <$>  ter vlet
->                                           <*>  at exprLet eval
->                                           <*>  at lhs env)
->   .+:  aspEnv
+> aspEnv2  =    traceAspect (Proxy @ ('Text "env2"))
+>          $    inhdefM env elet exprLet (at lhs env)
+>          .+:  inhdefM env elet bodyLet (insert   <$>  ter vlet
+>                                                  <*>  at exprLet eval
+>                                                  <*>  at lhs env)
+>          .+:  aspEnv
 %
 %
 and again combine them: 
