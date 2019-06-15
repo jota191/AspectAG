@@ -82,11 +82,13 @@ One common way to implement a record is by using a GADT
 indexed by the list of types of the values stored in its fields.
 These types are usually of kind |Type|, what makes sense since |Type|
 is the kind of inhabited types, and records store values.
-In cases such as our children records, where
-we store a full featured attribution that are also represented by an indexed GADT,
-we wish to keep some of this index information on the kinds. We
-abstracted this notion and designed a library of polymporphic extensible
-records, defined as follows:
+However, in cases such as our children records, where
+we store attributions that are also represented by an indexed GADT,
+we would like to be able to reflect some of this structural information at the indexes of the record. This can be achieved if we are polymorphic in the kind of the types corresponding to
+the record fields. Based on this approach we designed a new, polykinded, extensible record structure:
+
+%We abstracted this notion and designed a library of polymporphic extensible
+%records, defined as follows:
 
 
 > data Rec (c :: k) (r :: [(k', k'')]) :: Type where
@@ -169,16 +171,15 @@ Then we can encode the predicate as the following constraint.
 
 \subsection{Record Instances}
 
-Most functions over records are implemented over the polykinded implementation
-as part of the record library. Then we implement our actual record-like data
+In our library, most functions over records are implemented over the polykinded
+implementation. Because of that we implement our record-like data
 structures as particular instances of the general datatype. To introduce a
-record we must give an index acting as a name (the ``|c|'' parameter),
+new record structure we must give an index acting as a name (the ``|c|'' parameter),
 and code the family instance |WrapField|.
-To print the domain specific error messages
-we can also need instances for |ShowField| and |ShowRec|, as we shall see
-later.
+As we shall see later, in order to print out domain specific error messages
+we also need to provide instances for the classes |ShowField| and |ShowRec|. 
 
-Also, to code strongly kinded it is useful to specific datatypes for labels.
+To code strongly kinded it is also useful to provide specific datatypes for labels.
 
 > data  Att    = Att Symbol Type
 > data  Prod   = Prd Symbol NT
@@ -188,21 +189,22 @@ Also, to code strongly kinded it is useful to specific datatypes for labels.
 
 |Att| is used for attributions, |Prod| for productions, and |Child|
 for children.
-In the following subsections we give some examples of record instances.
 
-\subsubsection{Example: Attribution}
+Below we give some examples of record instances.
+
+\subsubsection*{Example: Attribution}
 
 Attributions are mappings from attribute names to values. To make an index we
 define an empty datatype:
 
 > data AttReco
 
-On the definition of |GenRecord| the |c| parameter is polykinded. We use the
+In the definition of |Rec| the |c| parameter is polykinded. We use the
 kind |Type| for indexes in our instances since |Type| is an extensible kind.
-Fixing the kind of this index the generic record library could allow a closed
-set of records.
+If we fixed the kind of this index, then the record library would only allow a closed
+set of records structures. 
 
-Attributions are records using the |AttReco| index. We define a descriptive name
+Attributions are records built using the |AttReco| index. We define a descriptive name
 and fix the polymorphic kinds since Attribution labels are of kind |Att|, and
 fields of kind |Type|.
 
@@ -222,8 +224,8 @@ but somewhat incompatible with abstract datatypes.
 Hiding constructors of |GenRecord| is nice but we lose pattern matching.
 Fortunately, GHC Haskell implements pattern synonyms.
 %endif
-For each instance of record we can define specialized versions of the constructors
-|TagField|, |EmptyRec| an |ConsAtt|, using the GHC Haskell's pattern synonyms\cite{pattern-synonyms}.
+For each record instance we can define specialized versions of the constructors
+|TagField|, |EmptyRec| and |ConsAtt| by using GHC's pattern synonyms~\cite{pattern-synonyms}.
 In the case of attributions this can be coded as follows:
 
 > pattern  Attribute     ::  v -> TagField AttReco l v
@@ -236,7 +238,7 @@ In the case of attributions this can be coded as follows:
 > pattern  ConsAtt a as  =   ConsRec att atts
 
 
-\subsubsection{Example: Children Records}
+\subsubsection*{Example: Children Records}
 Once again, we build an index:
 
 > data ChiReco (prd :: Prod)
