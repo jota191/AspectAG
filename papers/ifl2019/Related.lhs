@@ -30,7 +30,7 @@ Error messages is another weakness we dealed with.
 Managing type errors on EDSLs is an old problem to the community and an active
 research area. The idea of transforming a typing problem into a constraint
 problem is not recent \cite{10635_42131, improvingtypeerror}.
-Other embedded implementations \cite{DBLP:conf/ifl/VieraBP18} solve the type
+Other embedded implementations of AG \cite{DBLP:conf/ifl/VieraBP18} solve the type
 diagnostic problem at the cost of making it staged.
 
 
@@ -38,7 +38,7 @@ Compiler support added with the |TypeError| was essential, but further support
 would be desirable, in particular to control class constraint solving and avoid
 leaks an non readable messages. Research by Heeren~\cite{DBLP:phd/basesearch/Heeren05}
 was implemented for the Helium compiler.
-Recently, Serrano Mena and Hage  \emph{et al} \cite{DBLP:phd/basesearch/Serrano18,
+Recently, Serrano Mena and Hage \cite{DBLP:phd/basesearch/Serrano18,
   DBLP:conf/ifl/SerranoH17} developed a set of techniques for customizing type
 error diagnosis gor GHC, that we think can complement our, more ad-hoc based, approach.
 %Unfortunately this implementation was not merged in main tree.
