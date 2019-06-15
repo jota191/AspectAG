@@ -274,7 +274,7 @@ Suppose that we add a new production to bind local definitions:
 We implement it with these definition:
 %This new production has three children:
 
-> type P_Let = 'Prd "p_Let" Nt_Expr
+> type P_Let = 'Prd "Let" Nt_Expr
 > elet = Label @ P_Let
 >
 > exprLet   = Label @ ('Chi "exprLet"   P_Let
@@ -349,7 +349,7 @@ we get the error:
 \begin{Verbatim}[fontsize=\small]
 Error: Int /= Maybe Int
 trace: syndef( Attribute eval:Int
-             , Non-Terminal Expr::Production p_Var)
+             , Non-Terminal Expr::Production Var)
 \end{Verbatim}
 %
 expressing that we provided a |Maybe Int| where an |Int| was expected.
@@ -370,15 +370,15 @@ where we use the child |ival| that does not belong to the production |add|.
 In this case the error points to |ter ival|, and says:
 %
 \begin{Verbatim}[fontsize=\small]
-Error: Non-Terminal Expr::Production p_Val
+Error: Non-Terminal Expr::Production Val
        /=
-       Non-Terminal Expr::Production p_Add
+       Non-Terminal Expr::Production Add
 trace: syndef( Attribute eval:Int
-             , Non-Terminal Expr::Production p_Add)
+             , Non-Terminal Expr::Production Add)
 \end{Verbatim}
 %
-expressing that the production of type |p_Val| (of the non-terminal |Expr|) is
-not equal to the expected production of type |p_Add| (of the non-terminal |Expr|).
+expressing that the production of type |Val| (of the non-terminal |Expr|) is
+not equal to the expected production of type |Add| (of the non-terminal |Expr|).
 
 Another mistake, similar to the previous one, is to treat a non-terminal as a terminal,
 or the other way around.
@@ -386,17 +386,17 @@ Then, if we use |ter| to get a value out of the child |leftAdd|:
 < add_eval  =  syndefM eval add  $ ter leftAdd
 %
 We obtain a message indicating that the child
-(belonging to the production |p_Add| of the non-terminal |Expr|) is a non-terminal (|Expr|),
+(belonging to the production |Add| of the non-terminal |Expr|) is a non-terminal (|Expr|),
 and not a terminal of type |Int| as it was expected:
 %
 \begin{Verbatim}[fontsize=\small]
 Error: Non-Terminal Expr::Production p_Add
        ::Child leftAdd:Non-Terminal Expr
        /=
-       Non-Terminal Expr::Production p_Add
+       Non-Terminal Expr::Production Add
        ::Child leftAdd:Terminal Int
 trace: syndef( Attribute eval:Int
-             , Non-Terminal Expr::Production p_Add)
+             , Non-Terminal Expr::Production Add)
 \end{Verbatim}
 %
 Similarly, if we try to treat a terminal as a non-terminal,
@@ -407,15 +407,14 @@ the error says that |ival| is a terminal of type |Int| and
 not some non-terminal |n0|:
 %
 \begin{Verbatim}[fontsize=\small]
-Error: Non-Terminal Expr::Production p_Val
+Error: Non-Terminal Expr::Production Val
        ::Child ival:Terminal Int
        /=
-       Non-Terminal Expr::Production p_Val
+       Non-Terminal Expr::Production Val
        ::Child ival:Non-Terminal n0
 trace: syndef( Attribute eval:Int
-             , Non-Terminal Expr::Production p_Val)
+             , Non-Terminal Expr::Production Val)
 \end{Verbatim}
-
 
 Now suppose we have an attribute |foo|, of type |Int|,
 but without any rules defining its computation,
@@ -431,12 +430,12 @@ where we finally try to evaluate the incomplete aspect |asp|.
 Error: Field not Found on Attribution
        looking up Attribute foo:Int
 trace: syndef( Attribute eval:Int
-             , Non-Terminal Expr::Production p_Add)
+             , Non-Terminal Expr::Production Add)
        aspect eval
 \end{Verbatim}
 Notice that in this case the trace guides us to the place
 where the unsatisfied rule is defined:
-the synthesized attribute |eval| at the production |p_Add| (Line~\ref{line:add_eval}),
+the synthesized attribute |eval| at the production |Add| (Line~\ref{line:add_eval}),
 into the aspect |eval| (Line~\ref{line:aspEval}).
 
 Another case where the trace is helpful in the task of finding
