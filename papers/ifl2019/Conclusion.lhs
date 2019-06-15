@@ -20,8 +20,7 @@ was not this way in old versions of \AspectAG, allowing us to reuse some rules
 out of the box. Anyway, this can be shallowed since the host language provides
 type -and kind- polymorphism.
 
-To effectively solve the expression problem we presented a deforestated
-approach. Grammars don't need to be tied to a datatype. Reusing an AG in an
+Grammars do not need to be tied to a datatype. Reusing an AG in an
 extended datatype is nice, but the semantic function must be implemented twice.
 This is not a problem of our implementation, but of Haskell's expresiveness. To
 explore how to integrate our library with extensible datatypes is left as an
