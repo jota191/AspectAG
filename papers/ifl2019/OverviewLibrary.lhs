@@ -30,45 +30,55 @@
 
 %endif
 
+\newcommand{\alb}[2]{\textcolor{blue}{\textbf{Alb: #1} #2}}
+
 \section{Overview of the library}
 \label{sec:example}
 
-As a running example consider a simple expression language given by the following grammar,
-including integer values (|ival|), variables (|vname|) and addition:
+In this section we explain the main features of the library by means of an example.
+We start with a simple expression language formed by integer values, variables and addition,
+which we then extend syntactic- and semantically in order to show the different operations supported by the library.
+The abstract syntax of the expression language is given the following grammar:
 
 <  expr    ->  ival
 <  expr    ->  vname
 <  expr    ->  expr_l + expr_r
 
+%To keep it simple, we cannot bind variables with this constructs for now. Let us
+%assume that they actually denote some value clear from a given context. For
+%example, a concrete expression $x + 5 + 2$, evaluates to $9$ given the context
+%$\{x = 2\}$.
 
-To keep it simple, we cannot bind variables with this constructs for now. Let us
-assume that they actually denote some value clear from a given context. For
-example, a concrete expression $x + 5 + 2$, evaluates to $9$ given the context
-$\{x = 2\}$.
+%We have introduced one non-terminal, called |expr|, with three productions.
 
-We have introduced one non-terminal, called |expr|, with three productions.
-|ival| and |vname| are names for terminals, with types |Integer| and |String|,
-respectively. We say they are \emph{children} in their productions. The third
-production rewrites a non-terminal into two non-terminals. Each child has a
-different name, to be able to refer to it unambiguously.
+\noindent
+where |ival| and |vname| are terminals corresponding to integer values and variable names (given by strings), respectively. Both are said to be \emph{children} in their productions.
+In the third production,
+% rewrites a non-terminal into two non-terminals.
+the children (|expr_l| and |expr_r|), both occurrences of the non-terminal |expr|, have different names so that we can refer to each one unambiguously.
 
-In our embedded DSL this grammar is declared as follows. Declare one non-terminal:
+In our EDSL this grammar is declared as follows.
+First, we declare the non-terminal:
 
 > type Nt_Expr = 'NT "Expr"
 > expr = Label @ Nt_Expr
 
-with three productions:
+\noindent
+Non-terminals are defined by introducing a name (like |"Expr"|) at the type level by using a
+promoted string literal (which has kind |Symbol|). We use the \texttt{TypeApplications} extension of GHC to associate the type information to the label (we will make extensive use of this extension). 
+Productions are also identified by a name, and are related to a non-terminal.
 
-> type P_Add = 'Prd "p_Add" Nt_Expr
+> type P_Add = 'Prd "Add" Nt_Expr
 > add = Label @ P_Add
 
-> type P_Val = 'Prd "p_Val" Nt_Expr
+> type P_Val = 'Prd "Val" Nt_Expr
 > val = Label @ P_Val
 
-> type P_Var = 'Prd "p_Var" Nt_Expr
+> type P_Var = 'Prd "Var" Nt_Expr
 > var = Label @ P_Var
 
-Declare four different children:
+\noindent
+The grammar declaration is complete with the introduction of the four children that occur in the productions.
 
 > leftAdd
 >   = Label @ ('Chi "leftAdd" P_Add  ('Left Nt_Expr))
@@ -79,21 +89,20 @@ Declare four different children:
 > vname
 >   = Label @ ('Chi "vname" P_Var ('Right ('T String)))
 
-%This is simpler than it seems.
-Non-terminals are defined by names (like |"Expr"|). Note that we are using a
-promoted |String| here, the kind |Symbol| in modern Haskell. Productions are
-also identified by a name, and are related to a non-terminal. Children are once
-again names, tied to a production and |Either| a non-terminal or a terminal.
-Everything is wrapped on constructors of simple algebraic datakinds\footnote{for
-  the rest of the paper, we say datakind when we refer to promoted datatypes},
-since we implement everything strongly typed both at term level, and at type
-level. |Label| is actually a |Proxy| with an alternative name adecuated to our
-domain. Everything is defined at type-level but we will use this proxies as
-carriers of type information, a widely used idiom in type-level programming.
+\noindent
+Each child has a name, is tied to a production and can be either a non-terminal or a terminal. In the case of a terminal it is informed which type of values it denotes.
 
+Notice that we use constructors of simple algebraic datakinds%
+\footnote{Throughout the paper, we say datakind when we refer to promoted datatypes}
+to wrap around the type-level information associated to the different components of the grammar. 
+|Label| is nothing more than a |Proxy| type (we simply gave it an alternative name that is more adequate to our domain). When computations are mainly performed at the type level, as it is our case, proxies play a key role because they are a gadget to carry type information at the value level.
+% Everything is defined at type-level but we will use this proxies as
+% carriers of type information, a widely used idiom in type-level programming.
 
-The abstract syntax tree for this grammar can be implemented in Haskell,
-for example, with the datatype:
+Summing up, the information just provided for the grammar indirectly contains all the ingredients that would compose the datatype representation of its ASTs:
+
+%The abstract syntax tree for this grammar can be implemented in Haskell,
+%for example, with the datatype:
 
 > data Expr  =  Val  { ival'                 :: Int  }
 >            |  Var  { vname'                :: String   }
@@ -103,16 +112,11 @@ for example, with the datatype:
 >       deriving Show
 %endif
 %
-where the previous example expression is represented with the value:
+%where the previous example expression is represented with the value:
 
-|Add (Add (Var "x") (Val 5)) (Val 2)|.
+%|Add (Add (Var "x") (Val 5)) (Val 2)|.
 
-In our library we provide some Template
-Haskell\cite{Sheard:2002:TMH:636517.636528} functions that can be used to
-generate the grammar definition (non-terminals, productions and children) out of
-a datatype representing the abstract syntax tree (e.g. |Expr|). However, our
-grammar representation is independent of such datatypes, which is actually
-useful to solve the expression problem, as we shall discuss later.
+In our library we provide some Template Haskell~\cite{Sheard:2002:TMH:636517.636528} functions that can be used to generate the grammar definition (non-terminals, productions and children) out of a datatype representation of the ASTs (like |Expr|). \alb{despues vemos si esto queda}{However, our grammar representation is independent of such datatypes, which is actually useful to solve the expression problem, as we shall discuss later.}
 
 \begin{figure*}
 \numberson
@@ -140,27 +144,23 @@ useful to solve the expression problem, as we shall discuss later.
 \caption{Evaluation Semantics}\label{fig:eval}
 \end{figure*}
 
-Attribute grammars decorate the productions of context-free grammars with
-\emph{attribute} computations, in order to provide semantics to such grammars.
-In our example the semantics consist on the denotation of the expressions. To
-define the semantics we can use two attributes: |eval| to represent the result
-of the evaluation and |env| to distribute the context defining semantics for
-variables. In the rest of this subsection we will show how such semantics can be
-implemented using the library, as shown in Figure~\ref{fig:eval}. In lines
-\ref{line:eval} and \ref{line:env} we declare the attributes, specifying their
+With the aim to provide semantics, AGs decorate the productions of context-free grammars with
+\emph{attribute} computations.
+In our example, the usual semantics of an expression consists of the value it denotes. To
+define such a semantics we can use two attributes: |eval|, to represent the result
+of the evaluation, and |env|, to distribute the environment defining the value for
+variables. In the rest of this subsection we explain how the evaluation semantics can be
+implemented using the library. The complete definition is shown in Figure~\ref{fig:eval}. In lines \ref{line:eval} and \ref{line:env} we declare the attributes, specifying their
 types.
 
 % Time to define semantics.
-The attribute |eval| denotes the value of an
-expression. Attributes like this, where the information we compute flows
-from the children to their parent productions, are called \emph{synthesized
-attributes}.
+The attribute |eval| denotes the value of an expression. Attributes like this, where the information computed flows from the children to their parent productions, are called \emph{synthesized attributes}.
 
 On the |add| production (Line~\ref{line:add_eval}) we compute |eval| as the sum
 of the denotation of subexpressions. On each subexpression there is a proper
-attribute |eval| that contains its value. The function |syndefM| defines
-synthesized attributes. It takes an attribute (for wich the semantics are being
-defined), a production (where it is being defined), and the proper definition.
+attribute |eval| that contains its value. The function |syndefM| is the operation that defines synthesized attributes. It takes an attribute (the one for which the semantics is being
+defined), a production (where it is being defined), and the respective computation rule.
+%and the proper definition.
 
 Using the applicative interface\cite{applicative}, we take the values of |eval| at children
 |leftAdd| and |rightAdd|, and combine them with the operator |(+)|.
