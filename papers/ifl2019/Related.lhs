@@ -9,7 +9,8 @@ Some of them implemented as standalone compilers or generators,
 like LRC \cite{Saraiva02}, UUAGC \cite{uuagc}, LISA
 \cite{lisa}, JastAdd \cite{jastadd} and Silver \cite{silver},
 and others embbeded in languages like Scala (e.g. Kiama \cite{kiama})
-or Haskell (\cite{Moor99first-classattribute, Viera:2009:AGF:1596550.1596586,DBLP:conf/ifl/VieraBP18, MFS13, DBLP:phd/ethos/Balestrieri15}).
+or Haskell (\cite{DBLP:conf/gcse/MoorPW99, Moor99first-classattribute, Viera:2009:AGF:1596550.1596586,DBLP:conf/ifl/VieraBP18, MFS13, DBLP:phd/ethos/Balestrieri15}).
+
 
 This work is based on \AspectAG\ \cite{Viera:2009:AGF:1596550.1596586},
 where extensible records are used to implement a strongly typed
