@@ -47,32 +47,37 @@ now captures common errors and prints them out in a readable way.
 We use user-defined type errors, a tool introduced in GHC to help improving
 the quality of type-level programming error messages.
 Custom error messages are printed out using the type family |GHC.TypeLits.TypeError|.
-However, using this tool it is not clear how to structure the implementation in a
-modular, dependable and scalable way.
+%However, using this tool it is not clear how to structure the implementation in a
+%modular, dependable and scalable way.
 
 In this section we show an implementation of extensible records and introduce a framework
-to encode EDSL type errors. \alb{decir algo mas sobre el framework}{} 
+to encode EDSL type errors that keeps track of the possible sources of errors. 
 %On section \ref{sec:requirements} we present our solution.
 
 \subsection{Polymorphic Heterogeneous Records}
-We use multiple instances of extensible records:
+
+%We use multiple instances of extensible records:
+The implementation of the library is strongly based on the use of extensible records. They are used in the representation of:
 
 \begin{itemize}
 \item
-  |Attribution|s are mappings from attribute names to values.
+  |Attribution|s, which are mappings from attribute names to values.
 \item
   For each production, there is a set of children, each one with an associated
-  attribution. Note that in this case each field is not a flat value, but a full
-  record by itself. It would be nice to reflect it on types.
+  attribution.
+  % Note that
+  In this case each field is not a flat value, but a full
+  record by itself.
+  % It would be nice to reflect it on types.
 \item
-  \emph{Aspects} are records of rules indexed by productions.
+  \emph{Aspects}, which are records of rules indexed by productions.
 \item
-  Semantic functions are kept on a record (not visible by the user).
+  Semantic functions, which are kept in a record (not visible by the user).
 \end{itemize}
 
 Extensible records coded using type-level programming are already part of the
 folklore in the Haskell community. The {\tt HList}
-library\cite{Kiselyov:2004:STH:1017472.1017488} popularized them.
+library~\cite{Kiselyov:2004:STH:1017472.1017488} popularized them.
 %if False
 Old versions
 of {\tt HList} originally abused of Multi Parameter
@@ -92,9 +97,10 @@ application.
 Other implementations of Extensible Records such as Vinyl\cite{libvinyl} or
 CTRex\cite{libCTRex} have been introduced.
 %endif
-One common way to implement a |Record| is using a
-|GADT|. %\cite{Cheney2003FirstClassPT,Xi:2003:GRD:604131.604150}.
-Usually heterogeneous records contain values of kind |Type|. It makes sense since |Type|
+One common way to implement a record is by using a GADT.
+%\cite{Cheney2003FirstClassPT,Xi:2003:GRD:604131.604150}.
+
+Heterogeneous records usually contain values of kind |Type|. It makes sense since |Type|
 is the kind of inhabited types, and records store values. Datatype constructors
 take information with expressive kinds and wrap it on a uniform box. This is
 desirable ins ome situations. In use cases such as our children records, where
