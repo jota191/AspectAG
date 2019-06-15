@@ -29,35 +29,39 @@
 \label{sec:records}
 In order to provide flexibility and safety, \AspectAG\ internals are built from
 strongly typed extensible records. Then, mistakes like trying to access to an
-undefined attribute or child are detected at compile time as an incorrect look up
-in a given record. Also, the definition of duplicated attributes results in a
-type error, due to an incorrect record extension.
+undefined attribute or child are detected at compile time as an incorrect look
+up in a given record. Mistakes like duplicated attribute definitions results in
+a type error due to an incorrect record extension.
 
-However, detecting errors is not enough.
-If the error messages are difficult to understand and do not point to their possible sources,
-using the library becomes a painful task.
-A common problem of type-level programming implementations of EDSLs is the leakage of implementation details in error messages. This was the case of the previous version of \AspectAG.
+However, detecting errors is not enough. If the error messages are difficult to
+understand and do not point to their possible sources using the library becomes
+a painful task. Also, a common problem in type-level programming implementations
+of EDSLs is the leakage of implementation details in error messages. This was
+the case of the previous version of \AspectAG.
 
 %It is a common problem when implementing EDSLs using type-level programming that when a type
 % error occurs, implementation details are leaked on error messages,
 % and this was the case of the previous version of \AspectAG.
 
 As we have shown in the previous section, the new version of the library
-now captures common errors and prints them out in a readable way.
-We use user-defined type errors, a tool introduced in GHC to help improving
-the quality of type-level programming error messages.
-Custom error messages are printed out using the type family |GHC.TypeLits.TypeError|.
+captures common errors and prints them out in a readable way. We use
+user-defined type errors, a tool introduced in GHC to help improving the quality
+of type-level programming error messages. Custom error messages are printed out
+using the type family |GHC.TypeLits.TypeError|.
+
 %However, using this tool it is not clear how to structure the implementation in a
 %modular, dependable and scalable way.
 
-In this section we show an implementation of extensible records and introduce a framework
-to encode EDSL type errors that keeps track of the possible sources of errors. 
+In this section we show an implementation of extensible records and introduce a
+framework to encode EDSL type errors that keeps track of the possible sources of
+errors.
 %On section \ref{sec:requirements} we present our solution.
 
 \subsection{Polymorphic Heterogeneous Records}
 
 %We use multiple instances of extensible records:
-The implementation of the library is strongly based on the use of extensible records. They are used in the representation of:
+The implementation of the library is strongly based on the use of extensible
+records. They are used in the representation of:
 
 \begin{itemize}
 \item
@@ -78,35 +82,18 @@ The implementation of the library is strongly based on the use of extensible rec
 Extensible records coded using type-level programming are already part of the
 folklore in the Haskell community. The {\tt HList}
 library~\cite{Kiselyov:2004:STH:1017472.1017488} popularized them.
-%if False
-Old versions
-of {\tt HList} originally abused of Multi Parameter
-Typeclasses \cite{type-classes-an-exploration-of-the-design-space} and Functional
-Dependencies \cite{DBLP:conf/esop/Jones00} to do the job. Modern GHC Haskell
-provides extensions to the type system to support the encoding of this and more
-sort-of dependent types in a more comfortable way. Notably {\tt
-  TypeFamilies}\cite{Chakravarty:2005:ATC:1047659.1040306,
-  Chakravarty:2005:ATS:1090189.1086397, Sulzmann:2007:SFT:1190315.1190324}, to
-define functions at type-level, {\tt
-  DataKinds}~\cite{Yorgey:2012:GHP:2103786.2103795}, implementing data
-promotion, {\tt PolyKinds} providing kind polymorphism, {\tt
-  KindSignatures}\cite{ghcman} to document and deambiguate kinds, or \break
-{\tt TypeApplications}\cite{conf/esop/EisenbergWA16} to provide visible type
-application. 
 
-Other implementations of Extensible Records such as Vinyl\cite{libvinyl} or
-CTRex\cite{libCTRex} have been introduced.
-%endif
 One common way to implement a record is by using a GADT.
 %\cite{Cheney2003FirstClassPT,Xi:2003:GRD:604131.604150}.
 
-Heterogeneous records usually contain values of kind |Type|. It makes sense since |Type|
-is the kind of inhabited types, and records store values. Datatype constructors
-take information with expressive kinds and wrap it on a uniform box. This is
-desirable ins ome situations. In use cases such as our children records, where
-we store a full featured attribution, we wish to state this on kinds. We
-abstracted this notion and designed a library of polymporphic extensible
-records, defined as follows:
+Heterogeneous records usually contain values of kind |Type|. It makes sense it
+is the kind of inhabited types, and records store values. In use cases such as
+our children records, where we store a full featured attribution, we wish to
+state this on kinds, and use something more complex than |Type|, for instance
+|[(k,Type)]| to express that our record contains records.
+
+We abstracted this notion and designed a library
+of polymporphic extensible records, defined as follows:
 
 
 > data Rec (c :: k) (r :: [(k', k'')]) :: Type where
@@ -116,16 +103,17 @@ records, defined as follows:
 >             ->  Rec c ( '(l, v) ': r)
 
 
-A record is indexed by a parameter |c|, pointing out wich instance of record
-we are defining, and a promoted list of pairs |r|. The kind of the first
-component in each pair is polymorphic, since it is not mandatory that the type of
-labels is inhabited; they need to live only at type level.
-The second component is also polymorphic and it can have an elaborate kind.
-|LabelSet| is a predicate that encodes the fact that there are no repeated
-labels. 
-|Tagfield| solves
-the problem of wrapping and unwrapping some value so that each field actually stores
-something with kind |Type|, keeping explicitly the information at type level.
+A record is indexed by a parameter |c|, pointing out wich instance of record we
+are defining, and a promoted list of pairs |r|. The kind of the first component
+in each pair is polymorphic, since it is not mandatory that the type of labels
+is inhabited; they need to live only at type level. The second component is also
+polymorphic and it can have an elaborate kind. |LabelSet| is a predicate that
+encodes the fact that there are no repeated labels.
+
+Even if we use expressive kinds, actual records must be built with term level
+values. |Tagfield| solves the problem of wrapping some so that each field actually
+stores something with kind |Type|., keeping explicitly the information at type
+level.
 %|TagField| is a fancier implementation of the well known |Data.Tagged| datatype:
 
 > data TagField (c :: k) (l :: k') (v :: k'') where
