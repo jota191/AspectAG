@@ -18,7 +18,7 @@ extensible records are used to implement a strongly typed first class AG DSL
 embedded in Haskell. We preserve its main characteristics, i.e. safety and
 modularity, tackling in turn its main drawbacks. We use new Haskell type level
 programming techniques to obtain a more clear design and implementation. Also,
-we push a towards the direction of type safety making types strongly kinded.
+we push towards the direction of type safety making types strongly kinded.
 
 %First class implementations of Attibute grammars in Haskell were introduced by
 %Moor \cite{Moor99first-classattribute} with a lightweight approach missing from
