@@ -6,11 +6,10 @@ specific type errors, although we do not completely avoid implementation leaks.
 We inherite all the advantages of an embedding. All Haskell ecosystem and
 language features are avaiable to the user when implementing grammars.
 
-Even though Template Haskell can be used to scrap some boilerplate,
-automatically generating labels and semantic functions, the library can be used
-as a pure embedding within the host language, with no preprocessing or
-postprocessing. This represents an advantage, since a staged compilation makes
-interactive development and debugging difficult.
+Even though Template Haskell can be used to scrap some boilerplate, the library
+can be used as a pure embedding within the host language, with no preprocessing
+or postprocessing. This represents an advantage, since a staged compilation
+makes interactive development and debugging difficult.
 
 To get clear error messages we have to deal with some tradeoffs. It requires
 careful management of context information annotated in types, and explicit term
