@@ -384,7 +384,7 @@ We obtain a message indicating that the child
 and not a terminal of type |Int| as it was expected:
 %
 \begin{Verbatim}[fontsize=\small]
-Error: Non-Terminal Expr::Production p_Add
+Error: Non-Terminal Expr::Production Add
        ::Child leftAdd:Non-Terminal Expr
        /=
        Non-Terminal Expr::Production Add
@@ -413,13 +413,15 @@ trace: syndef( Attribute eval:Int
 Now suppose we have an attribute |foo|, of type |Int|,
 but without any rules defining its computation,
 and we use it in the definition of the rule |add_eval|:
+%
 < add_eval  =  syndefM eval add  $ (+)  <$>  at leftAdd eval
 <                                       <*>  at rightAdd foo
 %
 At this point this is not an error, because this rule can
 be combined into an aspect where this attribute is defined.
 However, it becomes an error at Line~\ref{line:evalExpr},
-where we finally try to evaluate the incomplete aspect |asp|.
+if we finally try to evaluate the incomplete aspect |asp|.
+%
 \begin{Verbatim}[fontsize=\small]
 Error: Field not Found on Attribution
        looking up Attribute foo:Int
@@ -427,6 +429,7 @@ trace: syndef( Attribute eval:Int
              , Non-Terminal Expr::Production Add)
        aspect eval
 \end{Verbatim}
+%
 Notice that in this case the trace guides us to the place
 where the unsatisfied rule is defined:
 the synthesized attribute |eval| at the production |Add| (Line~\ref{line:add_eval}),
