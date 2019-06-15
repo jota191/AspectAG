@@ -1,9 +1,15 @@
-Attribute grammars encoded in functional languages have a long history, starting
-with Johnson \cite{652508}. 
+%Attribute grammars encoded in functional languages have a long history, starting
+%with Johnson \cite{652508}. 
+%Related to Haskell, the {\tt uuagc} (Uthrech University Attribute Grammar
+%Compiler) is probably the most well known example. 
 
 
-Related to Haskell, the {\tt uuagc} (Uthrech University Attribute Grammar
-Compiler) is probably the most well known example. 
+There are a significant number of AG implementations.
+Some of them implemented as standalone compilers or generators,
+like LRC \cite{Saraiva02}, UUAGC \cite{uuagc}, LISA
+\cite{lisa}, JastAdd \cite{jastadd} and Silver \cite{silver},
+and others embbeded in languages like Scala (e.g. Kiama \cite{kiama})
+or Haskell (\cite{Moor99first-classattribute, Viera:2009:AGF:1596550.1596586,DBLP:conf/ifl/VieraBP18, MFS13}).
 
 First class implementations of Attibute grammars in Haskell were introduced by
 Moor \cite{Moor99first-classattribute} with a lightweight approach missing from
@@ -11,7 +17,7 @@ type safety. Viera \emph{et al} \cite{Viera:2009:AGF:1596550.1596586} in the
 original design og \AspectAG\ introduced a type safe approach. Other embedded
 implementations existed \cite{DBLP:phd/ethos/Balestrieri15}. Error messages were
 a weakness. Also, we push a towards the direction of type safety making types
-strongly kinded. \cite{DBLP:conf/ifl/VieraBP18}
+strongly kinded. 
 
 Other embedded implementations \cite{DBLP:conf/ifl/VieraBP18} solve the type
 diagnostic problem at the cost of making it staged.

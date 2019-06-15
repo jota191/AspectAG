@@ -49,6 +49,7 @@
 %format .*.   = " \: \: .\!\!*\!\!.  \: \: "
 %format .=.   = " \: \: .\!\!=\!\!. \: \: "
 %format ..*.. = "(\: .\!\!*\!\!. \:)"
+%format =.   = " \: \:=\!\!. \: \: "
 
 
 %format add_leftAdd_env = "\Varid{add\_leftAdd_{env}}"
