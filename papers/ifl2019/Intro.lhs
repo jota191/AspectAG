@@ -56,7 +56,8 @@ implement the DSL.
 \AspectAG\ is an EDSL implementing first class attribute grammars, firstly
 introduced by Viera et al in 2009 \cite{Viera:2009:AGF:1596550.1596586}. It uses
 extensible polymorphic records and predicates encoded using old fashioned type
-level programming (i.e. type classes and functional dependencies),
+level programming (i.e. Multi Parameter Typeclasses \cite{type-classes-an-exploration-of-the-design-space} and Functional
+Dependencies \cite{DBLP:conf/esop/Jones00}),
 to ensure well formedness of AGs at compile time. Type errors
 were of course a weakness, aggravated by the fact that an AG is a structure that
 can be easily illformed.
@@ -66,9 +67,22 @@ Moreover, at that time, type level programming was really ad-hoc, exploiting
 extensions originally introduced for other uses. In particular, at type level,
 programming was essentialy untyped.
 
-With recent additions to GHC this issues can be tackled. We propose a reworked
-version of \AspectAG\footnote{\url{http://hackage.haskell.org/package/AspectAG}}.
-Modern type level programming techniques allowed us to do
+Modern GHC Haskell
+provides extensions to the type system to support the encoding of more
+sort-of dependent types in a more comfortable way. Notably {\tt
+  TypeFamilies}~\cite{Chakravarty:2005:ATS:1090189.1086397, Sulzmann:2007:SFT:1190315.1190324}, to
+define functions at type-level, {\tt
+  DataKinds}~\cite{Yorgey:2012:GHP:2103786.2103795}, implementing data
+promotion, {\tt PolyKinds} providing kind polymorphism, {\tt
+  KindSignatures} %~\cite{ghcman}
+to document and deambiguate kinds, or
+{\tt TypeApplications}~\cite{conf/esop/EisenbergWA16} to provide visible type
+application. 
+%With recent additions to GHC this issues can be tackled.
+By using such extensions, we propose a reworked
+version of \AspectAG\footnote{\url{http://hackage.haskell.org/package/AspectAG}}
+that tackles some of its most important weaknesses.
+These type level programming techniques allowed us to do
 that in a strongly typed fashion at type level (we say, strongly kinded).
 We also define a framework to manipulate
 type errors, keeping track of the context of the possible
