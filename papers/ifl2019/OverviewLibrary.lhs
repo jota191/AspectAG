@@ -72,24 +72,18 @@ Productions are also identified by a name, and are related to a non-terminal.
 
 > type P_Add = 'Prd "Add" Nt_Expr
 > add = Label @ P_Add
-
 > type P_Val = 'Prd "Val" Nt_Expr
 > val = Label @ P_Val
-
 > type P_Var = 'Prd "Var" Nt_Expr
 > var = Label @ P_Var
 
 \noindent
 The last ingredient of the grammar declaration is given by the introduction of the children that occur in the productions.
 
-> leftAdd
->   = Label @ ('Chi "leftAdd" P_Add  ('Left Nt_Expr))
-> rightAdd
->   = Label @ ('Chi "rightAdd" P_Add  ('Left Nt_Expr))
-> ival
->   = Label @ ('Chi "ival" P_Val ('Right ('T Int)))
-> vname
->   = Label @ ('Chi "vname" P_Var ('Right ('T String)))
+> leftAdd   = Label @ ('Chi "leftAdd"   P_Add  ('Left Nt_Expr))
+> rightAdd  = Label @ ('Chi "rightAdd"  P_Add  ('Left Nt_Expr))
+> ival      = Label @ ('Chi "ival"   P_Val  ('Right ('T Int)))
+> vname     = Label @ ('Chi "vname"  P_Var  ('Right ('T String)))
 
 \noindent
 Each child has a name, is tied to a production and can be either a non-terminal or a terminal. In the case of a terminal it is informed which type of values it denotes.
