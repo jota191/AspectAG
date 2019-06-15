@@ -177,6 +177,7 @@ messages.
 \maketitle
 
 
+\newcommand{\tk}{\lq}
 \newcommand{\todo}[1]{\fbox{
   \parbox{\textwidth/3}{TODO: \\ #1}}}
 \newcommand{\note}[1]{\fbox{

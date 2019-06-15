@@ -59,3 +59,12 @@
 %format aspEnv = "\Varid{asp_{env}}"
 %format aspLits = "\Varid{asp_{lits}}"
 %format aspLitsRev = "\Varid{asp_{litsRev}}"
+
+
+%format 'NT = "\tk\!\Varid{NT}"
+%format 'Prd = "\tk\!\Varid{Prd}"
+%format 'Chi = "\tk\!\Varid{Chi}"
+%format 'Left = "\tk\!\Varid{Left}"
+%format 'Right = "\tk\!\Varid{Right}"
+
+%%format ' = "\tk\!\Varid{[]}"
