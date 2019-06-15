@@ -230,13 +230,13 @@ In the particular case of the evaluation semantics, we can define an evaluator l
 
 \subsection{Semantic Extension: Adding and Modifying attributes}
 
-Defining alternative semantics or extending the already defined ones is simple.
- For example, suppose that we want to collect the integral literals
-occurring on an expression. Define an attribute |lits|:
+Defining alternative semantics or extending already defined ones is simple.
+For example, suppose that we want to collect the integral literals
+occurring in an expression. We define an attribute |lits|:
 
 > lits  = Label @ ('Att "lits"  [Int])
 
-And the rules to compute it. This time we combine them on the fly:
+and the rules to compute it. This time we combine them on the fly:
 
 > aspLits  =    syndefM lits add  ((++)   <$>  at leftAdd lits
 >                                         <*>  at rightAdd lits)
@@ -244,13 +244,13 @@ And the rules to compute it. This time we combine them on the fly:
 >          .+:  syndefM lits var  (pure [])
 >          .+:  emptyAspect
 
-The function:
+The function,
 
 > litsExpr e = sem_Expr aspLits e emptyAtt #. lits
 
-returns a list of all literals occurring in the expression, in order.
+returns a list with the literals occurring in an expression from left to right.
 
-It is also possible to modify semantics in a modular way.
+It is also possible to modify a semantics in a modular way.
 As an example, to get the literals in the reverse order
 we can extend the original aspect |aspLits| with a rule
 that redefines the computation of |lits| for the production |add|
@@ -266,18 +266,17 @@ modify an existing attribute instead of defining a new one.
 \subsection{Grammar extension: Adding Productions}
 
 
-To completely tackle the expression problem we must be able to extend our grammar.
+% To completely tackle the expression problem we must be able to extend our grammar.
 Suppose that we add a new production to bind local definitions:
 
 < expr     -> let vname = expr_d in expr_i
 
-We implement them with this definition:
+We implement it with these definition:
+%This new production has three children:
 
 > type P_Let = 'Prd "p_Let" Nt_Expr
 > elet = Label @ P_Let
-
-This new production has three children
-
+>
 > exprLet   = Label @ ('Chi "exprLet"   P_Let
 >                                       ('Left Nt_Expr))
 > bodyLet   = Label @ ('Chi "bodyLet"   P_Let
@@ -285,13 +284,12 @@ This new production has three children
 > vlet      = Label @ ('Chi "vlet"      P_Let
 >                                       ('Right ('T String)))
 
-We extend the aspects with the definitions of
-the attributes for the new production.
+We extend the aspects we had with the definition of
+the attributes for the new production:
 
 > aspEval2  =  traceAspect (Proxy @ ('Text "eval2"))
 >           $  syndefM eval elet (at bodyLet eval) .+: aspEval
-
-
+>
 > aspEnv2
 >   =    traceAspect (Proxy @ ('Text "env2"))
 >   $    inhdefM env elet exprLet (at lhs env)
@@ -301,13 +299,14 @@ the attributes for the new production.
 >   .+:  aspEnv
 %
 %
-And again combine them.
+and again combine them: 
 
 > asp2 = aspEval2 .:+: aspEnv2
 
 Since we are not tied to any particular datatype implementation, we can now
-define the semantic functions for another datatype (e.g. |Expr'|) which includes
-the new production.
+define the semantic functions for another datatype
+%(e.g. |Expr'|)
+definition that includes the new production.
 
 \subsection{Error Messages}
 
@@ -318,10 +317,11 @@ programmer may make. In this subsection we show some examples of such error
 messages.
 
 
-A possible error when defining an attribute, is to have type errors
+A possible error when defining an attribute is to have type errors
 in the expressions that define the computation.
-For example if in Line~\ref{line:add_eval} we use an attribute of different
-type than the expected (|env| instead of |eval|):
+For example if in Line~\ref{line:add_eval} of  Figure~\ref{fig:eval}
+we use an attribute with a different
+type than the one expected (|env| instead of |eval|):
 %
 < add_eval  =  syndefM eval add  $ (+)  <$>  at leftAdd eval
 <                                       <*>  at rightAdd env
@@ -332,6 +332,7 @@ with the message:
 \begin{Verbatim}[fontsize=\small]
 Couldn't match type 'Map String Int' with 'Int'
 \end{Verbatim}
+%
 Similar messages are obtained if the expression has other internal type errors,
 like writing |pure (2 + False)|.
 
