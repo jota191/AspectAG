@@ -26,8 +26,8 @@ This is not a problem of our implementation, but of Haskell's expresiveness. To
 explore how to integrate our library with extensible datatypes is left as an
 open problem.
 
-We think the library is quite useful and easy to use. In addition to the
-examples we have coded during the development, it will be tested soon in the
-implementation of a serious functional language. Having the DSL embedded in
-Haskell allows the developing of furher abstractions, such as common patterns,
-or macros.
+We think the library is quite useful and easy to use. Having the DSL embedded in
+Haskell allows to develop furher abstractions, such as common patterns, or
+macros, or to use the power of higher order to generate grammars. In addition to
+the examples we have coded during the development, it will be tested soon in the
+implementation of a serious functional language.
