@@ -116,7 +116,7 @@ the case of children:
 >         (Reader (Proxy ctx, Fam prd' chi par))  where
 >  type ResAt  ('Chi ch prd nt) ('Att att t)
 >              (Reader (Proxy ctx, Fam prd' chi par))
->          = t 
+>   = t
 >  at ch att
 >   = liftM  (\(ctx,  Fam chi _)
 >                     ->  let  atts = req ctx (OpLookup ch chi)
@@ -335,17 +335,17 @@ The resulting aspect is combined with the head rule
 using the operation |OpComRA|.
 
 > instance
->   ( RequireR (OpComAsp al ar) ctx  (Aspect ar')
->   , Require  (OpComRA ctx prd sc ip ic sp ic' sp' ar') ctx)
+>    ( RequireR  (OpComAsp al ar) ctx  (Aspect ar')
+>    , Require   (OpComRA ctx prd sc ip ic sp ic' sp' ar') ctx)
 >   => Require (OpComAsp al
->        ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar)) ctx where
->   type ReqR (OpComAsp al
->        ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar))
->     = ReqR (OpComRA ctx prd sc ip ic sp ic' sp'
+>      ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar)) ctx where
+>   type ReqR  (OpComAsp al
+>              ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar))
+>     = ReqR  (OpComRA ctx prd sc ip ic sp ic' sp'
 >             (UnWrap (ReqR (OpComAsp al ar))))
 >   req ctx (OpComAsp al (ConsRec prdrule ar))
->    = req ctx (OpComRA (untagField prdrule)
->                       (req ctx (OpComAsp al ar)))
+>    = req ctx (OpComRA  (untagField prdrule)
+>                        (req ctx (OpComAsp al ar)))
 
 Thus, the function that combines two tagged aspects is:
 > comAspect al ar
