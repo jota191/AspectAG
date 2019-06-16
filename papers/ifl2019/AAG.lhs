@@ -112,8 +112,8 @@ the case of children:
 >   , RequireEq  prd prd' ctx
 >   , RequireEq  t t' ctx
 >   , RequireEq  ('Chi ch prd nt) ('Chi ch prd ('Left ('NT n)))  ctx)
->       => At  ('Chi ch prd nt) ('Att att t)
->              (Reader (Proxy ctx, Fam prd' chi par))  where
+>  => At  ('Chi ch prd nt) ('Att att t)
+>         (Reader (Proxy ctx, Fam prd' chi par))  where
 >  type ResAt  ('Chi ch prd nt) ('Att att t)
 >              (Reader (Proxy ctx, Fam prd' chi par))
 >          = t 
@@ -230,8 +230,9 @@ We implement |traceAspect| using a sort of |map| function, traversing the record
 %
 where |mapCtxRec| is a dependent function:
 
-> class MapCtxAsp (r :: [(Prod,Type)])  (ctx :: [ErrorMessage])
->                                       (ctx' :: [ErrorMessage])  where
+> class MapCtxAsp  (r     :: [(Prod,Type)])
+>                  (ctx   :: [ErrorMessage])
+>                  (ctx'  :: [ErrorMessage])  where
 >   type ResMapCtx r ctx ctx' :: [(Prod,Type)]
 >   mapCtxRec  :: (Proxy ctx -> Proxy ctx')
 >              -> Aspect r -> Aspect (ResMapCtx r ctx ctx')
@@ -280,7 +281,7 @@ We define an operation |OpComRA| to combine a rule with an aspect.
 >               (sp   :: [(Att, Type)])
 >               (ic'  :: [(Child, [(Att, Type)])])
 >               (sp'  :: [(Att, Type)])
->               (a     :: [(Prod, Type)])  where
+>               (a    :: [(Prod, Type)])  where
 >   OpComRA :: CRule ctx prd sc ip ic sp ic' sp'
 >           -> Aspect a -> OpComRA ctx prd sc ip ic sp ic' sp' a
 %
@@ -333,8 +334,9 @@ and call the recursive function with |al| and |ar|.
 The resulting aspect is combined with the head rule
 using the operation |OpComRA|.
 
-> instance  ( RequireR (OpComAsp al ar) ctx  (Aspect ar')
->           , Require  (OpComRA ctx prd sc ip ic sp ic' sp' ar') ctx)
+> instance
+>   ( RequireR (OpComAsp al ar) ctx  (Aspect ar')
+>   , Require  (OpComRA ctx prd sc ip ic sp ic' sp' ar') ctx)
 >   => Require (OpComAsp al
 >        ( '(prd, CRule ctx prd sc ip ic sp ic' sp') ': ar)) ctx where
 >   type ReqR (OpComAsp al
