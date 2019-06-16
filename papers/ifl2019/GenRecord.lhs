@@ -146,7 +146,7 @@ the identity (type) function.
 |LabelSet| is a predicate that encodes the fact that there are no repeated
 labels. 
 A relevant design decision is the implementation of the |LabelSet| constraint.
-A similar type class is introduced on the {\tt HList} library,
+A type class with similar semantics is introduced on the {\tt HList} library,
 where the property of non duplication of labels is implemented by the (recursive) instances of the class.
 By using a type class to
 encode a predicate, new instances can be defined anytime since type classes are open.
@@ -183,7 +183,9 @@ and code the family instance |WrapField|.
 As we shall see later, in order to print out domain specific error messages
 we also need to provide instances for the classes |ShowField| and |ShowRec|. 
 
-To code strongly kinded it is also useful to provide specific datatypes for labels.
+To code in a strongly kinded way, it is also useful to provide specific datatypes for labels,
+where |Att| is used for attributions, |Prod| for productions, and |Child| for children.
+
 
 > data  Att    = Att Symbol Type
 > data  Prod   = Prd Symbol NT
@@ -191,10 +193,8 @@ To code strongly kinded it is also useful to provide specific datatypes for labe
 > data  NT     = NT Symbol
 > data  T      = T Type
 
-|Att| is used for attributions, |Prod| for productions, and |Child|
-for children.
 
-We give some examples of record instances.
+We give some examples of record instances, that we use in our implementation of \AspectAG.
 
 \subsubsection*{Example: Attribution}
 
@@ -203,9 +203,8 @@ define an empty datatype:
 
 > data AttReco
 
-In the definition of |Rec| the |c| parameter is polykinded. We use the
-kind |Type| for indexes in our instances since |Type| is an extensible kind.
-
+%In the definition of |Rec| the |c| parameter is polykinded. We use the
+%kind |Type| for indexes in our instances since |Type| is an extensible kind.
 
 Attributions are records built using the |AttReco| index. We define a descriptive name
 and fix the polymorphic kinds since Attribution labels are of kind |Att|, and
@@ -247,7 +246,7 @@ Once again, we build an index:
 > data ChiReco (prd :: Prod)
 
 A child is associated to a production. Our instance has itself an index with
-that information. Recall that |Prod| has a name for the production but also a
+this information. Recall that |Prod| has a name for the production but also a
 name for the non-terminal that it rewrites, so all this information is contained
 on a child and used to check well formedness where it is used.
 In this case the labels are of kind |Child|, and the values have a kind that
@@ -275,11 +274,11 @@ requirements.
 >    req :: Proxy ctx -> op -> ReqR op
 
 Some functions require that specific non trivial conditions are met on types, or
-a type error must occur. For instance, each time we look up in a record we require
-that some label actually belongs to the record. Given an operation |op|, a
-datatype that takes all the arguments needed for the current operation to be
+a type error must occur otherwise. For instance, each time we look up in a record we require
+that some label actually belongs to the record. Given an operation represented by a datatype |op|,
+that takes all the arguments needed for the current operation to be
 performed, |req| extracts the tangible results, whose return type depends on the
-operation. The function |req| also uses some context information (i.e. the
+operation. The function |req| also uses some context information |ctx|  (i.e. the
 |trace| of the error) to provide more useful information in the error message.
 
 We collect the constraints imposed to a |Require| instance
@@ -316,15 +315,15 @@ the |Require| constraint.
 
 To pretty print type errors, we define a special operation:
 
-> data OpError (m :: ErrorMessage) where {}
+> data OpError (m :: ErrorMessage)
 %
 |OpError| is a phantom type containing some useful information to print.
 A call to |OpError| happens when some requirement is not
 fullfilled. Some examples of requirements implemented in our library are shown
 on Table~\ref{tab:req}: A non satisfied requirement means that there will be no
 regular instance of this class and it produces a |OpError| requirement.
-When we call |req| with this operator the type checker reports an error since there is
-only one instance:
+When we call |req| with this operator the type checker reports an error since
+the instance is:
 
 > instance (TypeError (  Text "Error: " :<>: m :$$:
 >                        Text "trace: " :<>: ShowCTX ctx))
@@ -352,9 +351,9 @@ The head label is inspected and depending on the
 types the head value is returned or a recursive call is performed. To make
 decisions over types, and set return types depending on arguments, we implement a
 -sort of- dependent type function, which is encoded in Haskell with the usual
-idioms of type-level programming. For instance, the proof of equality must be
-made explicit using a proxy to help GHC to carry this type-level information. We
-introduce a new |OpLookup'| with an auxiliary |Bool|ean at type-level:
+idioms of type level programming. For instance, the proof of equality must be
+made explicit using a proxy to help GHC to carry this type level information. We
+introduce a new |OpLookup'| with an auxiliary |Bool|ean at type level:
 
 > data OpLookup'  (b  :: Bool)
 >                 (c  :: Type)
@@ -389,7 +388,7 @@ the first position:
 Note that we set the return type to be |WrapField c v|, which is
 completely generic.
 
-When |b==True| a call to |OpLookup| on the tail of the record is performed:
+When |b==False| a call to |OpLookup| on the tail of the record is performed:
 
 > instance (Require (OpLookup c l r) ctx)
 >   => Require (OpLookup' False c l ( '(l', v) ': r)) ctx where
@@ -400,9 +399,9 @@ When |b==True| a call to |OpLookup| on the tail of the record is performed:
 
 
 When we try to lookup into an empty record an error happened:
-We went over all the record
+we went over all the record
 and there was no value tagged with the searched label.
-Here we build a pithy instance of |OpError|:
+Here we require the instance of |OpError| informing the actual error:
 
 > instance Require (OpError
 >     (     Text "field not Found on "  :<>: Text (ShowRec c)
@@ -415,18 +414,19 @@ Here we build a pithy instance of |OpError|:
 
 This procedure is recurrent in all our development:
 \begin{itemize}
-\item Code dependent Haskell, if everything goes well neither
-  we access bad indexes nor rules at incorrect productions were used, etc.
-\item Encode the bad cases, requiring an |OpError|. Note that when building it,
-  like in the former |Require| instance for |OpLookup| a lot of information
-  about types is on scope and can be used to make up an informative error.
+\item Use requirements for operations that can introduce DSL errors,
+      keeping track of the call trace in the |ctx| index.
+\item Encode the bad cases, requiring an |OpError|.
+%  Note that when building it,
+%  like in the former |Require| instance for |OpLookup| a lot of information
+%  about types is on scope and can be used to make up an informative error.
 \end{itemize}
 
-Then, when the user tries to access a bad index, at compile time the type
-checker triggers a type error when type class resolution comes upon this
+Then, when the user does not fulfill a requirement, the type
+checker triggers a type error since type class resolution comes upon this
 singleton instance of |OpError|.
 
-In the former definition |ShowRec| and |ShowField| type families were used to
+In the previous definition |ShowRec| and |ShowField| type families were used to
 pretty print the type information depending on which instance of records we
 are working on.
 
@@ -444,7 +444,7 @@ For children:
 > type instance ShowField  (ChiReco a) = "child labelled "
 
 The fact that type families can be open is very convenient in this
-context, new records can be defined in a customized and modular way.
+context; new records can be defined in a customized and modular way.
 We think that |Require| and |GenRecord| transcend the status of internal modules for
 \AspectAG\ and are useful as a standalone library on their own.
 
@@ -452,11 +452,14 @@ The |ShowT| family is also interesting:
 
 > type family ShowT (t :: k) :: ErrorMessage
 
-When we print labels which are types with kinds such as |Att|, |Prd| or |Chi|,
-to show clear type errors we should print them in a different way
-depending on the case, formatting the information correctly. At term level a
-fully polymorphic function cannot touch its arguments. Type classes are the way
-to define bounded parametricity. Haskell does not provide kind classes but they
+When we print labels (with kinds such as |Att|, |Prd| or |Chi|)
+to show clear type errors we should print different information
+depending on the kind.
+%At term level a
+%fully polymorphic function cannot touch its arguments. Type classes are the way
+%to define bounded parametricity.
+This imposes some sort of ad-hoc polymorphism at the kind level.
+Haskell does not provide such \emph{kind classes}, but they
 are not necessary since polykinded type families are actually not parametric.
 When programming at type level we can actually inspect kinds and pattern match
 on them as using {\bf |typeOf|} in languages where types are avaiable at run
@@ -482,7 +485,7 @@ wich is actually a sugar for a couple of constraints:
 > type RequireEq (t1 :: k )(t2 :: k) (ctx:: [ErrorMessage])
 >     = (Require (OpEq t1 t2) ctx, t1 ~ t2)
 
-The first is a requirement, using the following operator:
+The first constraint is a requirement, using the following operator:
 
 > data OpEq t1 t2
 > instance RequireEqRes t1 t2 ctx
@@ -491,8 +494,8 @@ The first is a requirement, using the following operator:
 >   req = undefined
 
 Notice that in this case we do not define an implementation for the function
-|req|, since this requirement is used only at type-level.
-The type family |RequireEqRes| is a type-level function computing a constraint.
+|req|, since this requirement is used only at type level.
+The type family |RequireEqRes| is a type level function computing a constraint.
 It reduces to the requirement of an |OpError| if $t1 \neq t2$, building a
 readable error message, or to the trivial (Top) constraint otherwise.
 
