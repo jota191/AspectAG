@@ -275,7 +275,7 @@ requirements.
 >    req :: Proxy ctx -> op -> ReqR op
 
 Some functions require that specific non trivial conditions are met on types, or
-a type error must occur. For instance, each time we lookup in a record we require
+a type error must occur. For instance, each time we look up in a record we require
 that some label actually belongs to the record. Given an operation |op|, a
 datatype that takes all the arguments needed for the current operation to be
 performed, |req| extracts the tangible results, whose return type depends on the
@@ -331,15 +331,14 @@ only one instance:
 >   => Require (OpError m) ctx where {}
 %
 The type family |GHC.TypeLits.TypeError| works like the value-level function
-|error|. When it is ``called'' a type error is raised, with a given error message
-including a description |m| of the error and the context |ctx| where it occurred.
-|TypeError| is so polymorphic that it can be used as a |Constraint|.
-This generic instance is used to print all sort of type errors in a unified way,
-otherwise catching type errors case by case would be difficult and error prone.
-Note that specific information
-of what happened is on |OpError| which is built from a specific instance of
-|Require|, from a given operator and where every type relevant to show the error
-message was in scope.
+|error|. When it is ``called'' a type error is raised, with a given error
+message including a description |m| of the error and the context |ctx| where it
+occurred. |TypeError| is completely polymorphic so it can be used as a
+|Constraint|. This generic instance is used to print all sort of type errors in
+a unified way, otherwise catching type errors case by case would be difficult
+and error prone. Note that specific information of what happened is on |OpError|
+which is built from a specific instance of |Require|, from a given operator and
+where every type relevant to show the error message was in scope.
 
 \subsubsection{Record Requirements: Lookup}\label{sec:lookup}
 As an example of record requirements, we define the lookup operation.
