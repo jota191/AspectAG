@@ -45,19 +45,19 @@ programming language semantics, but as a general purpose programming paradigm.
 %to users. Also, the amount of work required compared to the standalone approach
 %is minimal.
 %In higher order functional programming languages such as Haskell,
-%the embedded approach is common and successful.
+%the embedded approach is common and successf
 
-\AspectAG\ is a Haskell EDSL (Embedded Domain Specific Language) implementing first class attribute grammars,
-introduced by Viera \emph{et al} in 2009 \cite{Viera:2009:AGF:1596550.1596586}. It uses
-extensible polymorphic records and predicates encoded using old fashioned type
-level programming (i.e. Multi Parameter Typeclasses \cite{type-classes-an-exploration-of-the-design-space} and Functional
-Dependencies \cite{DBLP:conf/esop/Jones00}),
-to ensure well formedness of AGs at compile time.
+%\AspectAG\ is a Haskell EDSL (Embedded Domain Specific Language) implementing first class attribute grammars,
+%introduced by Viera \emph{et al} in 2009 \cite{Viera:2009:AGF:1596550.1596586}.
 
-One important drawback of EDSLs in general, and \AspectAG\ in particular,
-is that since is simply a library, when type errors occur they do not
-refer to domain terms, and they leak implementation details. This breaks all the
-abstraction mechanism that the technique introduces.
+\AspectAG\ is a Haskell EDSL (Embedded Domain Specific Language), introduced by Viera \emph{et al}~\cite{Viera:2009:AGF:1596550.1596586}, that implements first class AGs.
+It uses extensible polymorphic records and predicates encoded using old fashioned type
+level programming features, such as Multi Parameter Typeclasses \cite{type-classes-an-exploration-of-the-design-space} and Functional Dependencies \cite{DBLP:conf/esop/Jones00},
+to ensure well-formedness of AGs at compile time.
+
+An important drawback of EDSLs in general, and of \AspectAG\ in particular,
+is that they are simply embedded libraries and when type errors occur they usually do not
+deliver error messages that refer to domain terms, leaking in addition implementation details in those messages. This breaks all abstraction mechanisms that may have taken into account in building the library. 
 The problem is even worse if we use type level programming techniques to
 implement the DSL.
 %
@@ -66,15 +66,12 @@ implement the DSL.
 %can be easily illformed.
 %For instance, for the grammar implementator it is a
 %common mistake to try to use attributes that are not defined in some production.
-Moreover, type level programming used in \AspectAG\ was really ad-hoc, exploiting
-extensions originally introduced for other uses. In particular, at type level,
-programming was essentialy untyped.
+In the specific case of \AspectAG, the type level programming techniques that were used were really ad-hoc, exploiting extensions originally introduced for other uses. In particular, at type level, programming was essentialy untyped.
 
-
-
-Modern GHC Haskell
-provides extensions to the type system to support the encoding of more
-sort-of dependent types in a more comfortable way. Notably {\tt
+More recent versions of GHC provide extensions to the type system to support a more robust and trustworthy programming at the type level. 
+%the encoding of more
+%sort-of dependent types in a more comfortable way.
+Notably {\tt
   TypeFamilies}~\cite{Chakravarty:2005:ATS:1090189.1086397, Sulzmann:2007:SFT:1190315.1190324}, to
 define functions at type-level, {\tt
   DataKinds}~\cite{Yorgey:2012:GHP:2103786.2103795}, implementing data
