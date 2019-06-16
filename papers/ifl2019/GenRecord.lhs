@@ -101,13 +101,13 @@ record structure:
 >             ->  Rec c ( '(l, v) ': r)
 
 
-A record is indexed by a parameter |c|, pointing out wich instance of record
+A record is indexed by a parameter |c|, pointing out which instance of record
 we are defining (e.g. attribution, set of children, aspect, etc.),
 and a promoted list of pairs |r| representing the fields.
 The first component of each pair is the label.
-The kind is polymorphic |k'|, since it is not mandatory to the type of
+The kind |k'| is polymorphic, since it is not mandatory to the type of
 labels to be inhabited; they need to live only at type level.
-The second component is also polymorphic |k''| and it can have an elaborate kind.
+The second component is also polymorphic and it can have an elaborate kind |k''|.
 By doing this, in the cases where the type of a stored value is an indexed GADT, we
 can use its index as the index that represents the field.
 |Tagfield| is the type of the fields of our records.
@@ -181,7 +181,7 @@ structures as particular instances of the general datatype. To introduce a
 new record structure we must give an index acting as a name (the ``|c|'' parameter),
 and code the family instance |WrapField|.
 As we shall see later, in order to print out domain specific error messages
-we also need to provide instances for the classes |ShowField| and |ShowRec|. 
+we also need to provide instances for the type families |ShowField| and |ShowRec|. 
 
 To code in a strongly kinded way, it is also useful to provide specific datatypes for labels,
 where |Att| is used for attributions, |Prod| for productions, and |Child| for children.
@@ -223,7 +223,7 @@ We also use an specific name for fields:
 %if False
 Pattern matching is a very useful feature in functional programming languages,
 but somewhat incompatible with abstract datatypes.
-Hiding constructors of |GenRecord| is nice but we lose pattern matching.
+Hiding constructors of |Rec| is nice but we lose pattern matching.
 Fortunately, GHC Haskell implements pattern synonyms.
 %endif
 For each record instance we can define specialized versions of the constructors
@@ -287,7 +287,7 @@ in |RequireR|:
 >     = (Require op ctx, ReqR op ~ res)
 
 Some requirements such
-as label equality are only about types, wich means that |req| is not used. It is
+as label equality are only about types, which means that |req| is not used. It is
 still useful to keep type errors in this framework, and in that case we use only
 the |Require| constraint.
 
@@ -319,7 +319,7 @@ To pretty print type errors, we define a special operation:
 %
 |OpError| is a phantom type containing some useful information to print.
 A call to |OpError| happens when some requirement is not
-fullfilled. Some examples of requirements implemented in our library are shown
+fulfilled. Some examples of requirements implemented in our library are shown
 on Table~\ref{tab:req}: A non satisfied requirement means that there will be no
 regular instance of this class and it produces a |OpError| requirement.
 When we call |req| with this operator the type checker reports an error since
@@ -327,7 +327,7 @@ the instance is:
 
 > instance (TypeError (  Text "Error: " :<>: m :$$:
 >                        Text "trace: " :<>: ShowCTX ctx))
->   => Require (OpError m) ctx where {}
+>   => Require (OpError m) ctx
 %
 The type family |GHC.TypeLits.TypeError| works like the value-level function
 |error|. When it is ``called'' a type error is raised, with a given error
@@ -398,7 +398,7 @@ When |b==False| a call to |OpLookup| on the tail of the record is performed:
 >     = req ctx (OpLookup l r)
 
 
-When we try to lookup into an empty record an error happened:
+When we try to look up in an empty record an error happens:
 we went over all the record
 and there was no value tagged with the searched label.
 Here we require the instance of |OpError| informing the actual error:
@@ -445,7 +445,7 @@ For children:
 
 The fact that type families can be open is very convenient in this
 context; new records can be defined in a customized and modular way.
-We think that |Require| and |GenRecord| transcend the status of internal modules for
+We think that |Require| and |Rec| transcend the status of internal modules for
 \AspectAG\ and are useful as a standalone library on their own.
 
 The |ShowT| family is also interesting:
@@ -480,7 +480,7 @@ inhabited types are printed with their standard name:
 \subsubsection{Label Equality Requirements}
 
 We use |RequireEq| to require label (and thus type) equality,
-wich is actually a sugar for a couple of constraints:
+which is actually a sugar for a couple of constraints:
 
 > type RequireEq (t1 :: k )(t2 :: k) (ctx:: [ErrorMessage])
 >     = (Require (OpEq t1 t2) ctx, t1 ~ t2)
