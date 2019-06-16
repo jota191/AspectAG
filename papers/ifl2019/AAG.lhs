@@ -17,9 +17,9 @@ and |ChAttsRec|, and it is indexed with the production to which it belongs:
 
 
 Attribute computations, or rules, are actually functions from an \emph{input
-  family} (attributes inherited from the parent and synthesized of the children)
-to an \emph{output family} (attributes synthesized for the parent, inherited to
-children). We implement them with an extra arity to make them composable, a
+  family} (inherited attributes from the parent and synthesized of the children)
+to an \emph{output family} (synthesized attributes for the parent, inherited to
+children). We implement them with an extra arity to make them composable; a
 well-known trick\cite{Moor99first-classattribute}. 
 
 > type Rule  (prd  :: Prod)
@@ -168,18 +168,18 @@ the inherited attributes of the children |ic|, then extend it and update |ic|.
 Again, the monadic
 alternative |inhdefM| is provided. Functions to define synthesized and inherited
 attributes are neccesary to compose nontrivial attribute grammars. More
-constructs are useful in practice. In Section~\ref{sec:example} |synmod| (that modifies an attribute instead of adding it)
+constructs are useful in practice. In Section~\ref{sec:example}, |synmod| (that modifies an attribute instead of adding it)
 was used and proved to be useful to change semantics. Its inherited counterpart |inhmod|
 is also provided. On top of this we can implement some common patterns that generate
 rules from higher level specifications.
 
 \subsection{Combining Rules.}
 
-Functions as |syndef| or |inhdef| build rules from scratch defining how to
+Functions as |syndef| or |inhdef| build rules from scratch, defining how to
 compute one single new attribute from a given family using functions of the host
 language. A full rule is usually more complex, since it builds a full output
 family, where usually many attributes are computed in many ways. To build such
-rules we compose smaller rules. Composing them is easy, given the extra arity trick:
+rules we compose from smaller rules. Composing rules is easy, given the extra arity trick:
 
 > ext  ::  RequireEq prd prd' (Text "ext":ctx)
 >      =>  CRule ctx prd sc ip ic sp ic' sp'
@@ -200,7 +200,7 @@ obfuscated on hundreds of lines of error code, printing every record, such as
 \subsection{Aspects}
 
 Aspects are collections of rules, indexed by productions. They are an instance
-of |GenRecord|, defined as:
+of |Rec|, defined as:
 
 > data PrdReco
 > type instance  WrapField PrdReco (rule :: Type) = rule
@@ -216,9 +216,9 @@ we introduce the concept of a tagged aspect:
 >   = CAspect { mkAspect :: Proxy ctx -> Aspect asp}
 
 In Section~\ref{sec:defs} we saw how that context is extended when an attribute is
-defined using |syndef| or |inhdef|. In the running example in Section~\ref{sec:example}
+defined using |syndef| or |inhdef|. In the  example of Section~\ref{sec:example}
 the function |traceAspect| was introduced as a
-tool for the user to place marks visible in the trace when a type error occurs.
+tool for the user to place marks, visible in the trace when a type error occurs.
 We implement |traceAspect| using a sort of |map| function, traversing the record.
 
 
