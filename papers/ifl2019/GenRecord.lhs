@@ -28,15 +28,17 @@
 % In this section we present the design of the new \AspectAG.
 \label{sec:records}
 In order to provide flexibility and safety, \AspectAG\ internals are built from
-strongly typed extensible records. Then, mistakes like trying to access to an
-undefined attribute or child are detected at compile time as an incorrect look up
-in a given record. Also, the definition of duplicated attributes results in a
+strongly typed extensible records. Mistakes like trying to access to an
+undefined attribute or child are detected at compile time as an incorrect look
+up in a given record. Also, the definition of duplicated attributes results in a
 type error, due to an incorrect record extension.
 
-However, detecting errors is not enough.
-If the error messages are difficult to understand and do not point to their possible sources,
-using the library becomes a painful task.
-A common problem of type-level programming implementations of EDSLs is the leakage of implementation details in error messages. This was the case of the previous version of \AspectAG.
+However, detecting errors is not enough. If the error messages are difficult to
+understand and do not give references to their possible points of introduction
+within the source code, then using the library becomes a painful task. A common
+problem of type-level programming implementations of EDSLs is the leakage of
+implementation details in error messages. This was the case of the previous
+version of \AspectAG.
 
 %It is a common problem when implementing EDSLs using type-level programming that when a type
 % error occurs, implementation details are leaked on error messages,
@@ -77,15 +79,16 @@ The implementation of the library is strongly based on the use of extensible rec
 
 Extensible records coded using type-level programming are already part of the
 folklore in the Haskell community. The {\tt HList}
-library~\cite{Kiselyov:2004:STH:1017472.1017488} popularized them.
-One common way to implement a record is by using a GADT
-indexed by the list of types of the values stored in its fields.
-These types are usually of kind |Type|, what makes sense since |Type|
-is the kind of inhabited types, and records store values.
-However, in cases such as our children records, where
-we store attributions that are also represented by an indexed GADT,
-we would like to be able to reflect some of this structural information at the indexes of the record. This can be achieved if we are polymorphic in the kind of the types corresponding to
-the record fields. Based on this approach we designed a new, polykinded, extensible record structure:
+library~\cite{Kiselyov:2004:STH:1017472.1017488} popularized them. One common
+way to implement a record is by using a GADT indexed by the list of types of the
+values stored in its fields. These types are usually of kind |Type|, what makes
+sense since |Type| is the kind of inhabited types, and records store values.
+However, in cases such as our children records, where we store attributions that
+are also represented by an indexed GADT, we would like to be able to reflect
+some of this structural information at the indexes of the record. This can be
+achieved if we are polymorphic in the kind of the types corresponding to the
+record fields. Based on this approach we designed a new, polykinded, extensible
+record structure:
 
 %We abstracted this notion and designed a library of polymporphic extensible
 %records, defined as follows:
@@ -164,15 +167,16 @@ Boolean type family seems the way to go.
 >            (LabelSetF ( '(l, v)   ': r) )
 >            (LabelSetF ( '(l', v') ': r) )
 %
-where |(==)| is the type level equality operator (|Data.Type.Equality|).
-Then we can encode the predicate as the following constraint.
+where |(==)| is the type level equality operator (|Data.Type.Equality|), and
+|And3| a type family computing the conjunction of three boolean arguments. Then we
+can encode the predicate as the following constraint.
 
 > type LabelSet r = LabelSetF r ~ True
 
 \subsection{Record Instances}
 
-In our library, most functions over records are implemented over the polykinded
-implementation. Because of that we implement our record-like data
+In our library most functions over records are implemented over this
+general implementation. After that we implement our record-like data
 structures as particular instances of the general datatype. To introduce a
 new record structure we must give an index acting as a name (the ``|c|'' parameter),
 and code the family instance |WrapField|.
@@ -190,7 +194,7 @@ To code strongly kinded it is also useful to provide specific datatypes for labe
 |Att| is used for attributions, |Prod| for productions, and |Child|
 for children.
 
-Below we give some examples of record instances.
+We give some examples of record instances.
 
 \subsubsection*{Example: Attribution}
 
@@ -201,8 +205,7 @@ define an empty datatype:
 
 In the definition of |Rec| the |c| parameter is polykinded. We use the
 kind |Type| for indexes in our instances since |Type| is an extensible kind.
-If we fixed the kind of this index, then the record library would only allow a closed
-set of records structures. 
+
 
 Attributions are records built using the |AttReco| index. We define a descriptive name
 and fix the polymorphic kinds since Attribution labels are of kind |Att|, and
@@ -271,14 +274,13 @@ requirements.
 >    type ReqR op :: Type
 >    req :: Proxy ctx -> op -> ReqR op
 
-
-Given an operation |op|, that takes all the arguments needed for the current
-operation to be performed, |req| extracts the tangible results, whose return
-type depends on the operation. For example, each time we lookup in a record we
-require that some label actually belongs to the record. If this requirement is
-not accomplished an error must be raised at compile time.
-The function |req| also uses some context information (i.e. the |trace| of the error)
-to provide more useful information in the error message.
+Some functions require that specific non trivial conditions are met on types, or
+a type error must occur. For instance, each time we lookup in a record we require
+that some label actually belongs to the record. Given an operation |op|, a
+datatype that takes all the arguments needed for the current operation to be
+performed, |req| extracts the tangible results, whose return type depends on the
+operation. The function |req| also uses some context information (i.e. the
+|trace| of the error) to provide more useful information in the error message.
 
 We collect the constraints imposed to a |Require| instance
 in |RequireR|:
