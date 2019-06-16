@@ -4,10 +4,10 @@
 %Compiler) is probably the most well known example. 
 
 
-There are a significant number of AG implementations. Some of them implemented
+There is a significant number of AG implementations. Some of them are implemented
 as standalone compilers or generators, like LRC \cite{Saraiva02}, UUAGC
 \cite{uuagc}, LISA \cite{lisa}, JastAdd \cite{jastadd} and Silver \cite{silver},
-and others embbeded in languages like Scala (e.g. Kiama \cite{kiama}) or Haskell
+and others are embbeded in languages like Scala (e.g. Kiama \cite{kiama}) or Haskell
 (\cite{DBLP:conf/gcse/MoorPW99, Moor99first-classattribute,
   Viera:2009:AGF:1596550.1596586,DBLP:conf/ifl/VieraBP18, MFS13,
   DBLP:phd/ethos/Balestrieri15}).
@@ -28,17 +28,17 @@ we push towards the direction of type safety making types strongly kinded.
 %a weakness. Also, we push a towards the direction of type safety making types
 %strongly kinded. 
 
-Error messages are another weakness we dealed with. Managing type errors on
-EDSLs is an old problem to the community and an active research area. The idea
-of transforming a typing problem into a constraint problem is not recent
+Error messages are another weakness we deal with. Managing type errors on
+EDSLs is an old problem and an active research area. The idea
+of transforming a typing problem into a constraint problem is not new
 \cite{10635_42131, improvingtypeerror}. Other embedded implementations of AGs
 \cite{DBLP:conf/ifl/VieraBP18} solve the type diagnose problem at the cost of
 making it staged.
 
 
-Compiler support added with the |TypeError| family was essential, but further
+Compiler support added with the |TypeError| type family was essential, but further
 support would be desirable, in particular to control class constraint solving
-and avoid leaks an non readable messages. Research by
+and to avoid leaks and non readable messages. Research by
 Heeren~\cite{DBLP:phd/basesearch/Heeren05} was implemented for the Helium
 compiler. Recently, Serrano Mena and Hage \cite{DBLP:phd/basesearch/Serrano18,
   DBLP:conf/ifl/SerranoH17} developed a set of techniques for customizing type
