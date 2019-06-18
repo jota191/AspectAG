@@ -642,3 +642,12 @@
 
 
 > --usess (att) (KCons prd KNil) nts op unit = use att prd nts op unit
+
+
+
+
+> getProxy :: a -> Proxy a ; getProxy _ = Proxy
+> getLabel :: a -> Label a ; getLabel _ = Label
+
+> proxyFrom :: t a -> Proxy a
+> proxyFrom _ = Proxy
