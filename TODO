@@ -1,50 +1,16 @@
 
---
-code an interface for all record types, to use sugarized operators
-as # for all types isomorphic to records. The problem with this is
-the possible degradation of errors
+-- testear atributos polimorficos
 
-GenRecord está solucionando esto en parte,
-quedan pendientes varias cuestiones
-+Se hace pattern Matching sobre los constructores fuera de GenRecord
-+No se programan las funciones genericamente
+-- mas ejemplos
+
+-- common patterns
+   copy copies uses chn
 
 
---
-En Fam los kinds para las etiquetas de los hijos y las producciones
-se unifican, por eso no funcionaba usar tipos promovidos para las
-etiquetas, cambiar eso y testearlo con un ejemplo
-
---
-Uso de template Haskell para generar las etiquetas, depende 
-
---
-Hay que trabajar en los mensajes de error
+-- pragmas
+-- export list
 
 
--- reprogramar algunas de las funciones que usan fundeps con TF
-para hacerlas mas idiomaticas (en esto se avanzo mucho,
-y se purgó del modulo principal, pero aún hay uso en módulos
-auxiliares)
+-- new TH
 
---
-copy rules
-
--- arreglar las Exportaciones
-
--- Pragmas
-
--- precedencia de .=. y .*. para definir aspectos inline
-
--- test error instances for SingleDef
-
--- export Record patterns
-
--- Children labels are pairs constructed with (,), since we use
-TH to generate them. So they are not polykinded. Moreover,
-we implement Use, Use', Defs, etc in terms of this implementation.
-
--- overloaded (#) etc
-
--- why TPair can't be defined on TH module? moreover, if we enable PolyKinds
-on TH it breaks type inference (ambiguity)
+-- subir a hackage
