@@ -67,6 +67,7 @@
 %format 'Chi = "\tk\!\Varid{Chi}"
 %format 'Left = "\tk\!\Varid{Left}"
 %format 'Right = "\tk\!\Varid{Right}"
-%format 'Text = "\tk\!\Varid{Text}"
+%format 'Text = "\tk\!\Varid{Text}
+%format 'T = "\tk\!\Varid{T}"
 
 %%format ' = "\tk\!\Varid{[]}"
