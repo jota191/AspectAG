@@ -25,7 +25,7 @@
 module Language.Grammars.AspectAG.GenRecord where
 
 import Data.Kind
-import Data.Type.Equality
+--import Data.Type.Equality hiding ((==))
 import Data.Proxy
 import Language.Grammars.AspectAG.TPrelude
 import Language.Grammars.AspectAG.Require
@@ -33,6 +33,8 @@ import Language.Grammars.AspectAG.Require
 import GHC.TypeLits
 
 
+type family a == b where
+  a == b = Equal a b
 
 -- * Pretty constructors
 
