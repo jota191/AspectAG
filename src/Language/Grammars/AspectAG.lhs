@@ -626,28 +626,3 @@
 >   = singAsp $ syndef att prd $ \_ fam -> maybe unit id (usechi att prd nts op $ chi fam)
 
 > singAsp r = r .+: emptyAspect
-
-
-> class Uses (att :: Att) (prds :: [Prod]) (nts :: [NT]) a where
->   type UsesR (att :: Att) (prds :: [Prod]) (nts :: [NT]) a :: Type
->   uses :: Label att -> KList prds -> KList nts -> (a -> a -> a) -> a
->        -> UsesR att prds nts a
-
-
-> --instance Uses att ( prd ': '[]) nts a where
-> --  type UsesR att ( prd ': '[]) nts a
-> --    = CAspect '[] '[ '(prd, CRule '[] prd a b c d e f)]
-> --  uses att (KCons prd KNil) nts op unit
-> --    = use att prd nts op unit .+: emptyAspect
-
-
-> --usess (att) (KCons prd KNil) nts op unit = use att prd nts op unit
-
-
-
-
-> getProxy :: a -> Proxy a ; getProxy _ = Proxy
-> getLabel :: a -> Label a ; getLabel _ = Label
-
-> proxyFrom :: t a -> Proxy a
-> proxyFrom _ = Proxy
