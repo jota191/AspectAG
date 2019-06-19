@@ -78,10 +78,6 @@
 >   = sem_List (Proxy @ a) (asp_cata (Proxy @ b) f e) xs emptyAtt #. (scata @ b)
 
 
-> tyApp :: (forall a. Label ('Att "cata" a)) -> Proxy a
->       -> (Label ('Att "cata" a))
-> tyApp poly (Proxy :: Proxy a) = poly @ a
-
 > slen = Label @ ('Att "slen" Integer)
 
 > asp_slen
@@ -152,3 +148,18 @@ A possibly better alternative:
 
 > sumcata' = cata (+) 0
 > lencata  = cata (const (+1)) 0
+
+
+avoid annotations, without touching attribute definitions:
+
+> tyApp :: (forall b. Label ('Att name b)) -> Proxy a -> Label ('Att name a)
+> att `tyApp` Proxy = att
+
+> cata'' :: (a -> b -> b) -> b -> [a] -> b  -- needed
+> cata'' f e xs
+>   = semListPoly (asp_cata (getProxy e) f e) xs emptyAtt
+>       #. (scata `tyApp` (getProxy e))
+
+
+-------------------------------------------------------------------------------
+testing use

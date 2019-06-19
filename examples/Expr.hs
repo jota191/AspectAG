@@ -26,6 +26,7 @@ import GHC.TypeLits
 import Data.Map
 import Data.Maybe
 import Debug.Trace
+import Language.Grammars.AspectAG.TH
 
 type Nt_Expr = 'NT "Expr"
 expr = Label @ Nt_Expr
@@ -90,4 +91,5 @@ evalExpr e m = sem_Expr asp e (env =. m .*. emptyAtt) #. eval
 
 exampleExpr =  Add (Val (-9)) (Add (Var "x") (Val 2))
 exampleEval =  evalExpr exampleExpr (insert "x" 5 Data.Map.empty)
+
 
