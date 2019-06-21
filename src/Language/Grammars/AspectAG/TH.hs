@@ -1,19 +1,34 @@
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TemplateHaskell, CPP, DataKinds, KindSignatures, FlexibleInstances #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE PolyKinds                 #-}
+{-# LANGUAGE KindSignatures            #-}
+{-# LANGUAGE DataKinds                 #-}
+{-# LANGUAGE ConstraintKinds           #-}
+{-# LANGUAGE RankNTypes                #-}
+{-# LANGUAGE TypeOperators             #-}
+{-# LANGUAGE FlexibleInstances         #-}
+{-# LANGUAGE FlexibleContexts          #-}
+{-# LANGUAGE GADTs                     #-}
+{-# LANGUAGE UndecidableInstances      #-}
+{-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE TypeFamilies              #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE TypeFamilies              #-}
+{-# LANGUAGE TypeApplications          #-}
+{-# LANGUAGE FunctionalDependencies    #-}
+{-# LANGUAGE TemplateHaskell           #-}
 
 module Language.Grammars.AspectAG.TH where
 
 import Language.Haskell.TH
-
-import Data.List
-import Data.Set (Set)
-import Data.List (isPrefixOf, isSuffixOf, sort)
-import qualified Data.Set as S
 import Data.Proxy
+import Data.Either
+import GHC.TypeLits
+-- import Data.Kind
+
+import Control.Monad
 
 import Language.Grammars.AspectAG
-import Control.Monad
+
 
 -- * Attribute labels
 
@@ -55,3 +70,64 @@ addNTType :: String -> Q [Dec]
 addNTType s
   = return [TySynD (mkName ("Nt_"++ s)) [] (AppT (PromotedT 'NT) (LitT (StrTyLit s)))]
 
+
+-- * Productions
+--data Symbol = N String | Te Name
+
+type family Terminal s :: Either NT T where
+  Terminal s = 'Right ('T s)
+
+type family NonTerminal s where
+  NonTerminal s = 'Left s
+
+
+data SymTH = Ter Name | NonTer Name
+
+addTest :: String -> SymTH -> Q [Dec]
+addTest s sym
+  = case sym of
+      Ter n -> [d| $(varP (mkName s)) = Label :: Label $(conT n) |]
+
+--addProd :: String -> 
+
+
+addChi  :: String -- chi name
+        -> Name   -- prd
+        -> SymTH  -- symbol type
+        -> Q [Dec]
+addChi chi prd (Ter typ)
+  = [d| $(varP (mkName ("ch_" ++chi)))
+           = Label :: Label ( 'Chi $(str2Sym chi)
+                                   $(conT prd)
+                                    (Terminal $(conT typ)))|]
+addChi chi prd (NonTer typ)
+  = [d| $(varP (mkName ("ch_" ++chi)))
+           = Label :: Label ( 'Chi $(str2Sym chi)
+                                   $(conT prd)
+                                    (NonTerminal $(conT typ)))|]
+
+-- | only prod symbol
+addPrd :: String  --name
+       -> Name    --nonterm
+       -> Q [Dec]
+addPrd prd nt = liftM concat . sequence
+              $ [addPrdType prd nt, addPrdLabel prd nt]
+
+addPrdLabel prd nt
+  = [d| $(varP (mkName ("p_" ++ prd)))
+         = Label :: Label ('Prd $(str2Sym prd) $(conT nt))|]
+
+addPrdType prd nt
+  = return [TySynD (mkName ("P_"++ prd)) []
+            (AppT (AppT (PromotedT 'Prd) (LitT (StrTyLit prd))) (ConT nt))]
+
+
+-- | Productions
+
+addProd :: String             -- name
+        -> Name               -- nt
+        -> [(String, SymTH)]  -- chiLst
+        -> Q [Dec]
+addProd prd nt xs
+  = liftM concat . sequence $
+  addPrd prd nt : [addChi chi (mkName ("P_" ++ prd)) sym | (chi, sym) <- xs]
