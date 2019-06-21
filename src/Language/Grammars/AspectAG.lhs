@@ -285,6 +285,8 @@
 >      -> CRule ctx prd sc ip ic sp ic sp'
 > syndefM att prd = syndef att prd . def
 
+> syn = syndefM
+> inh = inhdefM
 
 
 > synmod
