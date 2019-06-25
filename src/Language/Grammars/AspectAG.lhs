@@ -158,6 +158,9 @@
 > (.+:) = extAspect
 > infixr 3 .+:
 
+> (.:+.) = flip extAspect
+> infixl 3 .:+.
+
 > (.:+:) = comAspect
 > infixr 4 .:+:
 
@@ -628,3 +631,10 @@
 >   = singAsp $ syndef att prd $ \_ fam -> maybe unit id (usechi att prd nts op $ chi fam)
 
 > singAsp r = r .+: emptyAspect
+
+
+> tyAppAtt :: (forall b. Label ('Att name b)) -> Proxy a -> Label ('Att name a)
+> att `tyAppAtt` Proxy = att
+
+> tyAppChi :: (forall b. Label ('Chi name prd b)) -> Proxy a -> Label ('Chi name prd a)
+> att `tyAppChi` Proxy = att

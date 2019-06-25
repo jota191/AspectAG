@@ -81,14 +81,7 @@ type family NonTerminal s where
   NonTerminal s = 'Left s
 
 
-data SymTH = Ter Name | NonTer Name
-
-addTest :: String -> SymTH -> Q [Dec]
-addTest s sym
-  = case sym of
-      Ter n -> [d| $(varP (mkName s)) = Label :: Label $(conT n) |]
-
---addProd :: String -> 
+data SymTH = Ter Name | NonTer Name | Poly
 
 
 addChi  :: String -- chi name
@@ -105,6 +98,11 @@ addChi chi prd (NonTer typ)
            = Label :: Label ( 'Chi $(str2Sym chi)
                                    $(conT prd)
                                     (NonTerminal $(conT typ)))|]
+addChi chi prd Poly
+  = [d| $(varP (mkName ("ch_" ++chi)))
+           = Label :: forall a . Label ( 'Chi $(str2Sym chi)
+                                   $(conT prd)
+                                    ('Right ('T a)))|]
 
 -- | only prod symbol
 addPrd :: String  --name
