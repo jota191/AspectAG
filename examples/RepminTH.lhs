@@ -1,5 +1,6 @@
 
 
+
 To use AspectAG in a module, some extensions must be enabled,
 otherwise type errors we won't have readable type errors.
 
@@ -11,7 +12,7 @@ otherwise type errors we won't have readable type errors.
 
 > {-# LANGUAGE AllowAmbiguousTypes #-}
 > {-# LANGUAGE NoMonomorphismRestriction #-}
-
+> {-# LANGUAGE DataKinds #-}
 
 > {-# LANGUAGE TypeApplications #-}
 
