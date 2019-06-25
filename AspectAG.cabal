@@ -22,7 +22,7 @@ synopsis:            A library of strongly typed Attribute Grammars implemented 
 homepage:            www.fing.edu.uy/~jpgarcia/AspectAG
 
 -- The license under which the package is released.
-license:             LGPL-3
+license:             GPL-3
 
 -- The file containing the license text.
 license-file:        LICENSE
@@ -58,6 +58,7 @@ cabal-version:       >=1.10
 library
   -- Modules exported by the library.
   exposed-modules:     Language.Grammars.AspectAG,
+                       Language.Grammars.AspectAG.TH,
                        Language.Grammars.AspectAG.HList,
                        Language.Grammars.AspectAG.TPrelude,
                        Language.Grammars.AspectAG.Derive,
@@ -99,7 +100,7 @@ library
  
 
   -- Directories containing source files.
-  hs-source-dirs:      src, test
+  hs-source-dirs:      src, examples
 
   -- Base language which the package is written in.
   default-language:    Haskell2010
