@@ -1,6 +1,7 @@
 
 
 
+
 To use AspectAG in a module, some extensions must be enabled,
 otherwise type errors we won't have readable type errors.
 
@@ -14,6 +15,8 @@ otherwise type errors we won't have readable type errors.
 > {-# LANGUAGE NoMonomorphismRestriction #-}
 > {-# LANGUAGE DataKinds #-}
 
+> {-# LANGUAGE FlexibleInstances #-}
+> {-# LANGUAGE MultiParamTypeClasses #-}
 > {-# LANGUAGE TypeApplications #-}
 
 
@@ -112,3 +115,11 @@ Another way to build  semantic functions:
 
 
 > repmin' t = semR asp_repmin (Root t) emptyAtt #. sres
+
+
+> -- $(addClass ''Int ''Char)
+> -- $(addClass ''Int ''Bool)
+> -- $(addClass ''Bool ''Bool)
+> $(addInstance ''Nt_Tree "Lala" [''Nt_Tree,''Bool])
+> $(createConstant "Lala")
+> $(closeNT)

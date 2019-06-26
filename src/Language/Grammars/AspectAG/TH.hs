@@ -20,20 +20,22 @@
 module Language.Grammars.AspectAG.TH where
 
 import Language.Haskell.TH
+import Language.Haskell.TH.Syntax (showName)
 import Data.Proxy
 import Data.Either
 import GHC.TypeLits
--- import Data.Kind
+import Data.List (isPrefixOf)
 
 import Control.Monad
 
 import Language.Grammars.AspectAG
+import qualified Data.Kind as DK
 
 
 -- * Attribute labels
 
 -- | makes a type level lit (Symbol) from a String
-str2Sym s = litT$ strTyLit s
+str2Sym s = litT$ strTyLit s -- th provides nametoSymbol, btw
 
 
 -- | TH function to define a typed attribute label given a name
@@ -73,7 +75,6 @@ addNTType s
 
 -- * Productions
 --data Symbol = N String | Te Name
-
 type family Terminal s :: Either NT T where
   Terminal s = 'Right ('T s)
 
@@ -98,7 +99,7 @@ addChi chi prd (NonTer typ)
            = Label :: Label ( 'Chi $(str2Sym chi)
                                    $(conT prd)
                                     (NonTerminal $(conT typ)))|]
-addChi chi prd Poly
+addChi chi prd poly
   = [d| $(varP (mkName ("ch_" ++chi)))
            = Label :: forall a . Label ( 'Chi $(str2Sym chi)
                                    $(conT prd)
@@ -121,11 +122,77 @@ addPrdType prd nt
 
 
 -- | Productions
-
 addProd :: String             -- name
         -> Name               -- nt
         -> [(String, SymTH)]  -- chiLst
         -> Q [Dec]
 addProd prd nt xs
   = liftM concat . sequence $
-  addPrd prd nt : [addChi chi (mkName ("P_" ++ prd)) sym | (chi, sym) <- xs]
+      addPrd prd nt
+    : addInstance nt prd (map preProc xs)
+    : [addChi chi (mkName ("P_" ++ prd)) sym | (chi, sym) <- xs]
+    where preProc (_, Ter a)    = a
+          preProc (_, NonTer a) = a 
+
+
+-- | class example
+class Prods (lhs :: NT) (name :: Symbol) (rhs :: [Either NT T]) where {}
+
+-- get a list of instances
+getInstances :: Q [InstanceDec]
+getInstances = do
+  ClassI _ instances <- reify ''Prods
+  return instances
+
+-- convert the list of instances into an Exp so they can be displayed in GHCi
+showInstances :: Q Exp
+showInstances = do
+  ins <- getInstances
+  return . LitE . stringL $ show $ head ins
+
+addInstance :: Name -> String -> [Name] -> Q [Dec]
+addInstance nt name rhs
+  = [d| instance Prods $(conT nt) $(str2Sym name) $(typeList rhs) where {}  |]
+
+typeList :: [Name] -> Q Type
+typeList = foldr f promotedNilT
+  where f = \x xs -> if isNTName x
+          then ((appT (appT promotedConsT
+                       ((appT [t| Left |]) (conT x))))) xs
+          else ((appT (appT promotedConsT
+                       ((appT [t| Right |])
+                        (appT [t| 'T |] (conT x)))))) xs
+
+isNTName :: Name -> Bool
+isNTName n
+  = "Nt_" `isPrefixOf` nameBase n
+
+
+createConstant :: String -> Q [Dec]
+createConstant constantName = do constantType   <- return $ mkName constantName
+                                 constant       <- return $ mkName constantName
+                                 return [ DataD []
+                                          constantType [] Nothing
+                                          [NormalC constant []]
+                                          []                       ]
+
+
+closeNT :: Name -> Q [Dec]
+closeNT nt
+  = do decs <- getInstances
+       let consts = map mkCon $ filter (isInstanceOf nt) decs
+       return [ DataD []
+                (mkName $ drop 3 $ nameBase nt) [] Nothing
+                consts []]
+
+isInstanceOf nt (InstanceD _ _ (AppT (AppT (AppT (ConT prods) (ConT nt')) _ ) _) _)
+  = nameBase nt == nameBase nt'
+isInstanceOf _ _ = False
+
+mkCon :: InstanceDec -> Con
+mkCon i
+  = case i of
+  InstanceD _ [] (AppT (AppT (AppT (ConT prods) (ConT nt)) (LitT (StrTyLit prdname))) _) _
+    -> NormalC (mkName prdname) []
+
+mkBangP a = (Bang NoSourceUnpackedness NoSourceStrictness, ConT a)
