@@ -187,7 +187,7 @@ closeNT nt
        let consts = map mkCon $ filter (isInstanceOf nt) decs
        return [ DataD []
                 (mkName $ drop 3 $ nameBase nt) [] Nothing
-                consts []]
+                consts [DerivClause Nothing [ConT ''Show, ConT ''Eq, ConT ''Read]]]
 
 isInstanceOf nt (InstanceD _ _ (AppT (AppT (AppT (ConT prods) (ConT nt')) _ ) _) _)
   = nameBase nt == nameBase nt'
