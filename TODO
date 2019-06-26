@@ -1,16 +1,22 @@
 
--- testear atributos polimorficos
+-- testear atributos polimorficos -- OK
 
 -- mas ejemplos
 
 -- common patterns
-   copy copies uses chn
+   copy
+   copies
+   uses
+   chn
 
+-- haddock
 
 -- pragmas
 -- export list
 
 
--- new TH
+-- new TH -- OK
+  -- TH RecordTypes
+
 
 -- subir a hackage
