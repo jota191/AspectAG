@@ -115,11 +115,3 @@ Another way to build  semantic functions:
 
 
 > repmin' t = semR asp_repmin (Root t) emptyAtt #. sres
-
-
-> -- $(addClass ''Int ''Char)
-> -- $(addClass ''Int ''Bool)
-> -- $(addClass ''Bool ''Bool)
-> $(addInstance ''Nt_Tree "Lala" [''Nt_Tree,''Bool])
-> $(createConstant "Lala")
-> $(closeNT)

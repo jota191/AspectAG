@@ -136,7 +136,7 @@ addProd prd nt xs
 
 
 -- | class example
-class Prods (lhs :: NT) (name :: Symbol) (rhs :: [Either NT T]) where {}
+class Prods (lhs :: NT) (name :: Symbol) (rhs :: [Symbol]) where {}
 
 -- get a list of instances
 getInstances :: Q [InstanceDec]
@@ -156,12 +156,16 @@ addInstance nt name rhs
 
 typeList :: [Name] -> Q Type
 typeList = foldr f promotedNilT
-  where f = \x xs -> if isNTName x
-          then ((appT (appT promotedConsT
-                       ((appT [t| Left |]) (conT x))))) xs
-          else ((appT (appT promotedConsT
-                       ((appT [t| Right |])
-                        (appT [t| 'T |] (conT x)))))) xs
+     where f = \x xs -> appT (appT promotedConsT (nameToSymbolBase x)) xs
+  -- where f = \x xs -> if isNTName x
+  --         then ((appT (appT promotedConsT
+  --                      ((appT [t| Left |]) (conT x))))) xs
+  --         else ((appT (appT promotedConsT
+  --                      ((appT [t| Right |])
+  --                       (appT [t| 'T |] (conT x)))))) xs
+
+nameToSymbol = litT . strTyLit . show
+nameToSymbolBase = litT . strTyLit . nameBase
 
 isNTName :: Name -> Bool
 isNTName n
@@ -192,7 +196,16 @@ isInstanceOf _ _ = False
 mkCon :: InstanceDec -> Con
 mkCon i
   = case i of
-  InstanceD _ [] (AppT (AppT (AppT (ConT prods) (ConT nt)) (LitT (StrTyLit prdname))) _) _
-    -> NormalC (mkName prdname) []
+  InstanceD _ [] (AppT (AppT (AppT (ConT _prods) (ConT nt)) (LitT (StrTyLit prdname))) tlist) _
+    -> NormalC (mkName prdname) (map mkBangP $ getTList tlist)
 
 mkBangP a = (Bang NoSourceUnpackedness NoSourceStrictness, ConT a)
+
+getTList :: Type -> [Name]
+getTList (SigT _ _) = []
+getTList (AppT (AppT PromotedConsT (LitT (StrTyLit pos))) ts)
+  = (if "Nt_" `isPrefixOf` pos then mkName (drop 3 (pos)) else mkName pos) : getTList ts
+getTList _ = []
+
+closeNTs :: [Name] -> Q [Dec]
+closeNTs = liftM concat . sequence . map (closeNT)

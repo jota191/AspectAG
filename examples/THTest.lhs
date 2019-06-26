@@ -26,21 +26,8 @@ otherwise type errors we won't have readable type errors.
 > import Language.Grammars.AspectAG.TH
 
 
-To add a nonterminal we can use the TH function |addNont|:
-
 > $(addNont "Root")
 > $(addNont "Tree")
-
-The produce the following code:
-
-< type Nt_Root = NT "Root"
-< nt_Root = Label :: Label Nt_Root
-
-< type Nt_Tree = NT "Tree"
-< nt_Tree = Label :: Label (Nt_Tree)
-
-
-After, we generate productions:
 
 
 > $(addProd "Leaf" ''Nt_Tree [("val", Ter ''Int)])
@@ -49,5 +36,8 @@ After, we generate productions:
 
 
 > $(createConstant "Lolo")
-> $(closeNT ''Nt_Root)
-> $(closeNT ''Nt_Tree)
+> -- $(closeNT ''Nt_Tree)
+> -- $(closeNT ''Nt_Root)
+
+
+> $(closeNTs [''Nt_Root,''Nt_Tree])
