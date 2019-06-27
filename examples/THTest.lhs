@@ -35,9 +35,9 @@ otherwise type errors we won't have readable type errors.
 > $(addProd "Root" ''Nt_Root [("tree",NonTer ''Nt_Tree)])
 
 
-> $(createConstant "Lolo")
-> -- $(closeNT ''Nt_Tree)
-> -- $(closeNT ''Nt_Root)
-
 
 > $(closeNTs [''Nt_Root,''Nt_Tree])
+
+
+> $(mkSemFunc ''Nt_Tree)
+> $(mkSemFunc ''Nt_Root)

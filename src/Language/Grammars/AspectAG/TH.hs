@@ -24,13 +24,16 @@ import Language.Haskell.TH.Syntax (showName)
 import Data.Proxy
 import Data.Either
 import GHC.TypeLits
-import Data.List (isPrefixOf)
+import Data.List
+import Data.Set (Set)
+import qualified Data.Set as S
 
 import Control.Monad
 
 import Language.Grammars.AspectAG
 import qualified Data.Kind as DK
 
+import qualified Language.Haskell.TH.Compat.Strict as Comp
 
 -- * Attribute labels
 
@@ -131,12 +134,12 @@ addProd prd nt xs
       addPrd prd nt
     : addInstance nt prd (map preProc xs)
     : [addChi chi (mkName ("P_" ++ prd)) sym | (chi, sym) <- xs]
-    where preProc (_, Ter a)    = a
-          preProc (_, NonTer a) = a 
+    where preProc (n, Ter a)    = (mkName n, a)
+          preProc (n, NonTer a) = (mkName n, a) 
 
 
--- | class example
-class Prods (lhs :: NT) (name :: Symbol) (rhs :: [Symbol]) where {}
+-- | class
+class Prods (lhs :: NT) (name :: Symbol) (rhs :: [(Symbol, Symbol)]) where {}
 
 -- get a list of instances
 getInstances :: Q [InstanceDec]
@@ -150,13 +153,17 @@ showInstances = do
   ins <- getInstances
   return . LitE . stringL $ show $ head ins
 
-addInstance :: Name -> String -> [Name] -> Q [Dec]
+addInstance :: Name -> String -> [(Name, Name)] -> Q [Dec]
 addInstance nt name rhs
   = [d| instance Prods $(conT nt) $(str2Sym name) $(typeList rhs) where {}  |]
 
-typeList :: [Name] -> Q Type
+typeList :: [(Name, Name)] -> Q Type
 typeList = foldr f promotedNilT
-     where f = \x xs -> appT (appT promotedConsT (nameToSymbolBase x)) xs
+    -- where f = \x xs -> appT (appT promotedConsT (nameToSymbolBase x)) xs
+  where f = \(n,t) xs
+          -> appT (appT promotedConsT (appT (appT (promotedTupleT 2)
+                                              (nameToSymbol n))
+                                       (nameToSymbolBase t))) xs
   -- where f = \x xs -> if isNTName x
   --         then ((appT (appT promotedConsT
   --                      ((appT [t| Left |]) (conT x))))) xs
@@ -170,15 +177,6 @@ nameToSymbolBase = litT . strTyLit . nameBase
 isNTName :: Name -> Bool
 isNTName n
   = "Nt_" `isPrefixOf` nameBase n
-
-
-createConstant :: String -> Q [Dec]
-createConstant constantName = do constantType   <- return $ mkName constantName
-                                 constant       <- return $ mkName constantName
-                                 return [ DataD []
-                                          constantType [] Nothing
-                                          [NormalC constant []]
-                                          []                       ]
 
 
 closeNT :: Name -> Q [Dec]
@@ -197,15 +195,79 @@ mkCon :: InstanceDec -> Con
 mkCon i
   = case i of
   InstanceD _ [] (AppT (AppT (AppT (ConT _prods) (ConT nt)) (LitT (StrTyLit prdname))) tlist) _
-    -> NormalC (mkName prdname) (map mkBangP $ getTList tlist)
+    -> RecC (mkName prdname) (map mkBangPR $ getTList tlist)
 
-mkBangP a = (Bang NoSourceUnpackedness NoSourceStrictness, ConT a)
+mkBangP  (_, a) = (Bang NoSourceUnpackedness NoSourceStrictness, ConT a)
+mkBangPR (n, a) = (n, Bang NoSourceUnpackedness NoSourceStrictness, ConT a)
 
-getTList :: Type -> [Name]
+getTList :: Type -> [(Name, Name)]
 getTList (SigT _ _) = []
-getTList (AppT (AppT PromotedConsT (LitT (StrTyLit pos))) ts)
-  = (if "Nt_" `isPrefixOf` pos then mkName (drop 3 (pos)) else mkName pos) : getTList ts
+getTList (AppT (AppT (PromotedConsT)
+                (AppT (AppT (PromotedTupleT 2)
+                       (LitT (StrTyLit n)))
+                  (LitT (StrTyLit pos))))
+           ts)
+  = (mkName n,
+     if "Nt_" `isPrefixOf` pos then mkName $ drop 3 pos else mkName pos)
+    : getTList ts
 getTList _ = []
 
+
+
+-- | keeps nt info
+getTListNT :: Type -> [(Name, Name)]
+getTListNT (SigT _ _) = []
+getTListNT (AppT (AppT (PromotedConsT)
+                (AppT (AppT (PromotedTupleT 2)
+                       (LitT (StrTyLit n)))
+                  (LitT (StrTyLit pos))))
+           ts)
+  = (mkName n, mkName pos) : getTListNT ts
+getTListNT _ = []
+
+-- | like |mkCon| in semantic functions, builds a case
+mkClause :: InstanceDec -> Clause
+mkClause i
+  = case i of
+  InstanceD _ [] (AppT (AppT (AppT (ConT _prods)
+                               (ConT nt))
+                         (LitT (StrTyLit prdname)))
+                   tlist) _
+    -> Clause [VarP (mkName "asp"),
+               ConP (mkName $ prdname) [ VarP a | a <- map fst (getTList tlist)]]
+    (NormalB ((AppE (AppE (AppE (VarE $ mkName "knitAspect")
+                           (VarE $ mkName $ "p_"++ prdname))
+                      (VarE $ mkName "asp"))
+                (toSemRec (getTListNT tlist)))))
+    []
+
+toSemRec :: [(Name, Name)] -> Exp
+toSemRec
+  = foldr mkChSem (VarE (mkName "emptyRecord"))
+  where mkChSem (n,pos) xs
+          | "Nt_" `isPrefixOf` nameBase pos =
+          (AppE (AppE (VarE $ mkName ".*.")
+                 (AppE (AppE (VarE $ mkName ".=.")
+                        (VarE $ mkName $ "ch_" ++ nameBase n))
+                   (AppE (AppE (VarE $ mkName $ "sem_" ++ (drop 3 $ nameBase pos))
+                          (VarE $ mkName "asp"))
+                     (VarE $ n))))
+            xs)
+          | otherwise =
+            (AppE (AppE (VarE $ mkName ".*.")
+                   (AppE (AppE (VarE $ mkName ".=.")
+                          (VarE $ mkName $ "ch_" ++ nameBase n))
+                    (AppE (VarE $ mkName "sem_Lit")
+                      (VarE $ n))))
+            xs)
 closeNTs :: [Name] -> Q [Dec]
 closeNTs = liftM concat . sequence . map (closeNT)
+
+mkSemFunc :: Name -- nonterm
+          -> Q [Dec]
+mkSemFunc nt =
+  do decs <- getInstances
+     let clauses = map mkClause $ filter (isInstanceOf nt) decs
+     return [FunD (mkName $ "sem_" ++ drop 3 (nameBase nt)) clauses ]
+
+
