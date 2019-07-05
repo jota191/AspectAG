@@ -1,3 +1,13 @@
+{-|
+Module      : Language.Grammars.AspectAG.TH
+Description : Boilerplate generation
+Copyright   : (c) Juan García Garland
+License     : GPL
+Maintainer  : jpgarcia@fing.edu.uy
+Stability   : experimental
+Portability : POSIX
+-}
+
 {-# LANGUAGE PolyKinds                 #-}
 {-# LANGUAGE KindSignatures            #-}
 {-# LANGUAGE DataKinds                 #-}

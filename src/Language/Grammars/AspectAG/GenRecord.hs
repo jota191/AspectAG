@@ -1,3 +1,13 @@
+{-|
+Module      : Language.Grammars.AspectAG.GenRecord
+Description : Record library, this will be eventually forked out
+              from AAG codebase and used as a standalone library, depending on it
+Copyright   : (c) Juan García Garland, Marcos Viera, 2019
+License     : GPL
+Maintainer  : jpgarcia@fing.edu.uy
+Stability   : experimental
+Portability : POSIX
+-}
 
 {-# OPTIONS_GHC -fno-warn-missing-methods #-}
 

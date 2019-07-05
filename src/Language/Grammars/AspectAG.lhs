@@ -2,7 +2,7 @@
 > {-|
 > Module      : Language.Grammars.AspectAG
 > Description : Main module, First-class attribute grammars
-> Copyright   : (c) Juan García Garland, Marcos Viera, 2019 
+> Copyright   : (c) Juan García Garland, Marcos Viera, 2019
 > License     : GPL
 > Maintainer  : jpgarcia@fing.edu.uy
 > Stability   : experimental
