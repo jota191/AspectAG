@@ -39,5 +39,7 @@ otherwise type errors we won't have readable type errors.
 > $(closeNTs [''Nt_Root,''Nt_Tree])
 
 
+
+
 > $(mkSemFunc ''Nt_Tree)
 > $(mkSemFunc ''Nt_Root)
