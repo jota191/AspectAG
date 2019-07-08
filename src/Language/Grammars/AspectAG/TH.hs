@@ -280,4 +280,7 @@ mkSemFunc nt =
      let clauses = map mkClause $ filter (isInstanceOf nt) decs
      return [FunD (mkName $ "sem_" ++ drop 3 (nameBase nt)) clauses ]
 
+mkSemFuncs :: [Name] -> Q [Dec]
+mkSemFuncs
+  = liftM concat . sequence . map (mkSemFunc)
 
