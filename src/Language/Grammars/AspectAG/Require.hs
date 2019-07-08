@@ -73,5 +73,5 @@ instance RequireEqRes t1 t2 ctx
 type family RequireEqRes (t1 :: k) (t2 :: k)
                      (ctx :: [ErrorMessage]) ::  Constraint where
   RequireEqRes t1 t2 ctx = If (t1 `Equal` t2) (() :: Constraint)
-    (Require (OpError (Text "" :<>: ShowT t1 :<>: Text " /= " :<>: ShowT t2)) ctx)
+    (Require (OpError (Text "\n   " :<>: ShowT t1 :<>: Text "\n/= " :<>: ShowT t2)) ctx)
 
