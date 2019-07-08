@@ -10,13 +10,15 @@ name:                AspectAG
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.5
+version:             0.5.0.0
 
 -- A short (one-line) description of the package.
-synopsis:            A library of strongly typed Attribute Grammars implemented using type-level programming
+synopsis:            Strongly typed Attribute Grammars implemented using type-level programming.
 
 -- A longer description of the package.
--- description:
+description: An EDSL implementing strongly typed -and strongly kinded!- attribute grammars
+             implemented using type-level programming. We make an effort to encode precise EDSL
+             type errors.
 
 -- URL for the project homepage or repository.
 homepage:            www.fing.edu.uy/~jpgarcia/AspectAG
@@ -43,11 +45,17 @@ build-type:          Simple
 
 -- Extra files to be distributed with the package, such as examples or a
 -- README.
-extra-source-files:  ChangeLog.md
-                     TODO
-                     test/*hs
+extra-source-files:  ChangeLog.md,
+                     LICENSE,
+                     examples/ExprExt.hs,
+                     examples/Expr.hs,
+                     examples/List.hs,
+                     examples/RepminTHExt.lhs,
+                     examples/RepminTH.lhs
 
---source-repository-package:
+
+
+--source-repository:
 --    type: git
 --    location: https://gitlab.fing.edu.uy/jpgarcia/attribute-grammars
 
@@ -61,7 +69,6 @@ library
                        Language.Grammars.AspectAG.TH,
                        Language.Grammars.AspectAG.HList,
                        Language.Grammars.AspectAG.TPrelude,
-                       Language.Grammars.AspectAG.Derive,
                        Language.Grammars.AspectAG.GenRecord,
                        Language.Grammars.AspectAG.RecordInstances,
                        Language.Grammars.AspectAG.Require
@@ -90,7 +97,7 @@ library
                        InstanceSigs
 
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.11,
+  build-depends:       base >=4.11 && <4.13,
                        tagged >=0.8,
                        containers >= 0.5,
                        template-haskell >= 2.13,
@@ -105,40 +112,40 @@ library
   -- Base language which the package is written in.
   default-language:    Haskell2010
 
-Test-Suite test-Repmin
-    type:             exitcode-stdio-1.0
-    main-is:          test/Repmin.hs
-    build-depends:    base >=4.11 && <4.12,
-                      tagged >=0.8 && <0.9,
-                      AspectAG >= 0.4,
-                      QuickCheck
-    default-language: Haskell2010
+-- Test-Suite test-Repmin
+--     type:             exitcode-stdio-1.0
+--     main-is:          test/Repmin.hs
+--     build-depends:    base >=4.11 && <4.12,
+--                       tagged >=0.8 && <0.9,
+--                       AspectAG >= 0.4,
+--                       QuickCheck
+--     default-language: Haskell2010
 
-Test-Suite test-Repmin-TH
-    type:             exitcode-stdio-1.0
-    main-is:          test/RepminTH.hs
-    build-depends:    base >=4.11 && <4.12,
-                      tagged >=0.8 && <0.9,
-                      AspectAG >= 0.4,
-                      QuickCheck
-    default-language: Haskell2010
+-- Test-Suite test-Repmin-TH
+--     type:             exitcode-stdio-1.0
+--     main-is:          test/RepminTH.hs
+--     build-depends:    base >=4.11 && <4.12,
+--                       tagged >=0.8 && <0.9,
+--                       AspectAG >= 0.4,
+--                       QuickCheck
+--     default-language: Haskell2010
     
-Test-Suite test-Arith
-    type:             exitcode-stdio-1.0
-    main-is:          test/Arith.hs
-    build-depends:    base >=4.11 && <4.12,
-                      containers >= 0.5,
-                      tagged >=0.8 && <0.9,
-                      AspectAG >= 0.4,
-                      QuickCheck
-    default-language: Haskell2010
+-- Test-Suite test-Arith
+--     type:             exitcode-stdio-1.0
+--     main-is:          test/Arith.hs
+--     build-depends:    base >=4.11 && <4.12,
+--                       containers >= 0.5,
+--                       tagged >=0.8 && <0.9,
+--                       AspectAG >= 0.4,
+--                       QuickCheck
+--     default-language: Haskell2010
 
-Test-Suite test-Graphs
-    type:             exitcode-stdio-1.0
-    main-is:          test/Graphs.hs
-    build-depends:    base >=4.11 && <4.12,
-                      tagged >=0.8 && <0.9,
-                      AspectAG >= 0.4,
-                      containers >= 0.5,
-                      QuickCheck
-    default-language: Haskell2010
+-- Test-Suite test-Graphs
+--     type:             exitcode-stdio-1.0
+--     main-is:          test/Graphs.hs
+--     build-depends:    base >=4.11 && <4.12,
+--                       tagged >=0.8 && <0.9,
+--                       AspectAG >= 0.4,
+--                       containers >= 0.5,
+--                       QuickCheck
+--     default-language: Haskell2010
