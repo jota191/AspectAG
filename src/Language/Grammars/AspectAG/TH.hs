@@ -145,8 +145,8 @@ addProd prd nt xs
     : addInstance nt prd (map preProc xs)
     : [addChi chi (mkName ("P_" ++ prd)) sym | (chi, sym) <- xs]
     where preProc (n, Ter a)    = (mkName n, a)
-          preProc (n, NonTer a) = (mkName n, a) 
-
+          preProc (n, NonTer a) = (mkName n, a)
+          preProc (n, Poly)     = (mkName n, mkName "a")
 
 -- | class
 class Prods (lhs :: NT) (name :: Symbol) (rhs :: [(Symbol, Symbol)]) where {}
