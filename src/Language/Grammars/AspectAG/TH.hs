@@ -43,7 +43,6 @@ import Control.Monad
 import Language.Grammars.AspectAG
 import qualified Data.Kind as DK
 
-import qualified Language.Haskell.TH.Compat.Strict as Comp
 
 -- * Attribute labels
 
