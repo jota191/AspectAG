@@ -52,7 +52,6 @@ import Language.Grammars.AspectAG.GenRecord
 import GHC.TypeLits
 
 import Data.Maybe
-import GHC.Types
 import Data.Type.Equality
 import Control.Monad.Reader
 
@@ -662,78 +661,6 @@ type UseC att prd nts t' sp sc sp' ctx
       ReqR (OpExtend AttReco ('Att att t') t' sp)
       ~ Rec AttReco sp')
 
-----------------------------------------------------------------------------
-
--- class Uses (att :: Att) (prds :: [Prod]) (nts :: [NT]) a (asp :: [(Prod, Type)]) ctx
---  where
---   uses :: Label att -> KList prds -> KList nts -> (a -> a -> a)
---        -> a -> CAspect ctx asp
-
-
--- instance Uses att '[] nts a '[] ctx where
---   uses _ _ _ _ _ = emptyAspect
-
--- instance (
---     Uses ('Att att t') prds nts t' ar ctx
---   , Require
---         (OpExtend'
---            (LabelSetF ( '( 'Att att t', t') : sp)) AttReco ('Att att t') t' sp)
---         ctx,
---       Require
---         (OpComAsp '[ '(prd, CRule ctx prd sc ip ic' sp ic' sp')] ar) ctx,
---       Use ('Att att t') prd nts t' sc,
---       ReqR (OpComAsp '[ '(prd, CRule ctx prd sc ip ic' sp ic' sp')] ar)
---       ~ Rec PrdReco asp,
---       ReqR
---         (OpExtend'
---            (LabelSetF ('( 'Att att t', t') : sp)) AttReco ('Att att t') t' sp)
---       ~ Rec AttReco sp'
---   , Require (OpComAsp al ar) ctx
---   , ReqR (OpComAsp al ar) ~ Rec PrdReco asp
---   , al ~ '[ '(prd, CRule ctx prd sc ip ic' sp ic' sp')]
---   )
---   => Uses ('Att att t') (prd ': prds) nts t' asp ctx where
---   uses (att :: Label ('Att att t'))
---         (KCons (prd :: Label prd) (prds :: KList prds)) nts op unit
---     = (use att prd nts op unit :: CAspect ctx '[ '(prd, CRule ctx prd sc ip ic' sp ic' sp')])
---     .:+: (uses att prds nts op unit :: CAspect ctx ar)
-
-class Uses (att :: Att) (prds :: [Prod]) (nts :: [NT]) (a :: Type)
-      (sp :: [(Att, Type)]) (sc :: [(Child, [(Att, Type )])])
-      (sp' :: [(Att, Type)]) (ip :: [(Att, Type)])
-      (ic'::[(Child, [(Att, Type )])]) (ctx :: [ErrorMessage])
- where
-  type UsesR att prds nts a sp sc sp' ip ic' ctx
-  uses :: Label att -> KList prds -> KList nts -> (a -> a -> a)
-       -> a -> UsesR att prds nts a sp sc sp' ip ic' ctx
-
-instance
-  ( ReqR (OpExtend AttReco ('Att att t) t sp)
-  ~ Rec AttReco sp'
-  , Require (OpExtend AttReco ('Att att t) t sp) ctx
-  , (Use ('Att att t) prd nts t sc)
-  )
-  => Uses ('Att att t) (prd ': '[]) nts t sp sc sp' ip ic' ctx where
-  type UsesR ('Att att t) (prd ': '[]) nts t sp sc sp' ip ic' ctx
-    = CAspect ctx '[ '(prd, CRule ctx prd sc ip ic' sp ic' sp')]
-  uses att (KCons prd KNil) nts op unit
-    = use att prd nts op unit .:+: emptyAspect
-
-
-instance
-  ( ReqR (OpExtend AttReco ('Att att t) t sp)
-  ~ Rec AttReco sp'
-  , Require (OpExtend AttReco ('Att att t) t sp) ctx
-  , (Use ('Att att t) prd nts t sc)
-  )
-  => Uses ('Att att t) (prd ': prds) nts t sp sc sp' ip ic' ctx where
-  type UsesR ('Att att t) (prd ': prds) nts t sp sc sp' ip ic' ctx
-    = CAspect ctx '[ '(prd, CRule ctx prd sc ip ic' sp ic' sp')]
-
-
-comb att prd nts op unit asp = use att prd nts op unit .:+: asp
-
---comb att (KCons prd prds) nts op unit asp = use att prd nts op unit .:+: asp
 
 
 -----------------------------------------------------------------------------
@@ -750,4 +677,10 @@ proxy2Label :: forall k (a :: k). Proxy a -> Label a
 proxy2Label Proxy = Label
 
 label2Proxy :: Label a -> Proxy a
-label2Proxy Label = Proxy 
+label2Proxy Label = Proxy
+----------------------------------------------------------------------------
+
+
+
+-- | Copy Rule
+copyAtCh att prd chi = singAsp $ inh att prd chi $ at lhs att
