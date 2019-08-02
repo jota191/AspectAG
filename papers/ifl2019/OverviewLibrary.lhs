@@ -37,7 +37,7 @@
 
 In this section we explain the main features of the library by means of an example.
 We start with a simple expression language formed by integer values, variables and addition,
-which we then extend syntactic- and semantically in order to show the different operations supported by the library.
+which we then extend syntactically and semantically in order to show the different operations supported by the library.
 
 \subsubsection*{Grammar declaration} 
 The abstract syntax of the expression language is given by the following grammar:
@@ -107,7 +107,7 @@ Summing up the information just provided, we can see that our grammar declaratio
 
 In our library we provide some Template Haskell~\cite{Sheard:2002:TMH:636517.636528} functions that can be used to generate a grammar definition as the one above (non-terminals, productions and children) out of a datatype representation of the ASTs (like |Expr|). However, our grammar representation is independent of such datatypes. %, which is actually useful to solve the expression problem, as we shall discuss later.
 
-Notice the use we do of algebraic datakinds constructors%
+Notice the use we make of algebraic datakind constructors%
 \footnote{Throughout the paper, we say datakind when we refer to promoted datatypes}
 to wrap around the type-level information associated to the different components of the grammar. 
 |Label| is nothing more than a |Proxy| type (we simply gave it an alternative name that is more adequate to our domain). When computations are mainly performed at the type level, as it is our case, proxies play a key role because they are a gadget to carry type information at the value level.
@@ -135,7 +135,8 @@ to wrap around the type-level information associated to the different components
 > {-" "-}
 > asp = aspEval .:+: aspEnv {-"\label{line:asp} "-}
 > {-" "-}
-> evalExpr e m =  sem_Expr asp e (env =. m .*. emptyAtt) #. eval {-"\label{line:evalExpr} "-}
+> evalExpr e m  =  sem_Expr asp e rootAtt #. eval {-"\label{line:evalExpr} "-}
+>               where rootAtt = env =. m .*. emptyAtt
 \numbersoff
 \caption{Evaluation Semantics}\label{fig:eval}
 \end{figure*}
@@ -158,7 +159,7 @@ attribute |eval| that contains its value. Attribute |eval| is defined using func
 %and the proper definition.
 Using an applicative interface, we take the values of |eval| at children
 |leftAdd| and |rightAdd|, and combine them with the operator |(+)|.
-By means of the opertion |at leftAdd eval| we pick up the attribute |eval| from the collection of synthesized attributes of the child |leftAdd|.
+By means of the operation |at leftAdd eval| we pick up the attribute |eval| from the collection of synthesized attributes of the child |leftAdd|.
 We refer to these collections of attributes as \emph{attributions}.
 
 At the |val| production
@@ -212,10 +213,20 @@ Finally, given an implementation of the abstract syntax tree, like the |Expr| da
 > sem_Expr asp (Var v)    = knitAspect var asp
 >                 $    vname  .=. sem_Lit v
 >                 .*.  EmptyRec
+
 %
-The semantic function |sem_Expr| takes an aspect, the AST of an expression and an initial attribution (with the inherited attributes of the root) and computes the expression semantics.
-The result is an attribution with all the synthesized attributes of the root.
-In the particular case of the evaluation semantics, we can define an evaluator like the one in Line~\ref{line:evalExpr}, that takes an environment |m| as input and returns the value of the expression as result. The evaluator is defined in terms of the application of |sem_Expr| to the aspect |asp| (defined in Line~\ref{line:asp}) and an initial attribution that simply contains the attribute |env| with the input environment. As result it produces a new attribution containing the value of attribute |eval| (at the root). The final result of the evaluator is then obtained by performing a lookup operation |(#.)| in the produced attribution, returning the value of attribute |eval|.     
+
+The semantic function |sem_Expr| takes the aspect,
+the AST of an expression, and
+an initial attribution
+(with the inherited attributes of the root) and computes
+the synthesized attibutes.
+
+In the particular case of the evaluation semantics of our example we can define
+an evaluator as the one in Line~\ref{line:evalExpr}. using the aspect (|asp|),
+the AST of an expression (|e|) and an initial attribution (|rootAtt|). It finally
+returns the value of the expression by performing a lookup operation |(#.)| of
+the attribute |eval| in the resulting attribution.
 
 %For example, the following expression evaluates to |9|.
 %< evalExpr  (Add (Add (Var "x") (Val 5)) (Val 2))

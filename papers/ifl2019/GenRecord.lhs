@@ -175,13 +175,13 @@ can encode the predicate as the following constraint.
 
 \subsection{Record Instances}
 
-In our library most functions over records are implemented over this
-general implementation. After that we implement our record-like data
-structures as particular instances of the general datatype. To introduce a
-new record structure we must give an index acting as a name (the ``|c|'' parameter),
-and code the family instance |WrapField|.
-As we shall see later, in order to print out domain specific error messages
-we also need to provide instances for the type families |ShowField| and |ShowRec|. 
+In our library most functions over records are implemented over the generic
+  implementation. After that we implement our record-like data structures as
+  particular instances of the general datatype. To introduce a new record
+  structure we must give an index acting as a name (the ``|c|'' parameter), and
+  code the family instance |WrapField|. As we shall see later, in order to print
+  out domain specific error messages we also need to provide instances for the
+  type families |ShowField| and |ShowRec|.
 
 To code in a strongly kinded way, it is also useful to provide specific datatypes for labels,
 where |Att| is used for attributions, |Prod| for productions, and |Child| for children.
@@ -330,10 +330,12 @@ the instance is:
 >   => Require (OpError m) ctx
 %
 The type family |GHC.TypeLits.TypeError| works like the value-level function
-|error|. When it is ``called'' a type error is raised, with a given error
+|error|. When it is evaluated at compile time a type error is raised,
+with a given error
 message including a description |m| of the error and the context |ctx| where it
-occurred. |TypeError| is completely polymorphic so it can be used as a
-|Constraint|. This generic instance is used to print all sort of type errors in
+occurred. |TypeError| is completely polymorphic so it can be used with kind
+|ErrorMessage -> Constraint| as we do here.
+This generic instance is used to print all sort of type errors in
 a unified way, otherwise catching type errors case by case would be difficult
 and error prone. Note that specific information of what happened is on |OpError|
 which is built from a specific instance of |Require|, from a given operator and
@@ -346,11 +348,12 @@ As an example of record requirements, we define the lookup operation.
 >   OpLookup  ::  Label l -> Rec c r ->  OpLookup c l r
 %
 The operation is specified by an algebraic datatype, parametric on:
-the record class, the index we are looking for, and the proper record.
+the record class (|c|), the index we are looking for (|l|),
+and the proper record (|r|).
 The head label is inspected and depending on the
 types the head value is returned or a recursive call is performed. To make
 decisions over types, and set return types depending on arguments, we implement a
--sort of- dependent type function, which is encoded in Haskell with the usual
+dependent type function, which is encoded in Haskell with the usual
 idioms of type level programming. For instance, the proof of equality must be
 made explicit using a proxy to help GHC to carry this type level information. We
 introduce a new |OpLookup'| with an auxiliary |Bool|ean at type level:
@@ -374,7 +377,7 @@ with the value equal to the predicate of equality of |l'| and the argument label
 >   req ctx (OpLookup l r)
 >     = req ctx (OpLookup' (Proxy @ (l == l')) l r)
 
-%Implementing instances for |OpLookup'| is easy.
+
 The instance of |OpLookup'| when |b==True|
 corresponds to a |head| function, since we know that the searched label is on
 the first position:

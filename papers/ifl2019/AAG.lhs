@@ -78,7 +78,7 @@ the attribution indexed by |sp| with the attribute |att| and the result is
 an attribution with index sp'. This requirement imposes the constraint that
 assures that this insertion does not duplicate the attribute |att|.
 Since this requirement is not internal to the computation defined in |syndef|,
-que use the current context |ctx| instead of |ctx'|.
+we use the current context |ctx| instead of |ctx'|.
 
 Using |syndef| we can define rules like |add_eval| of Section~\ref{sec:example}:
 
@@ -239,21 +239,21 @@ where |mapCtxRec| is a dependent function:
 %
 whose implementation does not offer new insights.
 
-\begin{table}[t] 
-   \small % text size of table content
-   \centering % center the table
-   \begin{tabular}{lccccc} % alignment of each column data
-   \toprule[\heavyrulewidth] \textbf{op.} & \textbf{Unicode op.} &
-   \textbf{larg} & \textbf{rarg} & \textbf{Assoc.}& \textbf{impl.}\\ \midrule
-   {\tt (.+:)} & |(.+:)| & Rule & Aspect & right& |extAspect| \\ \hline
-   {\tt (.:+.)} & |(.:+.)| & Aspect & Rule & left& |flip extAspect|\\ \hline
-      {\tt (.:+:)} & |(.:+:)| & Aspect & Aspect & right& |comAspect|\\ \hline
-   {\tt (.+.)} & |(.+.)| & Rule & Rule & right & |ext|\\
-   \bottomrule[\heavyrulewidth]
-   \end{tabular}
-   \caption{Operators to combine semantics}
-   \label{tab:ops}
-\end{table}
+%% \begin{table}[t] 
+%%    \small % text size of table content
+%%    \centering % center the table
+%%    \begin{tabular}{lccccc} % alignment of each column data
+%%    \toprule[\heavyrulewidth] \textbf{op.} & \textbf{Unicode op.} &
+%%    \textbf{larg} & \textbf{rarg} & \textbf{Assoc.}& \textbf{impl.}\\ \midrule
+%%    {\tt (.+:)} & |(.+:)| & Rule & Aspect & right& |extAspect| \\ \hline
+%%    {\tt (.:+.)} & |(.:+.)| & Aspect & Rule & left& |flip extAspect|\\ \hline
+%%       {\tt (.:+:)} & |(.:+:)| & Aspect & Aspect & right& |comAspect|\\ \hline
+%%    {\tt (.+.)} & |(.+.)| & Rule & Rule & right & |ext|\\
+%%    \bottomrule[\heavyrulewidth]
+%%    \end{tabular}
+%%    \caption{Operators to combine semantics}
+%%    \label{tab:ops}
+%% \end{table}
 
 
 \subsection{Combining Aspects}
@@ -261,10 +261,10 @@ whose implementation does not offer new insights.
 An aspect models a piece of semantics of a grammar. To make semantics extensible
 it is enough to implement an algorithm to merge two aspects, and a way to make
 an aspect from one single rule. Since our most basic primitives |syndef| and
-|inhdef| build a single rule, adding rules one by one to an aspect is a common operation. As
-we show in Table~\ref{tab:ops} we provide a set of operators to combine rules and
-aspects. We already introduced |ext|, which combines two rules of the same
-production.
+|inhdef| build a single rule, adding rules one by one to an aspect is a common
+operation.
+
+\todo{extAspect, comAspect, definirlas como operador?}
 
 %Within the |Require| framework, we implement operations to append rules to an
 %aspect, and to combine Aspects.

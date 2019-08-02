@@ -1,16 +1,18 @@
 
-☑☒
+☑ tick
 
+☒ cross
+
+[lala] <- comentarios nuestros
 
 
 
 # observaciones, rev1
 
-☒ The authors present an updated version of their attribute grammar EDSL called
-  AspectAG. Compared to the previous version, this updated version is able to
-  exploit many of the newer GHC type system features. The authors claim that the
-  use of these new GHC language features increases the robustness of the system
-  and improves the quality of the error messages the users of the EDSL may see.
+☒ The example uses fromJust. Not really great error handling. 
+
+  [talvez sobre esto simplemente comentar que los errores se podrían manejar con
+  más atributos]
 
 ☒ While attribute grammars aren't widely spread in practice, they are a
   well-studied concept, as the authors show in their related work section. Still,
@@ -76,6 +78,18 @@
   rough edges. My conclusion is a weak accept under the condition that the authors
   spend some time refining the paper.
 
+
+☒ Section 4.3: I don't really see the added value of Table 2. What's wrong with
+  just providing the type signatures? Even if you want to list the unicode
+  characters, that can be done with regular type signatures as well. On unicode
+  usage: the example in Figure 1 is inconsistent with regards to unicode usage.
+  Some operators are unicode, other are ASCII operators. To introduce fewer new
+  symbols to the reader and to make the correspondence between the paper and a
+  real implementation easier to see, I think I would prefer not to introduce a
+  unicode presentation for some of those operators.
+☑ [la tabla voló, hay que ver si vale la  pena mantener extAspect y comAspect
+  o definir derecho los operadores (en este momento teníamos tres formas de 
+  hacer lo mismo)]
 
 # Observaciones - rev2 (score 0)
 
@@ -157,37 +171,31 @@
 
 # Typos-rev1
 
- Just before paragraph 2.1, the text says "The final result of the evalutator
+☑ Just before paragraph 2.1, the text says "The final result of the evalutator
   is then obtained by performing..". Please point to a line number, because I
   was a bit lost there.
 
-☒ The example uses fromJust. Not really great error handling.
 
-☒ Section 3.2 starts with "... are implemented over this general
+☑ Section 3.2 starts with "... are implemented over this general
   implementetation.". What general implementation is that? (Remember, you're in
   a new paragraph in a new section)
 
 ☒ Table 1: please tell me how to read this table
+  [no está claro si a esta tabla está bueno pelarla o dejarla]
 
-☒ Section 3.3: "When it is "called" a type error...". Be more specific. If it's
+☑ Section 3.3: "When it is "called" a type error...". Be more specific. If it's
   not called, then what is it?
 
-☒ Section 3.3: why is it signficant that TypeError can be used as a constraint?
+☑ Section 3.3: why is it signficant that TypeError can be used as a constraint?
 
-☒ Section 3.3.1: please refer to each component by name. It's quite hard to
+☑ Section 3.3.1: please refer to each component by name. It's quite hard to
   follow otherwise.
 
 ☒ Section 3.3.1: would it make more sense to start the Require instance with the
   base case of an empty list?
+  [efectivamente hacemos esto o motivamos en una linea por qué lo dejamos para 
+  después?]
 
-☒ Section 4.3: I don't really see the added value of Table 2. What's wrong with
-  just providing the type signatures? Even if you want to list the unicode
-  characters, that can be done with regular type signatures as well. On unicode
-  usage: the example in Figure 1 is inconsistent with regards to unicode usage.
-  Some operators are unicode, other are ASCII operators. To introduce fewer new
-  symbols to the reader and to make the correspondence between the paper and a
-  real implementation easier to see, I think I would prefer not to introduce a
-  unicode presentation for some of those operators.
 
 ☒ Please don't use language like "clearly" (maybe it's not obvious), "complain"
   (be exact), "folklore" (what folklore?), "seems" (are you not sure?),
@@ -201,16 +209,18 @@
   library would gain by using (or would lose by not using) the TH functionality.
 
 
+
 # typos - rev 3
 
-☒ p1, 1st col:
+☑ p1, 1st col:
   "proven not being only useful" is awkward, perhaps "not only proven useful"?
 
-☒ p1, 2nd col:
+☑ p1, 2nd col:
   "syntactic- and semantically", perhaps "syntactically and semantically"
   
-☒ p2, 1st col: "the use we do of", perhaps "the use we make of"?
+☑ p2, 1st col: "the use we do of", perhaps "the use we make of"?
 
-☒ p2, 2nd col "opertion"
+☑ p2, 2nd col "opertion"
 
-☒ p9, 1st col: "que use"
+☑ p9, 1st col: "que use"
+

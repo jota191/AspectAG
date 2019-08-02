@@ -33,7 +33,7 @@ in every node of the abstract syntax tree,
 according to semantic rules that are expressed in terms of the attribute values
 of the children and the parent. Attributes are classified in at least two sets: synthesized
 attributes (where information flows bottom up) and inherited attibutes (where it
-flows top down). AGs have proven not being only useful to implement
+flows top down). AGs have not only proven useful to implement
 programming language semantics, but as a general purpose programming paradigm.
 
 %Domain Specific Languages (DSLs) are a useful abstraction tool to solve problems
