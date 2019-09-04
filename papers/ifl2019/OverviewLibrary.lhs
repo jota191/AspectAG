@@ -57,7 +57,8 @@ The abstract syntax of the expression language is given by the following grammar
 where |ival| and |vname| are terminals corresponding to integer values and variable names (given by strings), respectively. Both are said to be \emph{children} in their productions.
 In the third production,
 % rewrites a non-terminal into two non-terminals.
-the children (|expr_l| and |expr_r|), both occurrences of the non-terminal |expr|, have different names so that we can refer to each one unambiguously.
+the children (|expr_l| and |expr_r|, both occurrences of the non-terminal
+|expr|) have different names so that we can refer to each one unambiguously.
 
 In our EDSL this grammar is declared as follows.
 First, we declare the non-terminal:
@@ -105,7 +106,13 @@ Summing up the information just provided, we can see that our grammar declaratio
 
 %|Add (Add (Var "x") (Val 5)) (Val 2)|.
 
-In our library we provide some Template Haskell~\cite{Sheard:2002:TMH:636517.636528} functions that can be used to generate a grammar definition as the one above (non-terminals, productions and children) out of a datatype representation of the ASTs (like |Expr|). However, our grammar representation is independent of such datatypes. %, which is actually useful to solve the expression problem, as we shall discuss later.
+In our library we provide Template Haskell~\cite{Sheard:2002:TMH:636517.636528}
+functions that can be used to generate a grammar definition as the one above
+(non-terminals, productions and children). We also implement an utility to build
+a default datatype from this definitions. An important thing to notice is that the
+grammar representation is independent of this datatype.
+
+\note{tabla?}
 
 Notice the use we make of algebraic datakind constructors%
 \footnote{Throughout the paper, we say datakind when we refer to promoted datatypes}
@@ -142,18 +149,21 @@ to wrap around the type-level information associated to the different components
 \end{figure*}
 
 \subsubsection*{Semantics definition}
-With the aim to provide semantics, AGs decorate the productions of context-free grammars with
-\emph{attribute} computations.
-In our expression language, the usual semantics is given by the evaluation semantics. Such a semantics can be defined by using two attributes: |eval|, to represent the result
-of the evaluation, and |env|, to distribute the environment containing the value for
-variables. In the rest of this subsection we explain how the evaluation semantics can be
-implemented using our library. The complete definition is shown in Figure~\ref{fig:eval}. In lines \ref{line:eval} and \ref{line:env} we declare the attributes, specifying their
-types.
+With the aim to provide semantics, AGs decorate the productions of context-free
+grammars with \emph{attribute} computations. In an expression language as the
+one defined, the usual semantics are given by the evaluation semantics. This can
+be defined by using two attributes: |eval|, to represent the result of the
+evaluation, and |env|, to distribute the environment containing the value for
+variables. In the rest of this subsection we explain how the evaluation
+semantics can be implemented using our library. The complete definition is shown
+in Figure~\ref{fig:eval}. In lines \ref{line:eval} and \ref{line:env} we declare
+the attributes, specifying their types.
 
 % Time to define semantics.
 The attribute |eval| denotes the value of an expression. Attributes like this, where the information computed flows from the children to their parent productions, are called \emph{synthesized attributes}.
 
 On the |add| production (Line~\ref{line:add_eval}) we compute |eval| as the sum
+
 of the denotation of subexpressions. On each subexpression there is a proper
 attribute |eval| that contains its value. Attribute |eval| is defined using function |syndefM|, which is the library operation to define synthesized attributes. It takes an attribute (the one for which the semantics is being defined), a production (where it is being defined), and the respective computation rule for the attribute. 
 %and the proper definition.
@@ -180,9 +190,9 @@ rules. Here we build an aspect with all the rules for a given attribute, but the
 user can combine them in the way she wants (for example, by production). Aspects
 can be orthogonal among them, or not. Here |aspEval| clearly depends on an
 attribute |env| with no rules attached to it at this point, so it is not -yet-
-useful at all. We cannot complain here yet since the rules for |env| could be
-defined later (as we will do), or perhaps in another module! If we try to
-actually use |aspEval| calling it on a semantic function, there will be a type
+useful at all. We cannot complain at compile time yet since the rules for |env|
+could be defined later (as we will do), or perhaps in another module! If we
+actually use |aspEval| calling it on a semantic function there will be a type
 error, but it will be raised on the semantic function application. The function
 |traceAspect| and also -implicitly- each application of |syndefM| tag
 definitions to show them on type errors. This is useful to have a hint where the
@@ -201,7 +211,9 @@ In Line~\ref{line:asp} we combine |aspEval| and |aspEnv|,
 to get the aspect with all the attributes needed for the evaluation semantics.
 Note that this time we decided not to add a new tag.
 
-Finally, given an implementation of the abstract syntax tree, like the |Expr| datatype, we can encode (or derive with Template Haskell) a generic \emph{semantic function}.
+Finally, given an implementation of the abstract syntax tree, like the |Expr|
+datatype, we can encode (or derive it with Template Haskell) a generic
+\emph{semantic function}:
 
 > sem_Expr asp (Add l r)  = knitAspect add asp
 >                 $    leftAdd   .=. sem_Expr asp l
@@ -235,9 +247,10 @@ the attribute |eval| in the resulting attribution.
 
 \subsection{Semantic Extension: Adding and Modifying attributes}
 
-Defining alternative semantics or extending already defined ones is simple.
-For example, suppose that we want to collect the integral literals
-occurring in an expression. We define an attribute |lits|:
+Our approach allows the users to define alternative semantics or extending
+already defined ones in a simple way. For instance suppose that we want to
+collect the integral literals occurring in an expression. We define an attribute
+|lits|:
 
 > lits  = Label @ ('Att "lits"  [Int])
 
@@ -256,23 +269,24 @@ The function,
 returns a list with the literals occurring in an expression from left to right.
 
 It is also possible to modify a semantics in a modular way.
-As an example, to get the literals in the reverse order
-we can extend the original aspect |aspLits| with a rule
+For instance, to get the literals in the reverse order
+we extend the original aspect |aspLits| with a rule
 that redefines the computation of |lits| for the production |add|
 in this way.
 > aspLitsRev  =    synmodM lits add ((++)  <$>  at rightAdd lits
 >                                          <*>  at leftAdd lits)
 >             .+:  aspLits 
 %
-Notice that in this case we used |synmodM| instead of |syndefM|.
-The |mod| variants of the combinators |syndefM| and |inhdefM|
-modify an existing attribute instead of defining a new one.
+Notice that in this case we used |synmodM| instead of |syndefM|. The |mod|
+variants of the combinators |syndefM| and |inhdefM| modify an existing attribute
+instead of defining a new one, overriding the previous semantic function
+definition.
 
 \subsection{Grammar extension: Adding Productions}
 
 
 % To completely tackle the expression problem we must be able to extend our grammar.
-Suppose that we add a new production to bind local definitions:
+Now let's expand the grammar with a new production to bind local definitions:
 
 < expr     -> let vname = expr_d in expr_i
 
@@ -311,8 +325,8 @@ definition that includes the new production.
 
 \subsection{Error Messages}
 
-When dealing with type-level programming, type error messages are usually very
-difficult to understand, often leaking implementation details. Our library was
+When using a EDSL implemented using type-level programming type error messages
+are hard to understand, often leaking implementation details. Our library was
 designed to provide good, DSL-oriented error messages for the mistakes an AG
 programmer may make. In this subsection we show some examples of such error
 messages.

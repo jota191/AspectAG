@@ -222,5 +222,6 @@
 
 ☑ p2, 2nd col "opertion"
 
-☑ p9, 1st col: "que use"
+☑
+p9, 1st col: "que use"
 

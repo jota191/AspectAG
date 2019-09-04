@@ -57,7 +57,7 @@ to ensure well-formedness of AGs at compile time.
 
 An important drawback of EDSLs in general, and of \AspectAG\ in particular,
 is that they are simply embedded libraries and when type errors occur they usually do not
-deliver error messages that refer to domain terms, leaking in addition implementation details in those messages. This breaks all abstraction mechanisms that may have taken into account in building the library. 
+deliver error messages that refer to domain terms, leaking in addition implementation details in those messages. This breaks all abstraction mechanisms that may have taken into account in building the library.
 The problem is even worse if we use type level programming techniques to
 implement the DSL.
 %
@@ -66,7 +66,10 @@ implement the DSL.
 %can be easily illformed.
 %For instance, for the grammar implementator it is a
 %common mistake to try to use attributes that are not defined in some production.
-In the specific case of \AspectAG, the type level programming techniques that were used were really ad-hoc, exploiting extensions originally introduced for other uses. In particular, at type level, programming was essentialy untyped.
+In the specific case of the original \AspectAG\ library, the type level
+programming techniques that were used were really ad-hoc, exploiting extensions
+originally introduced for other uses. In particular, at type level, programming
+was essentialy untyped.
 
 More recent versions of GHC provide extensions to the type system to support a more robust and trustworthy programming at the type level. 
 %the encoding of more
@@ -78,8 +81,8 @@ define functions at type-level, {\tt
 promotion, {\tt PolyKinds} providing kind polymorphism, {\tt
   KindSignatures} %~\cite{ghcman}
 to document and deambiguate kinds, or
-{\tt TypeApplications}~\cite{conf/esop/EisenbergWA16} to provide visible type
-application. 
+{\tt TypeApplications}~\cite{conf/esop/EisenbergWA16} to provide visible
+application at type level. 
 %With recent additions to GHC this issues can be tackled.
 By using such extensions, we propose a reworked
 version of \AspectAG\footnote{\url{http://hackage.haskell.org/package/AspectAG}}
@@ -90,10 +93,10 @@ We also define a framework to manipulate
 type errors, keeping track of the context of the possible
 sources of errors, to show precise (DSL oriented) messages when they occur.
 
-The structure of the rest of the paper is as follows: In Section~\ref{sec:example}
-we present the EDSL using an example, including some error
-cases with their messages. In Section~\ref{sec:records} we make a summary of
-some techniques we used, introducing polymorphic extensible records
-and proposing a methodology to manage type errors.
-In Section~\ref{sec:aag} we present some implementation details.
+The structure of the rest of the paper is as follows: In
+Section~\ref{sec:example} we present the EDSL using an example, including a set
+of example error cases with their corresponding messages. In
+Section~\ref{sec:records} we make a summary of the techniques we used,
+introducing polymorphic extensible records and proposing a methodology to manage
+type errors. In Section~\ref{sec:aag} we present some implementation details.
 Finally, we discuss some related work and conclude.
