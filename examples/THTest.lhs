@@ -25,7 +25,6 @@ otherwise type errors we won't have readable type errors.
 > import Language.Grammars.AspectAG
 > import Language.Grammars.AspectAG.TH
 
-
 > $(addNont "Root")
 > $(addNont "Tree")
 

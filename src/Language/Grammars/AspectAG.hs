@@ -386,7 +386,7 @@ inhdefM
      -> Label ('Prd prd nt)
      -> Label ('Chi chi ('Prd prd nt) ntch)
      -> Reader (Proxy ctx', Fam ('Prd prd nt) sc ip) t'
-     -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp 
+     -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
 inhdefM att prd chi = inhdef att prd chi . def
 
 

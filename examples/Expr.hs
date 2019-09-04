@@ -50,24 +50,33 @@ eval = Label @ ('Att "eval" Int)
 env  = Label @ ('Att "env"  (Map String Int))
 
 add_eval  =  syndefM eval add  $ (+) <$> at leftAdd eval <*> at rightAdd eval
+--add_eval'' = uses eval (add .:. KNil) (expr .:. eL) ((+) @ Int) 0
+add_eval' = useadd add
+--        .:+: use eval mul (expr .:. eL) ((*) @ Int) 1
+
+useadd prd = use eval prd (expr .:. eL) ((+) @ Int) 0
+
 val_eval  =  syndefM eval val  $ ter ival
 var_eval  =  syndefM eval var  $ slookup <$> ter vname <*> at lhs env
 
 slookup nm = fromJust . Data.Map.lookup nm
 
-aspEval   =  traceAspect (Proxy @ ('Text "eval"))
-          $  add_eval .+: val_eval .+: var_eval .+: emptyAspect
+aspEval   =  traceAspect (Proxy @ ('Text "eval")) $
+          add_eval .+: val_eval .+: var_eval .+: emptyAspect
 
+aspEval'  =  traceAspect (Proxy @ ('Text "eval")) $
+          val_eval .+: var_eval .+: add_eval'
 
-add_leftAdd_env  = inhdefM env add leftAdd  $ at lhs env
-add_rightAdd_env = inhdefM env add rightAdd $ at lhs env
+add_leftAdd_env  = inh env add leftAdd  $ at lhs env
+add_rightAdd_env = inh env add rightAdd $ at lhs env
 -- val_ival_env = inhdefM env val ival $ at lhs env
 
-aspEnv  =  traceAspect (Proxy @ ('Text "env"))
-        $  add_leftAdd_env .+: add_rightAdd_env .+: emptyAspect 
+
+aspEnv  =  traceAspect (Proxy @ ('Text "env")) $
+  {- add_leftAdd_env .+:-} add_rightAdd_env .+: emptyAspect
 
 
-asp = aspEval .:+: aspEnv
+asp = aspEval' .:+: aspEnv
 
 
 data Expr = Val Int
