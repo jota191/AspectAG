@@ -52,7 +52,6 @@
 \usepackage { amssymb }
 \usepackage { hyperref }
 
-
 \setlength{\mathindent}{0.3cm}
 
 \begin{document}
@@ -66,32 +65,35 @@
 % two authors, and the "authornote" and "authornotemark" commands used to denote
 % shared contribution to the research.
 
+%\numberofauthors{3}
 \author{Juan García Garland}
+\email{jpgarcia@@fing.edu.uy}
 \affiliation{%
   \institution{Instituto de Computación\\Universidad de la República}
-  \streetaddress{P.O. Box 1212}
+  \streetaddress{Julio Herrera y Reissig 565}
   \city{Montevideo}
   \state{Uruguay}
-  \postcode{43017-6221}
+  \postcode{11300}
 }
 
 \author{Alberto Pardo}
+\email{pardo@@fing.edu.uy}
 \affiliation{%
   \institution{Instituto de Computación\\Universidad de la República}
-  \streetaddress{P.O. Box 1212}
+  \streetaddress{Julio Herrera y Reissig 565}
   \city{Montevideo}
   \state{Uruguay}
-  \postcode{43017-6221}
+  \postcode{11300}
 }
 
-
 \author{Marcos Viera}
+\email{mviera@@fing.edu.uy}
 \affiliation{%
   \institution{Instituto de Computación\\Universidad de la República}
-  \streetaddress{P.O. Box 1212}
+  \streetaddress{Julio Herrera y Reissig 565}
   \city{Montevideo}
   \state{Uruguay}
-  \postcode{43017-6221}
+  \postcode{11300}
 }
 
 % By default, the full list of authors will be used in the page headers. Often,

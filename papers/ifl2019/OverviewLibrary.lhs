@@ -54,22 +54,29 @@ The abstract syntax of the expression language is given by the following grammar
 %We have introduced one non-terminal, called |expr|, with three productions.
 
 \noindent
-where |ival| and |vname| are terminals corresponding to integer values and variable names (given by strings), respectively. Both are said to be \emph{children} in their productions.
-In the third production,
-% rewrites a non-terminal into two non-terminals.
-the children (|expr_l| and |expr_r|, both occurrences of the non-terminal
-|expr|) have different names so that we can refer to each one unambiguously.
+ where |ival| and |vname| are terminals corresponding to integer values and
+ variable names (given by strings), respectively. Both are said to be
+ \emph{children} in their productions. The third production has two children
+ of type |expr|, which we name with an index to refer them unambiguously.
 
 In our EDSL this grammar is declared as follows.
-First, we declare the non-terminal:
+First, we declare the non-terminal for our language:
 
 > type Nt_Expr = 'NT "Expr"
 > expr = Label @ Nt_Expr
 
 \noindent
-Non-terminals are defined by introducing a name (like |"Expr"|) at the type level by using a
-promoted string literal (which has kind |Symbol|). We use the \texttt{TypeApplications} extension of GHC to associate the type information to the label (we will make extensive use of this extension). 
-Productions are also identified by a name, and are related to a non-terminal.
+Non-terminals are types. They are built by a promoted algebraic datatype
+constructor |'NT| (we say, an algebraic datakind) applied to a name (|"Expr"|).
+Names are types of kind |Symbol|, the kind of promoted string symbols in modern
+Haskell. At term level we define an expression using the |Label| constructor.
+|Label| is a proxy type, with an appropiate name according to our domain instead
+of the usual |Proxy|. We use the \texttt{TypeApplications} extension of GHC to
+associate the type information to the label. The ``@@'' symbol above is a visible
+type application.
+
+ Productions are also identified by a name, and are related to a non-terminal,
+ once again using algebraic datakinds.
 
 > type P_Add = 'Prd "Add" Nt_Expr
 > add = Label @ P_Add
@@ -78,25 +85,29 @@ Productions are also identified by a name, and are related to a non-terminal.
 > type P_Var = 'Prd "Var" Nt_Expr
 > var = Label @ P_Var
 
-\noindent
-The last ingredient of the grammar declaration is given by the introduction of the children that occur in the productions.
+
+The last ingredient of the grammar declaration is given by the introduction of
+the children that occur in the productions.
 
 > leftAdd   = Label @ ('Chi "leftAdd"   P_Add  ('Left Nt_Expr))
 > rightAdd  = Label @ ('Chi "rightAdd"  P_Add  ('Left Nt_Expr))
 > ival      = Label @ ('Chi "ival"   P_Val  ('Right ('T Int)))
 > vname     = Label @ ('Chi "vname"  P_Var  ('Right ('T String)))
 
+
 \noindent
-Each child has a name, is tied to a production and can be either a non-terminal or a terminal. In the case of a terminal it is informed which type of values it denotes.
+Each child has a name, is tied to a production and can be either a non-terminal
+or a terminal, in the latter case it is informed which type of values it
+denotes.
 
 Summing up the information just provided, we can see that our grammar declaration indirectly contains all the ingredients that take part in the datatype representation of its ASTs:
 
 %The abstract syntax tree for this grammar can be implemented in Haskell,
 %for example, with the datatype:
 
-> data Expr  =  Val  { ival'                 :: Int  }
->            |  Var  { vname'                :: String   }
->            |  Add  { leftAdd', rightAdd'   :: Expr     }
+> data Expr  =  Val  Int
+>            |  Var  String
+>            |  Add  Expr Expr
 %
 %if False
 >       deriving Show
@@ -106,20 +117,22 @@ Summing up the information just provided, we can see that our grammar declaratio
 
 %|Add (Add (Var "x") (Val 5)) (Val 2)|.
 
-In our library we provide Template Haskell~\cite{Sheard:2002:TMH:636517.636528}
-functions that can be used to generate a grammar definition as the one above
-(non-terminals, productions and children). We also implement an utility to build
-a default datatype from this definitions. An important thing to notice is that the
-grammar representation is independent of this datatype.
+plus a set of names used to name explicitly each component.
+An important thing
+to notice is that the grammar representation is independent of this datatype.
 
-\note{tabla?}
 
-Notice the use we make of algebraic datakind constructors%
-\footnote{Throughout the paper, we say datakind when we refer to promoted datatypes}
-to wrap around the type-level information associated to the different components of the grammar. 
-|Label| is nothing more than a |Proxy| type (we simply gave it an alternative name that is more adequate to our domain). When computations are mainly performed at the type level, as it is our case, proxies play a key role because they are a gadget to carry type information at the value level.
-% Everything is defined at type-level but we will use this proxies as
-% carriers of type information, a widely used idiom in type-level programming.
+We provide Template Haskell~\cite{Sheard:2002:TMH:636517.636528} functions that
+can be used to generate all the definitions above in a more compact way, as
+follows:
+
+> $(addNont "Expr")
+> $(addProd "Val" ''Nt_Expr  [  ("val", Ter ''Int)])
+> $(addProd "Add" ''Nt_Expr  [  ("leftAdd",   NonTer ''Nt_Expr),
+>                               ("rightAdd",  NonTer ''Nt_Expr)])
+
+Notice that the use of Template Haskell is purely optional, \AspectAG\ can be
+used as an EDSL with neither preprocessing nor postprocessing of the source code.
 
 \begin{figure*}
 \numberson
@@ -145,6 +158,7 @@ to wrap around the type-level information associated to the different components
 > evalExpr e m  =  sem_Expr asp e rootAtt #. eval {-"\label{line:evalExpr} "-}
 >               where rootAtt = env =. m .*. emptyAtt
 \numbersoff
+\vspace{-0.1in}
 \caption{Evaluation Semantics}\label{fig:eval}
 \end{figure*}
 
@@ -153,51 +167,69 @@ With the aim to provide semantics, AGs decorate the productions of context-free
 grammars with \emph{attribute} computations. In an expression language as the
 one defined, the usual semantics are given by the evaluation semantics. This can
 be defined by using two attributes: |eval|, to represent the result of the
-evaluation, and |env|, to distribute the environment containing the value for
+evaluation, and |env|, to distribute the environment containing the values for
 variables. In the rest of this subsection we explain how the evaluation
-semantics can be implemented using our library. The complete definition is shown
+semantics can be implemented using our library.
+
+The complete definition is shown
 in Figure~\ref{fig:eval}. In lines \ref{line:eval} and \ref{line:env} we declare
 the attributes, specifying their types.
 
-% Time to define semantics.
-The attribute |eval| denotes the value of an expression. Attributes like this, where the information computed flows from the children to their parent productions, are called \emph{synthesized attributes}.
+The attribute |eval| denotes the value of an expression. Attributes like this,
+where the information computed flows from the children to their parent
+productions, are called \emph{synthesized attributes}.
 
 On the |add| production (Line~\ref{line:add_eval}) we compute |eval| as the sum
-
 of the denotation of subexpressions. On each subexpression there is a proper
-attribute |eval| that contains its value. Attribute |eval| is defined using function |syndefM|, which is the library operation to define synthesized attributes. It takes an attribute (the one for which the semantics is being defined), a production (where it is being defined), and the respective computation rule for the attribute. 
-%and the proper definition.
+attribute |eval| that contains its value. Attribute |eval| is defined using
+function |syndefM|, which is the library operation to define synthesized
+attributes. It takes an attribute (the one for which the semantics is being
+defined), a production (where it is being defined), and the respective
+computation rule for the attribute.
+
 Using an applicative interface, we take the values of |eval| at children
-|leftAdd| and |rightAdd|, and combine them with the operator |(+)|.
-By means of the operation |at leftAdd eval| we pick up the attribute |eval| from the collection of synthesized attributes of the child |leftAdd|.
-We refer to these collections of attributes as \emph{attributions}.
+|leftAdd| and |rightAdd|, and combine them with the operator |(+)|. By means of
+the operation |at leftAdd eval| we pick up the attribute |eval| from the
+collection of synthesized attributes of the child |leftAdd|. We refer to these
+collections of attributes as \emph{attributions}.
 
-At the |val| production
-%, where the grammar rewrites to a terminal,
-the value of the terminal corresponds to the semantics of the expression. In terms of our
-implementation (Line~\ref{line:val_eval}) the attribute |eval| is defined as the value of the terminal |ival|. |ter| is simply a reserved keyword in our EDSL.
+At the |val| production the value of the terminal corresponds to the semantics
+of the expression. In terms of our implementation (Line~\ref{line:val_eval}) the
+attribute |eval| is defined as the value of the terminal |ival|. |ter| is simply
+a reserved keyword in our EDSL.
 
-Finally, on the |var| production (Line~\ref{line:var_eval}), the expression denotes the
-value of the variable on the given environment. We lookup up the variable, with name given by the terminal |vname|, in the environment provided by the attribute |env|. The
-name |lhs| indicates that we receive the |env| attribute from the parent. Attributes
-like |env|, that flow in a top-down way, are called \emph{inherited attributes}.
+Finally, on the |var| production (Line~\ref{line:var_eval}), the expression
+denotes the value of the variable on the given environment. We lookup up the
+variable, with name given by the terminal |vname|, in the environment provided
+by the attribute |env|. The name |lhs| indicates that we receive the |env|
+attribute from the parent. Attributes like |env|, that flow in a top-down way,
+are called \emph{inherited attributes}. The use of |fromJust| is of course
+unsafe. We assume that the environment has an entry for each variable used in
+the expression evaluated. Error handling can be treated ortogonally with new
+attributes.
 
-We combine all these rules on an \emph{aspect} in Line~\ref{line:aspEval}.
-Before understanding what is going on with this |traceAspect| wrapper, lets say
-that the operator |(.+:)| is simply a combinator that adds a rule to an aspect
-(it associates to the right). In our EDSL domain an aspect is a collection of
-rules. Here we build an aspect with all the rules for a given attribute, but the
-user can combine them in the way she wants (for example, by production). Aspects
-can be orthogonal among them, or not. Here |aspEval| clearly depends on an
-attribute |env| with no rules attached to it at this point, so it is not -yet-
-useful at all. We cannot complain at compile time yet since the rules for |env|
-could be defined later (as we will do), or perhaps in another module! If we
-actually use |aspEval| calling it on a semantic function there will be a type
-error, but it will be raised on the semantic function application. The function
-|traceAspect| and also -implicitly- each application of |syndefM| tag
-definitions to show them on type errors. This is useful to have a hint where the
-error was actually introduced. Users are encouraged to use tags, but they are
-optional.
+We combine all these rules on an \emph{aspect} in Line~\ref{line:aspEval}. The
+operator |(.+:)| is a combinator that adds a rule to an aspect % (it associates to the right). 
+An aspect is a collection of rules. Here we build an aspect with all
+the rules for a given attribute, but the user can combine them in the way she
+wants (for example, by production). Aspects can be orthogonal among them, or
+not. 
+
+Aspects keep all the information of which attributes are computed, and which
+children are used, taken from the rules used to build them. All the structure of
+the grammar is known at compile time, which is used to compute precise errors.
+
+The function |traceAspect| and also -implicitly- each application of |syndefM|
+tag definitions to show more information on type errors. This is useful to have
+a hint where the error was actually introduced. For instance, note that that
+|aspEval| clearly depends on an attribute |env| with no rules attached to it at
+this point, so it is not -yet- useful at all. We cannot decide locally that the
+definition is wrong since the rules for |env| could be defined later (as we will
+do), or perhaps in another module! If we actually use |aspEval| calling it on a
+semantic function there will be a type error but it will be raised on the
+semantic function application. Showing the trace is helpful in those scenarios
+as we will see in section \ref{sec:errors}. Users are encouraged to use tags,
+but they are optional.
 
 For the definition of the inherited attribute |env| we use the |inhdefM| combinator, which
 takes an attribute name, a production (where the rule is being defined), and a
@@ -212,21 +244,21 @@ to get the aspect with all the attributes needed for the evaluation semantics.
 Note that this time we decided not to add a new tag.
 
 Finally, given an implementation of the abstract syntax tree, like the |Expr|
-datatype, we can encode (or derive it with Template Haskell) a generic
+datatype, we can encode a generic
 \emph{semantic function}:
-
+%
 > sem_Expr asp (Add l r)  = knitAspect add asp
 >                 $    leftAdd   .=. sem_Expr asp l
->                 .*.  rightAdd  .=. sem_Expr asp r
->                 .*.  EmptyRec
+>                 .*.  rightAdd  .=. sem_Expr asp r  .*.  EmptyRec
 > sem_Expr asp (Val i)    = knitAspect val asp
->                 $    ival   .=. sem_Lit i
->                 .*.  EmptyRec
+>                 $    ival   .=. sem_Lit i          .*.  EmptyRec
 > sem_Expr asp (Var v)    = knitAspect var asp
->                 $    vname  .=. sem_Lit v
->                 .*.  EmptyRec
-
+>                 $    vname  .=. sem_Lit v          .*.  EmptyRec
 %
+Again this definition could be derived automatically using Template Haskell with a
+compact splice:
+
+> $(mkSemFunc ''Nt_Expr)
 
 The semantic function |sem_Expr| takes the aspect,
 the AST of an expression, and
@@ -262,7 +294,7 @@ and the rules to compute it. This time we combine them on the fly:
 >          .+:  syndefM lits var  (pure [])
 >          .+:  emptyAspect
 
-The function,
+The function
 
 > litsExpr e = sem_Expr aspLits e emptyAtt #. lits
 
@@ -324,7 +356,7 @@ define the semantic functions for another datatype
 definition that includes the new production.
 
 \subsection{Error Messages}
-
+\label{sec:errors}
 When using a EDSL implemented using type-level programming type error messages
 are hard to understand, often leaking implementation details. Our library was
 designed to provide good, DSL-oriented error messages for the mistakes an AG

@@ -264,8 +264,6 @@ an aspect from one single rule. Since our most basic primitives |syndef| and
 |inhdef| build a single rule, adding rules one by one to an aspect is a common
 operation.
 
-\todo{extAspect, comAspect, definirlas como operador?}
-
 %Within the |Require| framework, we implement operations to append rules to an
 %aspect, and to combine Aspects.
 
@@ -303,14 +301,15 @@ more verbose, but anyway inmediate: we lookup the rule at the original aspect,
 extend the rule with the one as argument, and update the aspect with the
 resulting rule.
 
-With this operation, we define the proper |extAspect| function, that adds a
-tagged rule to a tagged Aspect.
+With this operation, we define the proper \emph{aspect extension} function, that
+adds a tagged rule to a tagged Aspect.
 
 %> extAspect  :: RequireR  (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx
 %>                         (Aspect asp)
 %>            =>  CRule ctx prd sc ip ic sp ic' sp'
 %>            ->  CAspect ctx a -> CAspect ctx asp
-> extAspect rule (CAspect fasp)
+
+> rule .+: (CAspect fasp)
 >   = CAspect $ \ctx -> req ctx (OpComRA rule (fasp ctx))
 
 
@@ -348,7 +347,7 @@ using the operation |OpComRA|.
 >                        (req ctx (OpComAsp al ar)))
 
 Thus, the function that combines two tagged aspects is:
-> comAspect al ar
+> al .:+: ar
 >   = CAspect $ \ctx -> req ctx (OpComAsp  (mkAspect al ctx)
 >                                          (mkAspect ar ctx))
 
