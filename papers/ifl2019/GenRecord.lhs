@@ -33,21 +33,18 @@ extensible records. Mistakes like trying to access to an undefined attribute or
 child are detected at compile time as an incorrect look up in a given record.
 Also, the definition of duplicated attributes results in a type error, due to an
 incorrect record extension.
-
 %% However, detecting errors is not enough. If the error messages are difficult to
 %% understand and do not give references to their possible points of introduction
 %% within the source code, then using the library becomes a painful task. A common
 %% problem of type-level programming implementations of EDSLs is the leakage of
 %% implementation details in error messages. This was the case of the previous
 %% version of \AspectAG.
-
 %It is a common problem when implementing EDSLs using type-level programming that when a type
 % error occurs, implementation details are leaked on error messages,
 % and this was the case of the previous version of \AspectAG.
-
-We use user-defined type errors, a tool introduced in GHC to help improving
-the quality of type-level programming error messages.
-Custom error messages are printed out using the type family |GHC.TypeLits.TypeError|.
+Then using user-defined type errors, a tool introduced in GHC to
+help improving the quality of type-level programming error messages, custom
+error messages are printed out using the type family |GHC.TypeLits.TypeError|.
 %However, using this tool it is not clear how to structure the implementation in a
 %modular, dependable and scalable way.
 
