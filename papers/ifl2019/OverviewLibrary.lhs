@@ -406,7 +406,7 @@ trace: syndef( Attribute eval:Int
 expressing that we provided a |Maybe Int| where an |Int| was expected. There is
 also some \verb"trace" information, showing the context where the error appears.
 In this case it is not really necessary since the source of the error and the
-place where the error is detected are the same. But we will see later in this
+place where it is detected are the same. But we will see later in this
 section some examples where this information will guide us to the possible
 source of an error that is produced in a later stage. This kind of error looks
 similar to the previous one from the user's perspective, but it is very
@@ -422,7 +422,7 @@ should track where the error was actually introduced.
 
 This kind of errors are related to the well-formedness of the AG, like trying to
 access to a child that does not belong to the production where we are defining
-the attribute, trying to lookup attributes that are not there, etc.
+the attribute, trying to lookup attributes that are not defined, etc.
 
 For example, if we modify Line~\ref{line:add_eval} with the following code:
 < add_eval  =  syndefM eval add  $ ter ival
@@ -440,6 +440,7 @@ trace: syndef( Attribute eval:Int
 %
 expressing that the production of type |Val| (of the non-terminal |Expr|) is
 not equal to the expected production of type |Add| (of the non-terminal |Expr|).
+
 
 Another example similar to the previous one, is to treat a non-terminal as a terminal,
 or the other way around.
@@ -498,10 +499,15 @@ trace: syndef( Attribute eval:Int
        aspect eval
 \end{Verbatim}
 %
-Notice that in this case the trace guides us to the place
-where the unsatisfied rule is defined:
-the synthesized attribute |eval| at the production |Add| (Line~\ref{line:add_eval}),
-into the aspect |eval| (Line~\ref{line:aspEval}).
+Notice that in this case the trace guides us to the place where the unsatisfied
+rule is defined: the synthesized attribute |eval| at the production |Add|
+(Line~\ref{line:add_eval}), into the aspect |eval| (Line~\ref{line:aspEval}). In
+previous versions of \AspectAG\ this kind of error was detected, but the long
+and noisy message referred to a missing instance of the class used to
+implement look up in records. The message was not related to our domain an leaked
+implementation information. The user should not know that records where used or
+how lookup operator was implemented.
+
 
 \subsubsection{Duplication of Fields}
 An attribute should not have more than one rule to compute it in a given
@@ -527,4 +533,6 @@ trace: aspect eval
 
 This is another case where the trace is helpful in the task of finding the
 source of an error. The trace information says that the duplication was
-generated when we defined the aspect |eval|; i.e. Line~\ref{line:aspEval}.
+generated when we defined the aspect |eval|; i.e. Line~\ref{line:aspEval}. As in
+\ref{sec:err2} previous \AspectAG\ implementations produced a type error in this
+scenario, but it was difficult to read, and it leaked implementation details.
