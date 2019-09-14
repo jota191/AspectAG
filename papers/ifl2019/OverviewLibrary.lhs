@@ -209,7 +209,8 @@ the expression evaluated. Error handling can be treated ortogonally with new
 attributes.
 
 We combine all these rules on an \emph{aspect} in Line~\ref{line:aspEval}. The
-operator |(.+:)| is a combinator that adds a rule to an aspect % (it associates to the right). 
+operator |(.+:)| is a combinator that adds a rule to an aspect
+(it associates to the right).
 An aspect is a collection of rules. Here we build an aspect with all
 the rules for a given attribute, but the user can combine them in the way she
 wants (for example, by production). Aspects can be orthogonal among them, or
@@ -357,14 +358,16 @@ definition that includes the new production.
 
 \subsection{Error Messages}
 \label{sec:errors}
-When using a EDSL implemented using type-level programming type error messages
-are hard to understand, often leaking implementation details. Our library was
+In a EDSL implemented using type-level programming type error messages are hard
+to understand and they often leak implementation details. Our library is
 designed to provide good, DSL-oriented error messages for the mistakes an AG
-programmer may make. In this subsection we show some examples of such error
-messages.
+programmer may make. We identify four set of errors. In this section we list
+them and show examples of each one.
 
 
-A possible error when defining an attribute is to have type errors
+\subsubsection{Type errors in attribute expressions}
+\label{sec:err1}
+When defining an attribute we can have type errors
 in the expressions that define the computation.
 For example if in Line~\ref{line:add_eval} of  Figure~\ref{fig:eval}
 we use an attribute with a different
@@ -381,13 +384,16 @@ Couldn't match type 'Map String Int' with 'Int'
 \end{Verbatim}
 %
 Similar messages are obtained if the expression has other internal type errors,
-like writing |pure (2 + False)|.
+like writing |pure (2 + False)|. This is acomplished ``for free'' since
+\AspectAG\ is embedded in Haskell, and this kind of error was well reported in
+old versions of the library.
 
-
-Another possible error is to define a computation that returns
-a value of a different type than the type of the attribute.
-For example, if in Figure~\ref{fig:eval}, instead of Line~\ref{line:var_eval}
-we have the following declaration that uses |lookup| instead of |slookup|:
+\subsubsection{Defining a computation that returns a value of a
+different type than the type of the attribute.}
+\label{sec:err2}
+For example, if in
+Figure~\ref{fig:eval} instead of Line~\ref{line:var_eval} we have the following
+declaration that uses |lookup| instead of |slookup|:
 %
 < var_eval  =  syndefM eval var
 <           $  lookup <$> ter vname <*> at lhs env
@@ -399,17 +405,27 @@ trace: syndef( Attribute eval:Int
              , Non-Terminal Expr::Production Var)
 \end{Verbatim}
 %
-expressing that we provided a |Maybe Int| where an |Int| was expected.
-There is also some \verb"trace" information, showing the context where
-the error appears.
-In this case it is not necessary, since the source of the error and the place where
-the error is detected are the same. But we will see later in this section some
-examples where this information will guide us to the possible source of an
-error that is produced in a later stage.
+expressing that we provided a |Maybe Int| where an |Int| was expected. There is
+also some \verb"trace" information, showing the context where the error appears.
+In this case it is not really necessary since the source of the error and the
+place where the error is detected are the same. But we will see later in this
+section some examples where this information will guide us to the possible
+source of an error that is produced in a later stage. This kind of error looks
+similar to the previous one from the user's perspective, but it is very
+different to us. It requires implementation work. In previous versions of
+\AspectAG\ this kind of error could not be detected since attributes had no
+information about their type. Probably the program would fail anyway, possibly
+with an error like the one in \ref{sec:err1} somewhere else. Then the programmer
+should track where the error was actually introduced.
 
 
-A more AG-specific error is to try to access to a child
-that does not belong to the production where we are defining the attribute.
+
+\subsubsection{References to lacking fields}
+
+This kind of errors are related to the well-formedness of the AG, like try to
+access to a child that does not belong to the production where we are defining
+the attribute, try to lookup attributes that are not there, etcetera.
+
 If we modify Line~\ref{line:add_eval} with the following code:
 < add_eval  =  syndefM eval add  $ ter ival
 %
@@ -427,7 +443,7 @@ trace: syndef( Attribute eval:Int
 expressing that the production of type |Val| (of the non-terminal |Expr|) is
 not equal to the expected production of type |Add| (of the non-terminal |Expr|).
 
-Another mistake, similar to the previous one, is to treat a non-terminal as a terminal,
+Another example similar to the previous one, is to treat a non-terminal as a terminal,
 or the other way around.
 Then, if we use |ter| to get a value out of the child |leftAdd|:
 < add_eval  =  syndefM eval add  $ ter leftAdd
@@ -463,6 +479,7 @@ trace: syndef( Attribute eval:Int
              , Non-Terminal Expr::Production Val)
 \end{Verbatim}
 
+
 Now suppose we have an attribute |foo|, of type |Int|,
 but without any rules defining its computation,
 and we use it in the definition of the rule |add_eval|:
@@ -488,21 +505,28 @@ where the unsatisfied rule is defined:
 the synthesized attribute |eval| at the production |Add| (Line~\ref{line:add_eval}),
 into the aspect |eval| (Line~\ref{line:aspEval}).
 
-Another case where the trace is helpful in the task of finding
-the source of an error, is when we define a duplicated attribute. 
-For example, if add |add_eval| twice when defining |aspEval| at  Line~\ref{line:aspEval}.
+\subsubsection{Duplication of Fields}
+An attribute should not have more than one rule to compute it in a given
+production. Also, children are unique.
+
+For instance this kind of error could be introduced if |add_eval| is defined
+twice when defining |aspEval| at Line~\ref{line:aspEval}.
 %
 < aspEval   =    traceAspect (Proxy @ ('Text "eval"))
 <           $    add_eval .+: add_eval 
 <           .+:  val_eval .+: var_eval .+: emptyAspect
 %
 Due to some flexibility matters that will become more clear in the next section,
-we can not detect this error at this point.
+we do not detect this error at this point.
+
 The error appears again at Line~\ref{line:evalExpr}, when we close the AG:
 \begin{Verbatim}[fontsize=\small]
 Error: Duplicated Labels on Attribution
        of Attribute eval:Int
 trace: aspect eval
 \end{Verbatim}
-However, the trace information says that the duplication was generated when we
-defined the aspect |eval|; i.e. Line~\ref{line:aspEval}. 
+
+
+This is another case where the trace is helpful in the task of finding the
+source of an error. The trace information says that the duplication was
+generated when we defined the aspect |eval|; i.e. Line~\ref{line:aspEval}.

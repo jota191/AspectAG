@@ -27,33 +27,34 @@
 
 % In this section we present the design of the new \AspectAG.
 \label{sec:records}
-In order to provide flexibility and safety, \AspectAG\ internals are built from
-strongly typed extensible records. Mistakes like trying to access to an
-undefined attribute or child are detected at compile time as an incorrect look
-up in a given record. Also, the definition of duplicated attributes results in a
-type error, due to an incorrect record extension.
+In order to provide flexibility, safety, and achieve error messages as the ones
+shown in the previous section, \AspectAG\ internals are built from strongly typed
+extensible records. Mistakes like trying to access to an undefined attribute or
+child are detected at compile time as an incorrect look up in a given record.
+Also, the definition of duplicated attributes results in a type error, due to an
+incorrect record extension.
 
-However, detecting errors is not enough. If the error messages are difficult to
-understand and do not give references to their possible points of introduction
-within the source code, then using the library becomes a painful task. A common
-problem of type-level programming implementations of EDSLs is the leakage of
-implementation details in error messages. This was the case of the previous
-version of \AspectAG.
+%% However, detecting errors is not enough. If the error messages are difficult to
+%% understand and do not give references to their possible points of introduction
+%% within the source code, then using the library becomes a painful task. A common
+%% problem of type-level programming implementations of EDSLs is the leakage of
+%% implementation details in error messages. This was the case of the previous
+%% version of \AspectAG.
 
 %It is a common problem when implementing EDSLs using type-level programming that when a type
 % error occurs, implementation details are leaked on error messages,
 % and this was the case of the previous version of \AspectAG.
 
-As we have shown in the previous section, the new version of the library
-now captures common errors and prints them out in a readable way.
 We use user-defined type errors, a tool introduced in GHC to help improving
 the quality of type-level programming error messages.
 Custom error messages are printed out using the type family |GHC.TypeLits.TypeError|.
 %However, using this tool it is not clear how to structure the implementation in a
 %modular, dependable and scalable way.
 
-In this section we show an implementation of extensible records and introduce a framework
-to encode EDSL type errors that keeps track of the possible sources of errors. 
+In this section we show an implementation of extensible records and introduce a
+framework to encode EDSL type errors that keeps track of the possible sources of
+errors.
+
 %On section \ref{sec:requirements} we present our solution.
 
 \subsection{Polymorphic Heterogeneous Records}
@@ -77,8 +78,8 @@ The implementation of the library is strongly based on the use of extensible rec
   Semantic functions, which are kept in a record (not visible by the user).
 \end{itemize}
 
-Extensible records coded using type-level programming are already part of the
-folklore in the Haskell community. The {\tt HList}
+Extensible records coded using type-level programming are already well known in
+the Haskell community. The {\tt HList}
 library~\cite{Kiselyov:2004:STH:1017472.1017488} popularized them. One common
 way to implement a record is by using a GADT indexed by the list of types of the
 values stored in its fields. These types are usually of kind |Type|, what makes
@@ -291,27 +292,27 @@ as label equality are only about types, which means that |req| is not used. It i
 still useful to keep type errors in this framework, and in that case we use only
 the |Require| constraint.
 
-\begin{table}[t] 
-   \small % text size of table content
-   \centering % center the table
-   \begin{tabular}{lcr} % alignment of each column data
-   \toprule[\heavyrulewidth] \textbf{Operation} & \textbf{Requirement} &
-   \textbf{Require Operator} \\ \midrule Record Lookup & label is a member &
-   |OpLookup| \\ \hline Record Update & label is a member & |OpUpdate| \\ \hline
-   Record Extension & label is not a member & |OpExtend| \\ \hline New
-   synthesized attribute & {\begin{minipage}[t]{.3\linewidth}\begin{center}
-         attribute type $\equiv$ \\type of definition \end{center}\end{minipage}}
-   & |RequireEq| \\ \hline New inherited attribute &
-   {\begin{minipage}[t]{.3\linewidth}\begin{center} attribute type $\equiv$ \\type
-         of definition \end{center}\end{minipage}}& |RequireEq| \\ \hline
-   New inherited
-   attribute & {\begin{minipage}[t]{.3\linewidth}\begin{center}
-         argument production \\$\equiv$ child production
-   \end{center}\end{minipage}}& |RequireEq|
-   \\ \bottomrule[\heavyrulewidth]
-   \end{tabular}
-   \caption{Example Requirements}\label{tab:req}
-\end{table}
+%% \begin{table}[t] 
+%%    \small % text size of table content
+%%    \centering % center the table
+%%    \begin{tabular}{lcr} % alignment of each column data
+%%    \toprule[\heavyrulewidth] \textbf{Operation} & \textbf{Requirement} &
+%%    \textbf{Require Operator} \\ \midrule Record Lookup & label is a member &
+%%    |OpLookup| \\ \hline Record Update & label is a member & |OpUpdate| \\ \hline
+%%    Record Extension & label is not a member & |OpExtend| \\ \hline New
+%%    synthesized attribute & {\begin{minipage}[t]{.3\linewidth}\begin{center}
+%%          attribute type $\equiv$ \\type of definition \end{center}\end{minipage}}
+%%    & |RequireEq| \\ \hline New inherited attribute &
+%%    {\begin{minipage}[t]{.3\linewidth}\begin{center} attribute type $\equiv$ \\type
+%%          of definition \end{center}\end{minipage}}& |RequireEq| \\ \hline
+%%    New inherited
+%%    attribute & {\begin{minipage}[t]{.3\linewidth}\begin{center}
+%%          argument production \\$\equiv$ child production
+%%    \end{center}\end{minipage}}& |RequireEq|
+%%    \\ \bottomrule[\heavyrulewidth]
+%%    \end{tabular}
+%%    \caption{Example Requirements}\label{tab:req}
+%% \end{table}
 
 To pretty print type errors, we define a special operation:
 
