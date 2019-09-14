@@ -29,9 +29,11 @@
 \label{sec:records}
 In order to provide flexibility, safety, and achieve error messages as the ones
 shown in the previous section, \AspectAG\ internals are built from strongly typed
-extensible records. Mistakes like trying to access to an undefined attribute or
-child are detected at compile time as an incorrect look up in a given record.
-Also, the definition of duplicated attributes results in a type error, due to an
+extensible records.
+Mistakes due to references to lacking fields (Section~\ref{sec:errref})
+%%like trying to access to an undefined attribute or child
+are detected at compile time as an incorrect look up in a given record.
+Also, the definition of duplicated attributes (Section~\ref{sec:errdup}) results in a type error, due to an
 incorrect record extension.
 
 %% However, detecting errors is not enough. If the error messages are difficult to
@@ -64,16 +66,16 @@ The implementation of the library is strongly based on the use of extensible rec
 
 \begin{itemize}
 \item
-  |Attribution|s, which are mappings from attribute names to values.
+  |Attribution|s, which are mappings from attribute names to values. In our example, |eval| and |env|, defined in Figure~\ref{fig:eval}, are labels of such records.
 \item
   For each production, there is a set of children, each one with an associated
   attribution.
   % Note that
   In this case each field is not a flat value, but a full
-  record by itself.
+  record by itself. The labels in the example are: |leftAdd|, |rightAdd|, |ival| and |vname|.
   % It would be nice to reflect it on types.
 \item
-  \emph{Aspects}, which are records of rules indexed by productions.
+  \emph{Aspects}, which are records of rules indexed by productions. In this case the labels are: |add|, |val| and |var|.
 \item
   Semantic functions, which are kept in a record (not visible by the user).
 \end{itemize}
@@ -124,6 +126,8 @@ where labels are proxies
 
 > data Label (l :: k) = Label
 
+Notice that all the labels in Section~\ref{sec:example} are defined using the constructor |Label|,
+varying the phantom type.
 %The |TagField| constructor uses |Label| arguments to build instances because we
 %usually have them avaiable at term level, as we saw in the example of Section~\ref{sec:example},
 %but type applications\cite{conf/esop/EisenbergWA16} -or a much less elegant annotation- would work
@@ -213,7 +217,10 @@ fields of kind |Type|.
 
 > type Attribution (attr :: [(Att, Type)]) = Rec AttReco attr
 %
-We do not need to actually wrap the fields since they are simply values:
+The label |add|, with type |Label ('Prd "Add" Nt_Expr)|, 
+of Section~\ref{sec:example} is an example of a valid |Attribution| label.
+
+\noindent We do not need to actually wrap the fields since they are simply values:
 %
 > type instance  WrapField AttReco  (v :: Type) = v
 %
@@ -263,7 +270,9 @@ not inhabited, and puts the |Attribution| wrapper.
 >   = Attribution v
 
 %Again pattern synonyms are defined.
-
+Examples of the types Attribution labels of the example are:
+< rightAdd  :: Label ('Chi "rightAdd"  P_Add  ('Left Nt_Expr))
+< ival      :: Label ('Chi "ival"   P_Val  ('Right ('T Int)))
 
 \subsection{Requirements}
 \label{sec:requirements}
@@ -417,6 +426,9 @@ Here we require the instance of |OpError| informing the actual error:
 >   req = undefined
 
 
+Notice that this error message is the one we obtain in Section~\ref{sec:errref},
+when trying to access to an undefined attribute |foo|.
+
 This procedure is recurrent in all our development:
 \begin{itemize}
 \item Use requirements for operations that can introduce DSL errors,
@@ -480,7 +492,9 @@ inhabited types are printed with their standard name:
 
 > type instance ShowT (t :: Type)  = ShowType t
 
-
+Then, for example in Section~\ref{sec:errref} the error messages say ``{\small\texttt{Attribute eval:Int}}'' when
+referring to the attribute |eval| and ``{\small\texttt{Non-Terminal Expr::Production Add}}'' when referring to the
+production |add|.
 
 \subsubsection{Label Equality Requirements}
 
@@ -513,3 +527,5 @@ readable error message, or to the trivial (Top) constraint otherwise.
 >                  (Require (OpError  (Text "" :<>: ShowT t1
 >                                     :<>: Text " /= " :<>: ShowT t2)) ctx)
 
+This is the error message that appears in \ref{sec:errexp} and in most of the examples of \ref{sec:errref},
+where the actual type is not the expected.

@@ -388,7 +388,7 @@ old versions of the library.
 
 \subsubsection{Defining a computation that returns a value of a
 different type than the type of the attribute.}
-\label{sec:err2}
+\label{sec:errexp}
 For example, if in
 Figure~\ref{fig:eval} instead of Line~\ref{line:var_eval} we have the following
 declaration that uses |lookup| instead of |slookup|:
@@ -418,7 +418,7 @@ should track where the error was actually introduced.
 
 
 
-\subsubsection{References to lacking fields}
+\subsubsection{References to lacking fields}\label{sec:errref}
 
 This kind of errors are related to the well-formedness of the AG, like trying to
 access to a child that does not belong to the production where we are defining
@@ -503,7 +503,7 @@ where the unsatisfied rule is defined:
 the synthesized attribute |eval| at the production |Add| (Line~\ref{line:add_eval}),
 into the aspect |eval| (Line~\ref{line:aspEval}).
 
-\subsubsection{Duplication of Fields}
+\subsubsection{Duplication of Fields}\label{sec:errdup}
 An attribute should not have more than one rule to compute it in a given
 production. Also, children are unique.
 
