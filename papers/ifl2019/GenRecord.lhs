@@ -317,8 +317,9 @@ To pretty print type errors, we define a special operation:
 %
 |OpError| is a phantom type containing some useful information to print.
 A call to |OpError| happens when some requirement is not
-fulfilled. Some examples of requirements implemented in our library are shown
-on Table~\ref{tab:req}: A non satisfied requirement means that there will be no
+fulfilled.
+%%Some examples of requirements implemented in our library are shown on Table~\ref{tab:req}:
+A non satisfied requirement means that there will be no
 regular instance of this class and it produces a |OpError| requirement.
 When we call |req| with this operator the type checker reports an error since
 the instance is:

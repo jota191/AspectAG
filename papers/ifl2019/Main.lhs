@@ -141,7 +141,7 @@ Aenean gravida dolor nec ex lacinia, non tempus odio iaculis. }
 \begin{abstract}
 AspectAG is a domain specific language embedded in Haskell to represent modular
 Attribute Grammars. In AspectAG attribute grammar fragments can be defined
-independently (in separate modules) and then combined in a safe way. This
+independently (even in separate modules) and then combined in a safe way. This
 flexibility is achieved through the use of extensible records, which are
 implemented as heterogeneous lists by using type-level programming techniques.
 %; i.e. multi-parameter type classes and functional dependencies.

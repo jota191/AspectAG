@@ -97,17 +97,15 @@ the children that occur in the productions.
 
 \noindent
 Each child has a name, is tied to a production and can be either a non-terminal
-or a terminal, in the latter case it is informed which type of values it
-denotes.
+or a terminal, in the latter case we include the type of values it
+denotes (e.g. |('T Int)|).
 
 Summing up the information just provided, we can see that our grammar declaration indirectly contains all the ingredients that take part in the datatype representation of its ASTs:
 
 %The abstract syntax tree for this grammar can be implemented in Haskell,
 %for example, with the datatype:
 
-> data Expr  =  Val  Int
->            |  Var  String
->            |  Add  Expr Expr
+> data Expr  =  Val  Int |  Var  String |  Add  Expr Expr
 %
 %if False
 >       deriving Show
@@ -123,7 +121,7 @@ to notice is that the grammar representation is independent of this datatype.
 
 
 We provide Template Haskell~\cite{Sheard:2002:TMH:636517.636528} functions that
-can be used to generate all the definitions above in a more compact way, as
+can be used to generate all the \emph{boilerplate} defined above, as
 follows:
 
 > $(addNont "Expr")
@@ -205,7 +203,7 @@ by the attribute |env|. The name |lhs| indicates that we receive the |env|
 attribute from the parent. Attributes like |env|, that flow in a top-down way,
 are called \emph{inherited attributes}. The use of |fromJust| is of course
 unsafe. We assume that the environment has an entry for each variable used in
-the expression evaluated. Error handling can be treated ortogonally with new
+the expression evaluated. Error handling can be treated orthogonally with new
 attributes.
 
 We combine all these rules on an \emph{aspect} in Line~\ref{line:aspEval}. The
@@ -229,7 +227,7 @@ definition is wrong since the rules for |env| could be defined later (as we will
 do), or perhaps in another module! If we actually use |aspEval| calling it on a
 semantic function there will be a type error but it will be raised on the
 semantic function application. Showing the trace is helpful in those scenarios
-as we will see in section \ref{sec:errors}. Users are encouraged to use tags,
+as we will see in Section~\ref{sec:errors}. Users are encouraged to use tags,
 but they are optional.
 
 For the definition of the inherited attribute |env| we use the |inhdefM| combinator, which
@@ -257,7 +255,7 @@ datatype, we can encode a generic
 >                 $    vname  .=. sem_Lit v          .*.  EmptyRec
 %
 Again this definition could be derived automatically using Template Haskell with a
-compact splice:
+splice:
 
 > $(mkSemFunc ''Nt_Expr)
 
@@ -361,7 +359,7 @@ definition that includes the new production.
 In a EDSL implemented using type-level programming type error messages are hard
 to understand and they often leak implementation details. Our library is
 designed to provide good, DSL-oriented error messages for the mistakes an AG
-programmer may make. We identify four set of errors. In this section we list
+programmer may make. We identify four categories of static errors. In this section we list
 them and show examples of each one.
 
 
@@ -413,7 +411,7 @@ section some examples where this information will guide us to the possible
 source of an error that is produced in a later stage. This kind of error looks
 similar to the previous one from the user's perspective, but it is very
 different to us. It requires implementation work. In previous versions of
-\AspectAG\ this kind of error could not be detected since attributes had no
+\AspectAG\ this kind of error could not be detected, since attributes had no
 information about their type. Probably the program would fail anyway, possibly
 with an error like the one in \ref{sec:err1} somewhere else. Then the programmer
 should track where the error was actually introduced.
@@ -422,11 +420,11 @@ should track where the error was actually introduced.
 
 \subsubsection{References to lacking fields}
 
-This kind of errors are related to the well-formedness of the AG, like try to
+This kind of errors are related to the well-formedness of the AG, like trying to
 access to a child that does not belong to the production where we are defining
-the attribute, try to lookup attributes that are not there, etcetera.
+the attribute, trying to lookup attributes that are not there, etc.
 
-If we modify Line~\ref{line:add_eval} with the following code:
+For example, if we modify Line~\ref{line:add_eval} with the following code:
 < add_eval  =  syndefM eval add  $ ter ival
 %
 where we use the child |ival| that does not belong to the production |add|.
