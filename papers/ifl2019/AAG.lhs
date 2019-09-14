@@ -127,6 +127,12 @@ child in the record of children and then the attribute in its attribution.
 We also require some equalities, including the fact that the child
 has to be a non-terminal |('Left ('NT n))|.
 
+
+By looking at the type of |syndef|, it becomes more clear how, for example,
+the error message of \ref{sec:errexp} is generated. The error is produced by failing
+the equality requirement of |t| and |t'| (|Int| and |Maybe Int|), and the
+trace information is given by the context |ctx'|.
+
 The function |inhdef| defines an inherited attribute.
 For simplicity reasons we omit the constraints.
 
