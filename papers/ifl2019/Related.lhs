@@ -11,8 +11,8 @@ and others are embbeded in languages like Scala (e.g. Kiama \cite{kiama}) or Has
 (\cite{DBLP:conf/gcse/MoorPW99, Moor99first-classattribute,
   Viera:2009:AGF:1596550.1596586,DBLP:conf/ifl/VieraBP18, MFS13,
   DBLP:phd/ethos/Balestrieri15}).
-
-
+%
+%
 This work is based on \AspectAG\ \cite{Viera:2009:AGF:1596550.1596586}, where
 extensible records are used to implement a strongly typed first class AG DSL
 embedded in Haskell. We preserve its main characteristics, i.e. safety and

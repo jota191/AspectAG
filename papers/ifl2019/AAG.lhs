@@ -7,7 +7,7 @@ work in the implementation of \AspectAG.
 We use the concept of \emph{families} as input and output
 for attribute computations. A family for a given production contains an
 attribution for the parent, and a collection of attributions, one for each
-of the children. A family is implemented as a product of |Attribution|
+of the children. A family |Fam| is a product of |Attribution|
 and |ChAttsRec|, and it is indexed with the production to which it belongs:
 
 > data Fam  (prd  ::  Prod)
@@ -86,12 +86,17 @@ Using |syndef| we can define rules like |add_eval| of Section~\ref{sec:example}:
 >   (+) (sc .#. leftAdd .#. eval) (sc .#. rightAdd .#. eval)
 %
 where |(.#.)| is the lookup operator. 
+
+By looking at the type of |syndef|, it becomes more clear how, for example,
+the error message of \ref{sec:errexp} is generated. The error is produced by failing
+the equality requirement of |t| and |t'| (|Int| and |Maybe Int|), and the
+trace information is given by the context |ctx'|.
+
+
 In practice it is useful to use a monadic version of |syndef|,
 which is the one we used in Section~\ref{sec:example}:
 
 > syndefM att prd = syndef att prd . def
-%
-where
 
 > def :: Reader (Proxy ctx, Fam prd chi par) a
 >     -> (Proxy ctx -> (Fam prd chi par) -> a)
@@ -105,7 +110,12 @@ We defined the monadic function |at| used to sugarize definitions:
 %
 with instances for looking up attributes into the attribution of the parent (|lhs|)
 or the attribution of a given child. The following is the instance for
-the case of children:
+the case of children,
+where are two lookups involved, because we have to find the
+child in the record of children and then the attribute in its attribution.
+We also require some equalities, including the fact that the child
+has to be a non-terminal |('Left ('NT n))|.
+
 > instance
 >   ( RequireR  (OpLookup   (ChiReco prd) ('Chi ch prd nt) chi)
 >                           ctx (Attribution r)
@@ -123,16 +133,8 @@ the case of children:
 >                     ->  let  atts = req ctx (OpLookup ch chi)
 >                         in   req ctx (OpLookup att atts))
 >            ask
-In this case there are two lookups involved, because we have to find the
-child in the record of children and then the attribute in its attribution.
-We also require some equalities, including the fact that the child
-has to be a non-terminal |('Left ('NT n))|.
 
 
-By looking at the type of |syndef|, it becomes more clear how, for example,
-the error message of \ref{sec:errexp} is generated. The error is produced by failing
-the equality requirement of |t| and |t'| (|Int| and |Maybe Int|), and the
-trace information is given by the context |ctx'|.
 
 The function |inhdef| defines an inherited attribute.
 For simplicity reasons we omit the constraints.
@@ -276,7 +278,13 @@ operation.
 
 \subsubsection{Adding a Rule}
 
-We define an operation |OpComRA| to combine a rule with an aspect. 
+We define the \emph{aspect extension} function, that
+adds a tagged rule to a tagged Aspect.
+
+> rule .+: (CAspect fasp)
+>   = CAspect $ \ctx -> req ctx (OpComRA rule (fasp ctx))
+
+To implement this function we define an operation |OpComRA|, that combines a rule with an aspect. 
 
 > data OpComRA  (ctx  :: [ErrorMessage])
 >               (prd  :: Prod)
@@ -308,16 +316,6 @@ more verbose, but anyway inmediate: we lookup the rule at the original aspect,
 extend the rule with the one as argument, and update the aspect with the
 resulting rule.
 
-With this operation, we define the proper \emph{aspect extension} function, that
-adds a tagged rule to a tagged Aspect.
-
-%> extAspect  :: RequireR  (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx
-%>                         (Aspect asp)
-%>            =>  CRule ctx prd sc ip ic sp ic' sp'
-%>            ->  CAspect ctx a -> CAspect ctx asp
-
-> rule .+: (CAspect fasp)
->   = CAspect $ \ctx -> req ctx (OpComRA rule (fasp ctx))
 
 
 \subsubsection{Combining two aspects}
