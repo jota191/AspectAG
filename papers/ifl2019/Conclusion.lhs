@@ -34,5 +34,5 @@ to a production, this was not designed this way in previous versions of
 \AspectAG, which allowed us to reuse some rules out of the box. Anyway, this can
 be shallowed since the host language provides type -and kind- polymorphism.
 
-We develop methodology to manage error message generation with |Requirements|.
+We developed a methodology to manage error message generation using |Requirements|.
 We think this idea can be applied similarly in other EDSL implementations.

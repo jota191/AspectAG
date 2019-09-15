@@ -41,31 +41,40 @@ which we then extend syntactically and semantically in order to show the differe
 
 \subsubsection*{Grammar declaration} 
 The abstract syntax of the expression language is given by the following grammar:
-
+%
+%\vspace{-0.1in}
 <  expr    ->  ival
 <  expr    ->  vname
 <  expr    ->  expr_l + expr_r
+%
+where |ival| and |vname| are terminals corresponding to integer values and
+variable names (given by strings), respectively. Both are said to be
+\emph{children} in their productions. The third production has two children
+of type |expr|, which we name with an index to refer them unambiguously.
 
-%To keep it simple, we cannot bind variables with this constructs for now. Let us
-%assume that they actually denote some value clear from a given context. For
-%example, a concrete expression $x + 5 + 2$, evaluates to $9$ given the context
-%$\{x = 2\}$.
-
-%We have introduced one non-terminal, called |expr|, with three productions.
-
-\noindent
- where |ival| and |vname| are terminals corresponding to integer values and
- variable names (given by strings), respectively. Both are said to be
- \emph{children} in their productions. The third production has two children
- of type |expr|, which we name with an index to refer them unambiguously.
-
-In our EDSL this grammar is declared as follows.
-First, we declare the non-terminal for our language:
-
+\begin{figure}
+\hline
 > type Nt_Expr = 'NT "Expr"
 > expr = Label @ Nt_Expr
+>
+> type P_Add = 'Prd "Add" Nt_Expr
+> add = Label @ P_Add
+> type P_Val = 'Prd "Val" Nt_Expr
+> val = Label @ P_Val
+> type P_Var = 'Prd "Var" Nt_Expr
+> var = Label @ P_Var
+>
+> leftAdd   = Label @ ('Chi "leftAdd"   P_Add  ('Left Nt_Expr))
+> rightAdd  = Label @ ('Chi "rightAdd"  P_Add  ('Left Nt_Expr))
+> ival      = Label @ ('Chi "ival"   P_Val  ('Right ('T Int)))
+> vname     = Label @ ('Chi "vname"  P_Var  ('Right ('T String)))
+\hline
+\vspace{-0.1in}
+\caption{Grammar declaration}\label{fig:gram}
+\end{figure}
 
-\noindent
+In our EDSL this grammar is declared as shown in Figure~\ref{fig:gram}.
+First, we declare the non-terminal |expr| for our language.
 Non-terminals are types. They are built by a promoted algebraic datatype
 constructor |'NT| (we say, an algebraic datakind) applied to a name (|"Expr"|).
 Names are types of kind |Symbol|, the kind of promoted string symbols in modern
@@ -75,27 +84,10 @@ of the usual |Proxy|. We use the \texttt{TypeApplications} extension of GHC to
 associate the type information to the label. The ``@@'' symbol above is a visible
 type application.
 
- Productions are also identified by a name, and are related to a non-terminal,
- once again using algebraic datakinds.
-
-> type P_Add = 'Prd "Add" Nt_Expr
-> add = Label @ P_Add
-> type P_Val = 'Prd "Val" Nt_Expr
-> val = Label @ P_Val
-> type P_Var = 'Prd "Var" Nt_Expr
-> var = Label @ P_Var
-
+Productions |add|, |val| and |var|, are also identified by a name, and are related to a non-terminal, once again using algebraic datakinds.
 
 The last ingredient of the grammar declaration is given by the introduction of
-the children that occur in the productions.
-
-> leftAdd   = Label @ ('Chi "leftAdd"   P_Add  ('Left Nt_Expr))
-> rightAdd  = Label @ ('Chi "rightAdd"  P_Add  ('Left Nt_Expr))
-> ival      = Label @ ('Chi "ival"   P_Val  ('Right ('T Int)))
-> vname     = Label @ ('Chi "vname"  P_Var  ('Right ('T String)))
-
-
-\noindent
+the children that occur in the productions (|leftAdd|, |rightAdd|, |ival| and |vname|).
 Each child has a name, is tied to a production and can be either a non-terminal
 or a terminal, in the latter case we include the type of values it
 denotes (e.g. |('T Int)|).
@@ -104,24 +96,20 @@ Summing up the information just provided, we can see that our grammar declaratio
 
 %The abstract syntax tree for this grammar can be implemented in Haskell,
 %for example, with the datatype:
-
+%\vspace{-0.1in}
 > data Expr  =  Val  Int |  Var  String |  Add  Expr Expr
 %
 %if False
 >       deriving Show
 %endif
 %
-%where the previous example expression is represented with the value:
-
-%|Add (Add (Var "x") (Val 5)) (Val 2)|.
-
 plus a set of names used to name explicitly each component.
 An important thing
 to notice is that the grammar representation is independent of this datatype.
 
 
 We provide Template Haskell~\cite{Sheard:2002:TMH:636517.636528} functions that
-can be used to generate all the \emph{boilerplate} defined above, as
+can be used to generate all the \emph{boilerplate} defined in Figure~\ref{fig:gram}, as
 follows:
 
 > $(addNont "Expr")
@@ -129,10 +117,11 @@ follows:
 > $(addProd "Add" ''Nt_Expr  [  ("leftAdd",   NonTer ''Nt_Expr),
 >                               ("rightAdd",  NonTer ''Nt_Expr)])
 
-Notice that the use of Template Haskell is purely optional, \AspectAG\ can be
-used as an EDSL with neither preprocessing nor postprocessing of the source code.
+%Notice that the use of Template Haskell is purely optional, \AspectAG\ can be
+%used as an EDSL with neither preprocessing nor postprocessing of the source code.
 
 \begin{figure*}
+\hline
 \numberson
 > eval  = Label @ ('Att "eval" Int)               {-"\label{line:eval} "-}
 > env   = Label @ ('Att "env"  (Map String Int))  {-"\label{line:env} "-}
@@ -156,6 +145,8 @@ used as an EDSL with neither preprocessing nor postprocessing of the source code
 > evalExpr e m  =  sem_Expr asp e rootAtt #. eval {-"\label{line:evalExpr} "-}
 >               where rootAtt = env =. m .*. emptyAtt
 \numbersoff
+\hline
+
 \vspace{-0.1in}
 \caption{Evaluation Semantics}\label{fig:eval}
 \end{figure*}
@@ -227,8 +218,8 @@ definition is wrong since the rules for |env| could be defined later (as we will
 do), or perhaps in another module! If we actually use |aspEval| calling it on a
 semantic function there will be a type error but it will be raised on the
 semantic function application. Showing the trace is helpful in those scenarios
-as we will see in Section~\ref{sec:errors}. Users are encouraged to use tags,
-but they are optional.
+as we will see in Section~\ref{sec:errors}.
+%Users are encouraged to use tags, but they are optional.
 
 For the definition of the inherited attribute |env| we use the |inhdefM| combinator, which
 takes an attribute name, a production (where the rule is being defined), and a
@@ -254,8 +245,7 @@ datatype, we can encode a generic
 > sem_Expr asp (Var v)    = knitAspect var asp
 >                 $    vname  .=. sem_Lit v          .*.  EmptyRec
 %
-Again this definition could be derived automatically using Template Haskell with a
-splice:
+Again, this code can be derived automatically using Template Haskell:
 
 > $(mkSemFunc ''Nt_Expr)
 
@@ -460,7 +450,7 @@ Error: Non-Terminal Expr::Production Add
 trace: syndef( Attribute eval:Int
              , Non-Terminal Expr::Production Add)
 \end{Verbatim}
-%
+%if False
 Similarly, if we try to treat a terminal as a non-terminal,
 changing for example Line~\ref{line:val_eval} by the following:
 < val_eval  =  syndefM eval val  $ at ival eval
@@ -477,7 +467,7 @@ Error: Non-Terminal Expr::Production Val
 trace: syndef( Attribute eval:Int
              , Non-Terminal Expr::Production Val)
 \end{Verbatim}
-
+%endif
 
 Now suppose we have an attribute |foo|, of type |Int|,
 but without any rules defining its computation,

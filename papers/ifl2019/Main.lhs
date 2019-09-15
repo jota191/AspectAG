@@ -26,7 +26,7 @@
 % provided to you when you complete the rights form. These commands are for a
 % PROCEEDINGS abstract or paper.
 \acmConference[IFL'19]{International Symposium on Implementation and Application
-  of Functional Languages}{September 2020}{Singapore} \acmYear{2020}
+  of Functional Languages}{September 2019}{Singapore} \acmYear{2020}
 \copyrightyear{2020}
 
 % These commands are for a JOURNAL article. \setcopyright{acmcopyright}
@@ -143,7 +143,8 @@ AspectAG is a domain specific language embedded in Haskell to represent modular
 Attribute Grammars. In AspectAG attribute grammar fragments can be defined
 independently (even in separate modules) and then combined in a safe way. This
 flexibility is achieved through the use of extensible records, which are
-implemented as heterogeneous lists by using type-level programming techniques.
+implemented %as heterogeneous lists by
+using type-level programming techniques.
 %; i.e. multi-parameter type classes and functional dependencies.
 
 Type-level programming support has remarkably evolved in Haskell since the

@@ -97,6 +97,7 @@ where
 >     -> (Proxy ctx -> (Fam prd chi par) -> a)
 > def = curry . runReader
 
+With a |Reader| we avoid to explicitly manipulate the input family.
 We defined the monadic function |at| used to sugarize definitions:
 > class At pos att m  where
 >  type ResAt pos att m

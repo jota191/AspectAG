@@ -267,7 +267,7 @@ not inhabited, and puts the |Attribution| wrapper.
 >   = Attribution v
 
 %Again pattern synonyms are defined.
-Examples of the types Attribution labels of the example are:
+Examples of types of Attribution labels of the example are:
 < rightAdd  :: Label ('Chi "rightAdd"  P_Add  ('Left Nt_Expr))
 < ival      :: Label ('Chi "ival"   P_Val  ('Right ('T Int)))
 
@@ -524,5 +524,5 @@ readable error message, or to the trivial (Top) constraint otherwise.
 >                  (Require (OpError  (Text "" :<>: ShowT t1
 >                                     :<>: Text " /= " :<>: ShowT t2)) ctx)
 
-This is the error message that appears in \ref{sec:errexp} and in most of the examples of \ref{sec:errref},
+This is the kind of error message that appears in \ref{sec:errexp} and in most of the examples of \ref{sec:errref},
 where the actual type is not the expected.

@@ -26,7 +26,7 @@
 %% \cite{ExpressionProblem}. Attribute grammars offer an aproach to solve this
 %% issue.
 
-Attribute Grammars (AGs, for short) were originally introduced to describe
+Attribute Grammars (AGs) were originally introduced to describe
 semantics for context free languages \cite{Knuth68semanticsof}. Given a context-free grammar,
 attributes are associated to each of its productions. Attribute values are computed
 in every node of the abstract syntax tree,
@@ -58,7 +58,7 @@ to ensure well-formedness of AGs at compile time.
 An important drawback of EDSLs in general, and of \AspectAG\ in particular,
 is that they are simply embedded libraries and when type errors occur they usually do not
 deliver error messages that refer to domain terms, leaking in addition implementation details in those messages. This breaks all abstraction mechanisms that may have taken into account in building the library.
-The problem is even worse if we use type level programming techniques to
+The problem is even worse if we use type-level programming techniques to
 implement the DSL.
 %
 %Type errors
@@ -66,7 +66,7 @@ implement the DSL.
 %can be easily illformed.
 %For instance, for the grammar implementator it is a
 %common mistake to try to use attributes that are not defined in some production.
-In the specific case of the original \AspectAG\ library, the type level
+In the specific case of the original \AspectAG\ library, the type-level
 programming techniques that were used were really ad-hoc, exploiting extensions
 originally introduced for other uses. In particular, at type level, programming
 was essentialy untyped.
@@ -76,7 +76,7 @@ More recent versions of GHC provide extensions to the type system to support a m
 %sort-of dependent types in a more comfortable way.
 Notably {\tt
   TypeFamilies}~\cite{Chakravarty:2005:ATS:1090189.1086397, Sulzmann:2007:SFT:1190315.1190324}, to
-define functions at type-level, {\tt
+define functions at type level, {\tt
   DataKinds}~\cite{Yorgey:2012:GHP:2103786.2103795}, implementing data
 promotion, {\tt PolyKinds} providing kind polymorphism, {\tt
   KindSignatures} %~\cite{ghcman}
@@ -86,8 +86,8 @@ application at type level.
 %With recent additions to GHC this issues can be tackled.
 By using such extensions, we propose a reworked
 version of \AspectAG\footnote{\url{http://hackage.haskell.org/package/AspectAG}}
-that tackles some of its most important weaknesses.
-These type level programming techniques allowed us to do
+that tackles the previously mentioned drawbacks. %some of its most important weaknesses.
+These type-level programming techniques allowed us to do
 that in a strongly typed fashion at type level (we say, strongly kinded).
 We also define a framework to manipulate
 type errors, keeping track of the context of the possible
