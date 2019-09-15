@@ -97,8 +97,7 @@ record structure:
 > data Rec (c :: k) (r :: [(k', k'')]) :: Type where
 >   EmptyRec  ::  Rec c '[]
 >   ConsRec   ::  LabelSet ( '(l,v) ': r)
->             =>  TagField c l v -> Rec c r
->             ->  Rec c ( '(l, v) ': r)
+>             =>  TagField c l v -> Rec c r ->  Rec c ( '(l, v) ': r)
 
 
 A record is indexed by a parameter |c|, pointing out which instance of record
@@ -118,12 +117,10 @@ can use its index as the index that represents the field.
 > data TagField (c :: k) (l :: k') (v :: k'') where
 >   TagField  ::  Label c -> Label l -> WrapField c v
 >             ->  TagField c l v
-%
-where labels are proxies
-
+>
 > data Label (l :: k) = Label
 
-Notice that all the labels in Section~\ref{sec:example} are defined using the constructor |Label|,
+Labels are proxies, notice that all the labels in Section~\ref{sec:example} are defined using the constructor |Label|,
 varying the phantom type.
 %The |TagField| constructor uses |Label| arguments to build instances because we
 %usually have them avaiable at term level, as we saw in the example of Section~\ref{sec:example},
@@ -171,7 +168,7 @@ Boolean type family seems the way to go.
 %
 where |(==)| is the type level equality operator (|Data.Type.Equality|), and
 |And3| a type family computing the conjunction of three boolean arguments. Then we
-can encode the predicate as the following constraint.
+can encode the predicate as the constraint:
 
 > type LabelSet r = LabelSetF r ~ True
 
@@ -200,24 +197,20 @@ We give some examples of record instances, that we use in our implementation of 
 
 \subsubsection*{Example: Attribution}
 
-Attributions are mappings from attribute names to values. To make an index we
-define an empty datatype:
-
-> data AttReco
-
-%In the definition of |Rec| the |c| parameter is polykinded. We use the
-%kind |Type| for indexes in our instances since |Type| is an extensible kind.
-
-Attributions are records built using the |AttReco| index. We define a descriptive name
-and fix the polymorphic kinds since Attribution labels are of kind |Att|, and
+Attributions are mappings from attribute names to values.
+%To make an index we define an empty datatype:
+We instance |Rec| with an empty datatype |AttReco| as index. We define a descriptive name
+and fix the polymorphic kinds, since Attribution labels are of kind |Att|, and
 fields of kind |Type|.
 
+> data AttReco
+>
 > type Attribution (attr :: [(Att, Type)]) = Rec AttReco attr
 %
 The label |add|, with type |Label ('Prd "Add" Nt_Expr)|, 
 of Section~\ref{sec:example} is an example of a valid |Attribution| label.
 
-\noindent We do not need to actually wrap the fields since they are simply values:
+\noindent We do not need to wrap the fields since they are simply values:
 %
 > type instance  WrapField AttReco  (v :: Type) = v
 %
@@ -231,9 +224,10 @@ but somewhat incompatible with abstract datatypes.
 Hiding constructors of |Rec| is nice but we lose pattern matching.
 Fortunately, GHC Haskell implements pattern synonyms.
 %endif
-For each record instance we can define specialized versions of the constructors
+%For each record instance
+We can define specialized versions of the constructors
 |TagField|, |EmptyRec| and |ConsAtt| by using GHC's pattern synonyms~\cite{pattern-synonyms}.
-In the case of attributions this can be coded as follows:
+%In the case of attributions this can be coded as follows:
 
 > pattern  Attribute     ::  v -> TagField AttReco l v
 > pattern  Attribute v   =   TagField Label Label v
@@ -246,9 +240,7 @@ In the case of attributions this can be coded as follows:
 
 
 \subsubsection*{Example: Children Records}
-Once again, we build an index:
-
-> data ChiReco (prd :: Prod)
+%Once again, we build an index:
 
 A child is associated to a production. Our instance has itself an index with
 this information. Recall that |Prod| has a name for the production but also a
@@ -257,6 +249,8 @@ on a child and used to check well formedness where it is used.
 In this case the labels are of kind |Child|, and the values have a kind that
 represents the list of associations attribute-value; i.e. an attribution.
 
+> data ChiReco (prd :: Prod)
+>
 > type ChAttsRec prd (chs :: [(Child,[(Att,Type)])])
 >    = Rec (ChiReco prd) chs
 %

@@ -269,7 +269,7 @@ the attribute |eval| in the resulting attribution.
 \subsection{Semantic Extension: Adding and Modifying attributes}
 
 Our approach allows the users to define alternative semantics or extending
-already defined ones in a simple way. For instance suppose that we want to
+already defined ones in a simple and modular way. For instance suppose that we want to
 collect the integral literals occurring in an expression. We define an attribute
 |lits|:
 
@@ -283,11 +283,9 @@ and the rules to compute it. This time we combine them on the fly:
 >          .+:  syndefM lits var  (pure [])
 >          .+:  emptyAspect
 
-The function
-
 > litsExpr e = sem_Expr aspLits e emptyAtt #. lits
 
-returns a list with the literals occurring in an expression from left to right.
+The function |litsExpr| returns a list with the literals occurring in an expression from left to right.
 
 It is also possible to modify a semantics in a modular way.
 For instance, to get the literals in the reverse order
@@ -303,11 +301,11 @@ variants of the combinators |syndefM| and |inhdefM| modify an existing attribute
 instead of defining a new one, overriding the previous semantic function
 definition.
 
-\subsection{Grammar extension: Adding Productions}
+\subsection{Grammar Extension: Adding Productions}
 
 
 % To completely tackle the expression problem we must be able to extend our grammar.
-Now let's expand the grammar with a new production to bind local definitions:
+Now let us expand the grammar with a new production to bind local definitions:
 
 < expr     -> let vname = expr_d in expr_i
 
@@ -492,17 +490,17 @@ trace: syndef( Attribute eval:Int
 Notice that in this case the trace guides us to the place where the unsatisfied
 rule is defined: the synthesized attribute |eval| at the production |Add|
 (Line~\ref{line:add_eval}), into the aspect |eval| (Line~\ref{line:aspEval}). In
-previous versions of \AspectAG\ this kind of error was detected, but the long
+previous versions of \AspectAG\ this kind of error was detected, but generating a long
 and noisy message referred to a missing instance of the class used to
 implement look up in records. The message was not related to our domain an leaked
-implementation information. The user should not know that records where used or
-how lookup operator was implemented.
+implementation information.
+%The user should not know that records where used or
+%how lookup operator was implemented.
 
 
 \subsubsection{Duplication of Fields}\label{sec:errdup}
 An attribute should not have more than one rule to compute it in a given
 production. Also, children are unique.
-
 For instance this kind of error could be introduced if |add_eval| is defined
 twice when defining |aspEval| at Line~\ref{line:aspEval}.
 %
