@@ -358,7 +358,9 @@ Thus, the function that combines two tagged aspects is:
 
 \subsection{Semantic functions}
 In Section~\ref{sec:example} we show how |sem_Expr| is defined. It takes an aspect, an
-abstract syntax tree (i.e. an |Expr|) and builds a function from the synthesized
+%abstract syntax tree (i.e. an |Expr|)
+AST,
+and builds a function from the synthesized
 attributes to the inherited attributes. More in general, for the domain
 associated with each non-terminal we take the function mapping its inherited to
 its synthesized attributes. The function |knitAspect| is a wrapper to add
@@ -409,8 +411,9 @@ DBLP:conf/gcse/MoorPW99}.
 \subsection{Terminals}
 
 A production specifies how a nonterminal symbol can be rewritten. It can rewrite
-to a mix of terminal and nonterminal symbols. From the datatype perspective, a
-constructor can contain recursive and nonrecursive positions. Usually, in
+to a mix of terminal and nonterminal symbols.
+%From the datatype perspective, a constructor can contain recursive and nonrecursive positions.
+Usually, in
 attribute grammar systems a terminal has only one attribute: itself. In
 \AspectAG\ all children are put in a record, each position containing an
 attribution. In previous versions of \AspectAG\ terminals where directly put as a
@@ -449,4 +452,3 @@ semantic functions of the children can be coded in a polymorphic way.
 All of them are labelled with the attribute named |"Term"|, accesible using
 the |lit| expression, and the semantic function simply wraps a value in an
 attribution.
-

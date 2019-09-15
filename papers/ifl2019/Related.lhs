@@ -5,7 +5,7 @@
 
 
 There is a significant number of AG implementations. Some of them are implemented
-as standalone compilers or generators, like LRC \cite{Saraiva02}, UUAGC
+as standalone compilers or generators like LRC \cite{Saraiva02}, UUAGC
 \cite{uuagc}, LISA \cite{lisa}, JastAdd \cite{jastadd} and Silver \cite{silver},
 and others are embbeded in languages like Scala (e.g. Kiama \cite{kiama}) or Haskell
 (\cite{DBLP:conf/gcse/MoorPW99, Moor99first-classattribute,
@@ -17,8 +17,8 @@ This work is based on \AspectAG\ \cite{Viera:2009:AGF:1596550.1596586}, where
 extensible records are used to implement a strongly typed first class AG DSL
 embedded in Haskell. We preserve its main characteristics, i.e. safety and
 modularity, tackling in turn its main drawbacks. We use new Haskell type level
-programming techniques to obtain a more clear design and implementation. Also,
-we push towards the direction of type safety making types strongly kinded.
+programming techniques to obtain a more clear design and implementation.
+%We push towards the direction of type safety making types strongly kinded.
 
 %First class implementations of Attibute grammars in Haskell were introduced by
 %Moor \cite{Moor99first-classattribute} with a lightweight approach missing from

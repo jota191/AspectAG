@@ -51,6 +51,7 @@
 
 \usepackage { amssymb }
 \usepackage { hyperref }
+\usepackage { svg }
 
 \setlength{\mathindent}{0.3cm}
 

@@ -38,6 +38,7 @@
 %format val_eval   = "\Varid{val_{eval}}"
 %format sem_Lit    = "\Varid{sem_{Lit}}"
 
+
 %format ival' = "\Varid{ival}"
 %format vname' = "\Varid{vname}"
 %format leftAdd' = "\Varid{leftAdd}"
@@ -69,3 +70,6 @@
 %format 'Right = "\tk\!\Varid{Right}"
 %format 'Text = "\tk\!\Varid{Text}"
 %format 'T = "\tk\!\Varid{T}"
+
+%format ''Nt_Expr   = "\tk\tk\!\Varid{NT_{Expr}}"
+%format ''Int   = "\tk\tk\!\Varid{Int}"
