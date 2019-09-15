@@ -406,15 +406,15 @@ trace: syndef( Attribute eval:Int
 expressing that we provided a |Maybe Int| where an |Int| was expected. There is
 also some \verb"trace" information, showing the context where the error appears.
 In this case it is not really necessary since the source of the error and the
-place where it is detected are the same. But we will see later in this
-section some examples where this information will guide us to the possible
-source of an error that is produced in a later stage. This kind of error looks
-similar to the previous one from the user's perspective, but it is very
-different to us. It requires implementation work. In previous versions of
-\AspectAG\ this kind of error could not be detected, since attributes had no
-information about their type. Probably the program would fail anyway, possibly
-with an error like the one in \ref{sec:err1} somewhere else. Then the programmer
-should track where the error was actually introduced.
+place where it is detected are the same. But we will see later in this section
+some examples where this information will guide us to the possible source of an
+error that is produced in a later stage. This kind of error looks similar to the
+previous one from the user's perspective, but it is very different to us. It
+requires implementation work. In previous versions of \AspectAG\ this kind of
+error could not be detected, since attributes had no information about their
+type. Probably the program would fail anyway, possibly with an error like the
+one in \ref{sec:err1} somewhere else. Then the programmer should track where the
+error was actually introduced.
 
 
 
@@ -534,5 +534,6 @@ trace: aspect eval
 This is another case where the trace is helpful in the task of finding the
 source of an error. The trace information says that the duplication was
 generated when we defined the aspect |eval|; i.e. Line~\ref{line:aspEval}. As in
-\ref{sec:err2} previous \AspectAG\ implementations produced a type error in this
+\ref{sec:errref} previous \AspectAG\ implementations produced a type error in this
 scenario, but it was difficult to read, and it leaked implementation details.
+
