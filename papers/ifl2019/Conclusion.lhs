@@ -36,7 +36,7 @@ be shallowed since the host language provides type -and kind- polymorphism.
 
 We developed a methodology to manage error message generation using
 |Requirements|. We think this idea can be applied similarly in other EDSL
-implementations and deserves to be explored.
+implementations and it deserves to be explored.
 
 Working on performance optimization is left for future work.
 
