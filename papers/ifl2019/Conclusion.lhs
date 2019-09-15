@@ -24,6 +24,7 @@ macros, or to use the power of higher order to generate grammars. In addition to
 the examples we have coded during the development, the library is being tested with
 success in the implementation of a real compiler of a non trivial functional
 language.
+Working on performance optimization, to alleviate the performance overhead, is left for future work.
 
 To get clear error messages we had to deal with some tradeoffs. It requires
 careful management of context information annotated in types, and explicit term
@@ -38,5 +39,5 @@ We developed a methodology to manage error message generation using
 |Requirements|. We think this idea can be applied similarly in other EDSL
 implementations and it deserves to be explored.
 
-Working on performance optimization is left for future work.
+
 
