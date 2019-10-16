@@ -49,7 +49,7 @@ asp_ival
  .+:  emptyAspect
 
 asp_repmin
-  = asp_smin .:+: asp_sres .:+: asp_ival
+  = asp_smin .:+: asp_ival .:+: asp_sres
 
 
 examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
@@ -62,11 +62,13 @@ examplet =    (Node (Node (Node (Leaf 3) (Leaf 4))
 
 
 exampleT 0 = examplet
-exampleT n = Node (exampleT (n-1)) (exampleT (n-1))
+exampleT n = Node (examplet) (exampleT (n-1))
 
 repmin t = sem_Root asp_repmin (Root t) emptyAtt #. sres
+
+minT t = sem_Tree asp_smin t emptyAtt #. smin
 
 main
   = getArgs >>= \args ->
     let n = (read :: String -> Int) (args!!0) in
-    print $ length $ show $ repmin $ exampleT n
+    print $ minT $ repmin $ exampleT n
