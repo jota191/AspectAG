@@ -13,11 +13,12 @@ main
   = plotPaths
       [Key (Just [])
       -- ,YRange (x,y)
-      ,LineStyle 3 [PointSize 0.5]
-      ,XLabel "grammar size"
+      ,LineStyle 1 [PointSize 0.5]
+      ,XLabel "tree size (x 50k nodes)"
       ,YLabel "time(ms)"
-      ,Title "AspectAG Benchmark"
+ --     ,Title "AspectAG Benchmark"
       ,Custom "grid" []
       , terminal (SVG.cons ("plot.svg"))
-      ,Custom "style line" ["3","lc","3","lw","3"]
-      ]  [old,new]
+      -- ,Custom "style line" ["3","lt","9"]
+      -- , Custom "style line" ["3", "lt", "2", "lc"]
+      ]  [old,[],[],[],new]
