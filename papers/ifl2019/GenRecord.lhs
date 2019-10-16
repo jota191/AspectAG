@@ -284,6 +284,7 @@ operation. The function |req| also uses some context information |ctx|  (i.e. th
 
 We collect the constraints imposed to a |Require| instance
 in |RequireR|:
+
 > type RequireR (op :: Type ) (ctx:: [ErrorMessage]) (res :: Type)
 >     = (Require op ctx, ReqR op ~ res)
 

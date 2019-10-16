@@ -187,6 +187,7 @@ useful to solve the expression problem, as we shall discuss later.
 \caption{Evaluation Semantics}\label{fig:eval}
 \end{figure*}
 
+
 Attribute grammars decorate the productions of context-free grammars with
 \emph{attribute} computations, in order to provide semantics to such grammars.
 In our example the semantics consist on the denotation of the expressions. To

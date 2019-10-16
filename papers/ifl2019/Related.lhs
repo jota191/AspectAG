@@ -21,7 +21,7 @@ characteristics.
 
 \begin{figure}[t]
   \centering
-%  \includesvg[width=0.4\textwidth]{./plot/bench}
+%  \includesvg[width=0.35\textwidth]{./plot/bench}
   \includegraphics[width=0.4\textwidth]{./plot/bench}
 
   \vspace{-0.2in}
