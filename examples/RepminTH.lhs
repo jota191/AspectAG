@@ -80,7 +80,8 @@ Semantic functions and a datatype by hand (for now)
 >  .+:  emptyAspect
 
 > asp_ival
->  =    inh ival p_Root ch_tree (at ch_tree smin)
+>  = traceAspect _
+>   $   inh ival p_Root ch_tree (at ch_tree smin)
 >  .+:  inh ival p_Node ch_l (at lhs ival)
 >  .+:  inh ival p_Node ch_r (at lhs ival)
 >  .+:  emptyAspect

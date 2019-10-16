@@ -51,7 +51,7 @@ env  = Label @ ('Att "env"  (Map String Int))
 
 add_eval  =  syndefM eval add  $ (+) <$> at leftAdd eval <*> at rightAdd eval
 --add_eval'' = uses eval (add .:. KNil) (expr .:. eL) ((+) @ Int) 0
-add_eval' = useadd add
+--add_eval' = useadd add
 --        .:+: use eval mul (expr .:. eL) ((*) @ Int) 1
 
 useadd prd = use eval prd (expr .:. eL) ((+) @ Int) 0
@@ -65,7 +65,7 @@ aspEval   =  traceAspect (Proxy @ ('Text "eval")) $
           add_eval .+: val_eval .+: var_eval .+: emptyAspect
 
 aspEval'  =  traceAspect (Proxy @ ('Text "eval")) $
-          val_eval .+: var_eval .+: add_eval'
+          val_eval .+: var_eval .+: add_eval
 
 add_leftAdd_env  = inh env add leftAdd  $ at lhs env
 add_rightAdd_env = inh env add rightAdd $ at lhs env
