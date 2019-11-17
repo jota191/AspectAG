@@ -80,8 +80,7 @@ Semantic functions and a datatype by hand (for now)
 >  .+:  emptyAspect
 
 > asp_ival
->  = traceAspect _
->   $   inh ival p_Root ch_tree (at ch_tree smin)
+>  =    inh ival p_Root ch_tree (at ch_tree smin)
 >  .+:  inh ival p_Node ch_l (at lhs ival)
 >  .+:  inh ival p_Node ch_r (at lhs ival)
 >  .+:  emptyAspect
@@ -115,4 +114,4 @@ Another way to build  semantic functions:
 > semT asp (Leaf i)    = semTree_Leaf asp (sem_Lit i)
 
 
-> repmin' t = semR asp_repmin (Root t) emptyAtt #. sres
+> repmin' t = sem_Root asp_repmin (Root t) emptyAtt #. sres
