@@ -181,6 +181,7 @@ messages.
 \maketitle
 
 
+\newcommand{\tk}{\lq}
 \newcommand{\AspectAG}{\texttt{AspectAG}}
 
 \numbersoff
