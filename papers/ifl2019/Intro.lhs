@@ -26,7 +26,7 @@
 %% \cite{ExpressionProblem}. Attribute grammars offer an aproach to solve this
 %% issue.
 
-Attribute Grammars (AGs) were originally introduced to describe
+Attribute grammars (AGs) were originally introduced to describe
 semantics for context free languages \cite{Knuth68semanticsof}. Given a context-free grammar,
 attributes are associated to each of its productions. Attribute values are computed
 in every node of the abstract syntax tree,

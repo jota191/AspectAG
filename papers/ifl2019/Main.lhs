@@ -67,7 +67,7 @@
 % shared contribution to the research.
 
 %\numberofauthors{3}
-\author{Juan García Garland}
+\author{Juan García-Garland}
 \email{jpgarcia@@fing.edu.uy}
 \affiliation{%
   \institution{Instituto de Computación\\Universidad de la República}
@@ -141,7 +141,7 @@ Aenean gravida dolor nec ex lacinia, non tempus odio iaculis. }
 % The abstract is a short summary of the work to be presented in the article.
 \begin{abstract}
 AspectAG is a domain specific language embedded in Haskell to represent modular
-Attribute Grammars. In AspectAG attribute grammar fragments can be defined
+attribute grammars. In AspectAG attribute grammar fragments can be defined
 independently (even in separate modules) and then combined in a safe way. This
 flexibility is achieved through the use of extensible records, which are
 implemented %as heterogeneous lists by
@@ -180,14 +180,6 @@ messages.
 % builds the first part of the formatted document.
 \maketitle
 
-
-\newcommand{\tk}{\lq}
-\newcommand{\todo}[1]{\fbox{
-  \parbox{\textwidth/3}{TODO: \\ #1}}}
-\newcommand{\note}[1]{\fbox{
-  \parbox{\textwidth/3}{NOTE: \\ #1}}}
-\newcommand{\marcos}[1]{\fbox{
-  \parbox{\textwidth/3}{Marcos: \\ #1}}}
 
 \newcommand{\AspectAG}{\texttt{AspectAG}}
 
