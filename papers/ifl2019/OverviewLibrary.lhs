@@ -53,7 +53,7 @@ variable names (given by strings), respectively. Both are said to be
 of type |expr|, which we name with an index to refer them unambiguously.
 
 \begin{figure}
-\hline
+\hrule
 > type Nt_Expr = 'NT "Expr"
 > expr = Label @ Nt_Expr
 >
@@ -68,7 +68,7 @@ of type |expr|, which we name with an index to refer them unambiguously.
 > rightAdd  = Label @ ('Chi "rightAdd"  P_Add  ('Left Nt_Expr))
 > ival      = Label @ ('Chi "ival"   P_Val  ('Right ('T Int)))
 > vname     = Label @ ('Chi "vname"  P_Var  ('Right ('T String)))
-\hline
+\hrule
 \vspace{-0.1in}
 \caption{Grammar declaration}\label{fig:gram}
 \end{figure}
@@ -121,7 +121,7 @@ follows:
 %used as an EDSL with neither preprocessing nor postprocessing of the source code.
 
 \begin{figure*}
-\hline
+\hrule
 \numberson
 > eval  = Label @ ('Att "eval" Int)               {-"\label{line:eval} "-}
 > env   = Label @ ('Att "env"  (Map String Int))  {-"\label{line:env} "-}
@@ -145,7 +145,7 @@ follows:
 > evalExpr e m  =  sem_Expr asp e rootAtt #. eval {-"\label{line:evalExpr} "-}
 >               where rootAtt = env =. m .*. emptyAtt
 \numbersoff
-\hline
+\hrule
 
 \vspace{-0.1in}
 \caption{Evaluation Semantics}\label{fig:eval}

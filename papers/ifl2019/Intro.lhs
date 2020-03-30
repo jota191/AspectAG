@@ -27,9 +27,9 @@
 %% issue.
 
 Attribute grammars (AGs) were originally introduced to describe
-semantics for context free languages \cite{Knuth68semanticsof}. Given a context-free grammar,
+semantics for context-free languages \cite{Knuth68semanticsof}. Given a context-free grammar,
 attributes are associated to each of its productions. Attribute values are computed
-in every node of the abstract syntax tree,
+in every node of the abstract syntax tree
 according to semantic rules that are expressed in terms of the attribute values
 of the children and the parent. Attributes are classified in at least two sets: synthesized
 attributes (where information flows bottom up) and inherited attibutes (where it
@@ -50,9 +50,9 @@ programming language semantics, but as a general purpose programming paradigm.
 %\AspectAG\ is a Haskell EDSL (Embedded Domain Specific Language) implementing first class attribute grammars,
 %introduced by Viera \emph{et al} in 2009 \cite{Viera:2009:AGF:1596550.1596586}.
 
-\AspectAG\ is a Haskell EDSL (Embedded Domain Specific Language), introduced by Viera \emph{et al}~\cite{Viera:2009:AGF:1596550.1596586}, that implements first class AGs.
+\AspectAG\ is a Haskell EDSL (Embedded Domain Specific Language), introduced by Viera \emph{et al}~\cite{Viera:2009:AGF:1596550.1596586} that implements first class AGs.
 It uses extensible polymorphic records and predicates encoded using old fashioned type
-level programming features, such as Multi Parameter Typeclasses \cite{type-classes-an-exploration-of-the-design-space} and Functional Dependencies \cite{DBLP:conf/esop/Jones00},
+level programming features, such as Multi Parameter Typeclasses \cite{type-classes-an-exploration-of-the-design-space} and Functional Dependencies \cite{DBLP:conf/esop/Jones00}
 to ensure well-formedness of AGs at compile time.
 
 An important drawback of EDSLs in general, and of \AspectAG\ in particular,
@@ -76,11 +76,11 @@ More recent versions of GHC provide extensions to the type system to support a m
 %sort-of dependent types in a more comfortable way.
 Notably {\tt
   TypeFamilies}~\cite{Chakravarty:2005:ATS:1090189.1086397, Sulzmann:2007:SFT:1190315.1190324}, to
-define functions at type level, {\tt
-  DataKinds}~\cite{Yorgey:2012:GHP:2103786.2103795}, implementing data
-promotion, {\tt PolyKinds} providing kind polymorphism, {\tt
+define functions at type level; {\tt
+  DataKinds}~\cite{Yorgey:2012:GHP:2103786.2103795} implementing data
+promotion; {\tt PolyKinds}, providing kind polymorphism; {\tt
   KindSignatures} %~\cite{ghcman}
-to document and deambiguate kinds, or
+to document and deambiguate kinds; or
 {\tt TypeApplications}~\cite{conf/esop/EisenbergWA16} to provide visible
 application at type level. 
 %With recent additions to GHC this issues can be tackled.

@@ -174,7 +174,7 @@ messages.
 
 % Keywords. The author(s) should pick words that accurately describe the work
 % being presented. Separate the keywords with commas.
-\keywords{Attribute Grammars, EDSL, Type Level Programming, Haskell}
+\keywords{Attribute Grammars, EDSL, Type-level Programming, Haskell}
 
 % This command processes the author and affiliation and title information and
 % builds the first part of the formatted document.
