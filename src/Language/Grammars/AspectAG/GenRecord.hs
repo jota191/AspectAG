@@ -91,13 +91,12 @@ data OpLookup (c :: Type)
               (r  :: [(k, k')]) :: Type where
   OpLookup :: Label l -> Rec c r -> OpLookup c l r
 
+
 data OpLookup' (b  :: Bool)
                (c  :: Type)
                (l  :: k)
                (r  :: [(k, k')]) :: Type where
   OpLookup' :: Proxy b -> Label l -> Rec c r -> OpLookup' b c l r
-
-
 
 
 instance (Require (OpLookup' (l == l') c l ( '(l', v) ': r)) ctx)
