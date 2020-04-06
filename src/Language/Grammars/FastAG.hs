@@ -44,7 +44,7 @@ import Language.Grammars.AspectAG.HList
 import Data.Kind
 import Language.Grammars.AspectAG.TPrelude
 import Data.Proxy
-
+import Data.Ord
 
 import Language.Grammars.AspectAG.RecordInstances
 import Language.Grammars.AspectAG.Require
@@ -199,7 +199,7 @@ instance
   req ctx (OpComAsp al (ConsRec prdrule ar))
    = req ctx (OpComRA (untagField prdrule)
                       (req ctx (OpComAsp al ar)))
-
+ 
 
 data OpComRA  (ctx  :: [ErrorMessage])
               (prd  :: Prod)
@@ -213,7 +213,7 @@ data OpComRA  (ctx  :: [ErrorMessage])
   OpComRA :: CRule ctx prd sc ip ic sp ic' sp'
           -> Aspect a -> OpComRA ctx prd sc ip ic sp ic' sp' a
 
-data OpComRA' (b :: Bool)
+data OpComRA' (b    :: Ordering)
               (ctx  :: [ErrorMessage])
               (prd  :: Prod)
               (sc   :: [(Child, [(Att, Type)])])
@@ -226,41 +226,74 @@ data OpComRA' (b :: Bool)
   OpComRA' :: Proxy b -> CRule ctx prd sc ip ic sp ic' sp'
           -> Aspect a -> OpComRA' b ctx  prd sc ip ic sp ic' sp' a
 
-
 instance
- (Require (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a) ctx)
-  => Require (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx where
-  type ReqR (OpComRA ctx prd sc ip ic sp ic' sp' a)
-     = ReqR (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a)
+  (Require (OpComRA' (CMP prd prd') ctx prd sc ip ic sp ic' sp' ( '(prd' , t) ': asp )) ctx)
+  => Require (OpComRA ctx prd sc ip ic sp ic' sp' ( '(prd' , t) ': asp ) ) ctx
+ where
+  type ReqR (OpComRA ctx prd sc ip ic sp ic' sp' ( '(prd' , t) ': asp ) )
+    = ReqR (OpComRA' (CMP prd prd') ctx prd sc ip ic sp ic' sp' ( '(prd' , t) ': asp ) )
   req ctx (OpComRA rule a)
-     = req ctx (OpComRA' (Proxy @ (HasLabel prd a)) rule a)
+    = req ctx (OpComRA' (Proxy @ (CMP prd prd')) rule a)
+
+type family CMP (a :: k) (b :: k) :: Ordering where
+  CMP (a :: Symbol) (b :: Symbol) = CmpSymbol a b
+  CMP (Prd s _) (Prd s' _) = CmpSymbol s s'
 
 instance
-  (Require (OpExtend PrdReco prd (CRule ctx prd sc ip ic sp ic' sp') a)) ctx
-  => Require (OpComRA' 'False ctx prd sc ip ic sp ic' sp' a) ctx where
-  type ReqR (OpComRA' 'False ctx prd sc ip ic sp ic' sp' a)
-    = ReqR (OpExtend PrdReco prd (CRule ctx prd sc ip ic sp ic' sp') a)
-  req ctx (OpComRA' _ (rule :: CRule ctx prd sc ip ic sp ic' sp') asp)
-    = req ctx (OpExtend (Label @ prd) rule asp)
-
-instance
- ( Require (OpUpdate PrdReco prd (CRule ctx prd sc ip ic sp ic'' sp'') a) ctx
+  ( Require (OpUpdate PrdReco prd (CRule ctx prd sc ip ic sp ic'' sp'') a) ctx
  , RequireR (OpLookup PrdReco prd a) ctx (CRule ctx prd sc ip ic sp ic' sp') 
  , (IC (ReqR (OpLookup PrdReco prd a))) ~ ic
  , (SP (ReqR (OpLookup PrdReco prd a))) ~ sp
- ) =>
-  Require (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a) ctx where
-  type ReqR (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a)
-    = ReqR (OpUpdate PrdReco prd
-           (CRule ctx prd sc ip
-             (IC (ReqR (OpLookup PrdReco prd a)))
-             (SP (ReqR (OpLookup PrdReco prd a)))
-            ic'' sp'') a)
+ )
+  => 
+  Require (OpComRA' 'EQ ctx ('Prd prd nt) sc ip ic' sp' ic'' sp'' ( '( 'Prd prd nt , t) ': asp ) ) ctx
+ where
+  type ReqR (OpComRA' 'EQ ctx ('Prd prd nt) sc ip ic' sp' ic'' sp'' ( '( 'Prd prd nt , t) ': asp ) )
+      = ReqR (OpUpdate PrdReco ('Prd prd nt)
+           (CRule ctx ('Prd prd nt) sc ip
+             (IC (ReqR (OpLookup PrdReco ('Prd prd nt) ( '( ('Prd prd nt)  , t) ': asp ))))
+             (SP (ReqR (OpLookup PrdReco ('Prd prd nt) ( '( ('Prd prd nt)  , t) ': asp ))))
+            ic'' sp'') ( '( ('Prd prd nt), t) ': asp ))
   req ctx (OpComRA' _ rule asp)
-    = let prd     = Label @ prd
+    = let prd     = Label @ ('Prd prd nt)
           oldRule = req ctx (OpLookup prd asp)
           newRule = rule `ext` oldRule
       in  req ctx (OpUpdate prd newRule asp)
+
+-- instance
+--  (Require (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a) ctx)
+--   => Require (OpComRA ctx prd sc ip ic sp ic' sp' a) ctx where
+--   type ReqR (OpComRA ctx prd sc ip ic sp ic' sp' a)
+--      = ReqR (OpComRA' (HasLabel prd a) ctx prd sc ip ic sp ic' sp' a)
+--   req ctx (OpComRA rule a)
+--      = req ctx (OpComRA' (Proxy @ (HasLabel prd a)) rule a)
+
+-- instance
+--   (Require (OpExtend PrdReco prd (CRule ctx prd sc ip ic sp ic' sp') a)) ctx
+--   => Require (OpComRA' 'False ctx prd sc ip ic sp ic' sp' a) ctx where
+--   type ReqR (OpComRA' 'False ctx prd sc ip ic sp ic' sp' a)
+--     = ReqR (OpExtend PrdReco prd (CRule ctx prd sc ip ic sp ic' sp') a)
+--   req ctx (OpComRA' _ (rule :: CRule ctx prd sc ip ic sp ic' sp') asp)
+--     = req ctx (OpExtend (Label @ prd) rule asp)
+
+-- instance
+--  ( Require (OpUpdate PrdReco prd (CRule ctx prd sc ip ic sp ic'' sp'') a) ctx
+--  , RequireR (OpLookup PrdReco prd a) ctx (CRule ctx prd sc ip ic sp ic' sp') 
+--  , (IC (ReqR (OpLookup PrdReco prd a))) ~ ic
+--  , (SP (ReqR (OpLookup PrdReco prd a))) ~ sp
+--  ) =>
+--   Require (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a) ctx where
+--   type ReqR (OpComRA' 'True ctx prd sc ip ic' sp' ic'' sp'' a)
+--     = ReqR (OpUpdate PrdReco prd
+--            (CRule ctx prd sc ip
+--              (IC (ReqR (OpLookup PrdReco prd a)))
+--              (SP (ReqR (OpLookup PrdReco prd a)))
+--             ic'' sp'') a)
+--   req ctx (OpComRA' _ rule asp)
+--     = let prd     = Label @ prd
+--           oldRule = req ctx (OpLookup prd asp)
+--           newRule = rule `ext` oldRule
+--       in  req ctx (OpUpdate prd newRule asp)
 
 
 
@@ -274,13 +307,14 @@ type family SP (rule :: Type) where
 syndef
   :: ( -- RequireEq t t' ctx
      -- ,
-       RequireR (OpExtend AttReco ('Att att t) t sp) ctx (Attribution sp')
+       RequireR (OpExtend AttReco att -- ('Att att t)
+                 t sp) ctx (Attribution sp')
      -- , ctx
      --     ~ ((Text "syndef("
      --         :<>: ShowT ('Att att t) :<>: Text ", "
      --         :<>: ShowT prd :<>: Text ")") ': ctx)
      )
-     => Label ('Att att t)
+     => Label att  -- ('Att att t)
      -> Label prd
      -> (Proxy ctx -> Fam prd sc ip -> t)
      -> CRule ctx prd sc ip ic sp ic sp'
@@ -291,7 +325,7 @@ syndef
 --       ReqR (OpExtend' (LabelSetF ('(l, v) : r)) AttReco l v r)
 --       ~ Rec AttReco sp') =>
 --      Label l
---      -> p
+--      -> Label prd
 --      -> (Proxy t -> Fam prd sc ip -> v)
 --      -> CRule ctx prd sc ip ic' r ic' sp'
 syndef att prd f
@@ -320,8 +354,9 @@ inh = inhdefM
 
 
 synmod
-  :: RequireR (OpUpdate AttReco ('Att att t) t r) ctx (Attribution sp')
-  => Label ('Att att t)
+  :: RequireR (OpUpdate AttReco att -- ('Att att t)
+               t r) ctx (Attribution sp')
+  => Label att -- ('Att att t)
      -> Label prd
      -> (Proxy '[]
            -- ((('Text "synmod(" ':<>: ShowT ('Att att t)) :<>: Text ", "
@@ -334,8 +369,9 @@ synmod att prd f
            -> Fam ic $ req ctx (OpUpdate att (f Proxy inp) sp)
 
 synmodM
-  :: RequireR (OpUpdate AttReco ('Att att t) t r) ctx (Attribution sp')
-  => Label ('Att att t)
+  :: RequireR (OpUpdate AttReco att -- ('Att att t)
+               t r) ctx (Attribution sp')
+  => Label att -- ('Att att t)
      -> Label prd
      -> Reader ( Proxy '[]
                        -- ((('Text "synmod(" ':<>: ShowT ('Att att t)) :<>: Text ", "
@@ -351,12 +387,12 @@ synmodM att prd = synmod att prd . def
 inhdef
   :: (--  RequireEq t t' ctx
      -- ,
-       RequireR  (OpExtend AttReco ('Att att t) t r) ctx (Attribution v2)
-     , RequireR (OpUpdate (ChiReco ('Prd prd nt))
-                ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
-                (ChAttsRec ('Prd prd nt) ic')
-     , RequireR (OpLookup (ChiReco ('Prd prd nt))
-                ('Chi chi ('Prd prd nt) ntch) ic) ctx
+       RequireR  (OpExtend AttReco att {-('Att att t)-} t r) ctx (Attribution v2)
+     , RequireR (OpUpdate (ChiReco prd {-('Prd prd nt)-})
+                ('Chi chi prd {-('Prd prd nt)-} ntch) v2 ic) ctx
+                (ChAttsRec prd {-('Prd prd nt)-} ic')
+     , RequireR (OpLookup (ChiReco prd {-('Prd prd nt)-})
+                ('Chi chi prd {-('Prd prd nt)-} ntch) ic) ctx
                 (Attribution r)
      , RequireEq ntch ('Left n) ctx
      -- , ctx ~ ((Text "inhdef("
@@ -366,11 +402,12 @@ inhdef
      --            ': ctx)
      )
      =>
-     Label ('Att att t)
-     -> Label ('Prd prd nt)
-     -> Label ('Chi chi ('Prd prd nt) ntch)
-     -> (Proxy ctx -> Fam ('Prd prd nt) sc ip -> t{--})
-     -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
+     Label att -- ('Att att t)
+     -> Label prd {-('Prd prd nt)-}
+     -> Label ('Chi chi prd {-('Prd prd nt)-} ntch)
+     -> (Proxy ctx -> Fam prd {- ('Prd prd nt)-} sc ip -> t{--})
+     -> CRule ctx prd -- ('Prd prd nt)
+  sc ip ic sp ic' sp
 inhdef  att prd chi f
   = CRule $ \ctx inp (Fam ic sp)
        -> let ic'   = req ctx (OpUpdate chi catts' ic)

@@ -29,7 +29,8 @@ Portability : POSIX
              InstanceSigs,
              AllowAmbiguousTypes,
              TypeApplications,
-             PatternSynonyms
+             PatternSynonyms,
+             TypeFamilyDependencies
 #-}
 
 module Language.Grammars.FastAG.GenRecord where
@@ -53,13 +54,6 @@ infixr 2 .*.
     TagField c l v -> Rec c r -> Rec c ( '(l,v) ': r)
 (.*.) = ConsRec
 
--- * destructors
-
--- | A getter, also a predicate
--- class HasField (l :: k) (r :: [(k, k')]) field where
---   type LookupByLabel field l r :: Type
---   (#) :: REC field r -> Label l -> LookupByLabel field l v
-
 
 tailRec :: Rec c ( '(l,v) ': r) -> Rec c r
 tailRec (ConsRec _ t) = t
@@ -75,7 +69,16 @@ data TagField (cat :: k) (l :: k') (v :: k'') where
 untagField :: TagField c l v -> WrapField c v
 untagField (TagField lc lv v) = v
 
-type family    WrapField (c :: k')  (v :: k) -- = ftype | ftype c -> v
+type family    WrapField (c :: k')  (v :: k) = ftype -- | ftype -> v
+
+{-
+  Node: We cannot encode the dependency {ftype, c} -> v since
+  TypeFamilyDependencies does not support this general
+  dependencies. So from (WrapField c v) we can't infer c.
+-}
+
+type family UnWrap t :: k -- (t :: [(k,k')]) :: k'
+type instance UnWrap (Rec c (r :: [(k, k')])) = r
 
 
 ----------------------------LOOKUP---------------------------------------------
@@ -107,24 +110,81 @@ instance
 
 ----------------------------UPDATE---------------------------------------------
 class Update (c :: Type) (l :: k) (v :: k') (r :: [(k, k')]) where
-  type UpdateR c l v r :: Type
-  update :: Label l -> WrapField c v -> Rec c r -> UpdateR c l v r
+  type UpdateR c l v r :: [(k, k')]
+  update :: Label l -> Proxy v -> WrapField c v -> Rec c r
+         -> Rec c (UpdateR c l v r)
 
 class Update' (cmp :: Ordering)
               (c :: Type) (l :: k) (v :: k') (r :: [(k, k')]) where
-  type UpdateR' cmp c l v r :: Type
-  update' :: Label cmp -> Label l -> WrapField c v -> Rec c r
-          -> UpdateR' c l v r
+  type UpdateR' cmp c l v r :: [(k, k')]
+  update' :: Proxy cmp -> Label l -> Proxy v -> WrapField c v -> Rec c r
+          -> Rec c (UpdateR' cmp c l v r)
+
+instance Update' (CMP l l') c l v ( '(l' , v') ': r) =>
+  Update c l v ( '(l' , v') ': r) where
+  type UpdateR  c l v ( '(l' , v') ': r)
+    = UpdateR' (CMP l l') c l v ( '(l' , v') ': r)
+  update l _ (f :: WrapField c v) r
+    = update' (Proxy @(CMP l l')) l (Proxy @v) f r
+
+instance Update c l v r =>
+  Update' 'LT c l v ( '(l' , v') ': r) where
+  type UpdateR' 'LT c l v ( '(l' , v') ': r)
+    = '(l' , v') ': UpdateR c l v r
+  update' Proxy l Proxy f (ConsRec x xs)
+    = ConsRec x $ (update l (Proxy @v) f xs)
+
+
+instance
+  Update' 'EQ c l v ( '(l , v') ': r) where
+  type UpdateR' 'EQ c l v ( '(l , v') ': r)
+    = '(l, v) ': r
+  update' _ l _ f (ConsRec x xs)
+    = ConsRec (TagField Label l f) xs
+
+----------------------------EXTEND---------------------------------------------
+class Extend (c :: Type) (l :: k) (v :: k') (r :: [(k, k')]) where
+  type ExtendR c l v r :: [(k, k')]
+  extend :: Label l -> Proxy v -> WrapField c v -> Rec c r
+         -> Rec c (ExtendR c l v r)
+
+class Extend' (cmp :: Ordering )(c :: Type) (l :: k) (v :: k') (r :: [(k, k')])
+ where
+  type ExtendR' cmp c l v r :: [(k, k')]
+  extend' :: Proxy cmp -> Label l -> Proxy v -> WrapField c v -> Rec c r
+          -> Rec c (ExtendR c l v r)
+
+instance
+  Extend c l v '[] where
+  type ExtendR c l v '[]
+    =  '(l, v) ': '[]
+  extend l _ f EmptyRec
+    = ConsRec (TagField Label l f) EmptyRec
 
 
 
-{-
-  Node: We cannot encode the dependency {ftype, c} -> v since
-  TypeFamilyDependencies does not support this general
-  dependencies. So from (WrapField c v) we can't infer c.
--}
+instance Extend' (CMP l l') c l v ( '(l', v') : r) =>
+  Extend c l v ( '(l', v') ': r) where
+  type ExtendR c l v ( '(l', v') ': r)
+    =  ExtendR' (CMP l l') c l v ( '(l', v') ': r)
+  extend l _ (f :: WrapField c v) r
+    = extend' (Proxy @(CMP l l')) l (Proxy @v) f r
 
+instance ( Extend c l v r
+         , Rec c (ExtendR c l v ('(l', v') : r))
+           ~ Rec c ( '(l', v') : ExtendR c l v r)
+         ) =>
+  Extend' 'LT c l v ( '(l', v') ': r) where
+  type ExtendR' 'LT c l v ( '(l', v') ': r)
+    = '(l', v') ': ExtendR c l v r
+  extend' cmp l _ f (ConsRec x xs)
+    = ConsRec x (extend l (Proxy @v) f xs)
 
--- Extend
--- Update
--- Lookup
+instance Rec c (ExtendR c l v ('(l', v') : r))
+        ~ Rec c ('(l, v) : '(l', v') : r) =>
+  Extend' 'GT c l v ( '(l', v') ': r) where
+  type ExtendR' 'GT c l v ( '(l', v') ': r)
+    = ( '(l, v) ': '(l', v') ': r)
+  extend' cmp l _ f r
+    = ConsRec (TagField Label l f) r
+
