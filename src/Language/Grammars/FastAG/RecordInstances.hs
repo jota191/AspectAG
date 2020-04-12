@@ -17,10 +17,12 @@
              ScopedTypeVariables,
              TypeFamilies,
              InstanceSigs,
-             AllowAmbiguousTypes,
              TypeApplications,
              PatternSynonyms
 #-}
+        --     AllowAmbiguousTypes,
+
+
 
 module Language.Grammars.FastAG.RecordInstances where
 

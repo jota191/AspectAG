@@ -29,7 +29,7 @@ Portability : POSIX
 {-# LANGUAGE TypeFamilyDependencies    #-}
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE IncoherentInstances       #-}
-{-# LANGUAGE AllowAmbiguousTypes       #-}
+-- {-# LANGUAGE AllowAmbiguousTypes       #-}
 
 module Language.Grammars.FastAG (
               module Language.Grammars.FastAG,
@@ -166,22 +166,55 @@ instance ExtAspect' 'LT (Rule prd sc ip ic sp ic' sp')
   extAspect' _ rule asp
     = ConsRec (TagField (Label @PrdReco) (Label @prd)  rule) asp
 
-instance ExtAspect (Rule prd sc ip ic sp ic' sp') asp =>
-  ExtAspect' 'GT (Rule prd sc ip ic sp ic' sp')
+-- instance ExtAspect (Rule prd sc ip ic sp ic' sp') asp =>
+--   ExtAspect' 'GT (Rule prd sc ip ic sp ic' sp')
+--                  ('(prd', rule') : asp) where
+--   type ExtAspectR'  'GT (Rule prd sc ip ic sp ic' sp')
+--                         ('(prd', rule') ': asp)
+--     = '(prd', rule') ': ExtAspectR (Rule prd sc ip ic sp ic' sp') asp
+--   extAspect' _ rule (ConsRec rul asp)
+--     = ConsRec rul (extAspect rule asp)
+
+instance ExtAspect rule asp =>
+  ExtAspect' 'GT (rule)
                  ('(prd', rule') : asp) where
-  type ExtAspectR'  'GT (Rule prd sc ip ic sp ic' sp')
+  type ExtAspectR'  'GT (rule)
                         ('(prd', rule') ': asp)
-    = '(prd', rule') ': ExtAspectR (Rule prd sc ip ic sp ic' sp') asp
+    = '(prd', rule') ': ExtAspectR (rule) asp
   extAspect' _ rule (ConsRec rul asp)
     = ConsRec rul (extAspect rule asp)
 
-instance ExtAspect' 'EQ (Rule prd sc ip ic sp ic' sp')
-                 ('(prd, Rule prd sc ip a  b  ic  sp) ': asp) where
-  type ExtAspectR' 'EQ (Rule prd sc ip ic sp ic' sp')
-                 ('(prd, Rule prd sc ip a  b  ic  sp) ': asp)
-    = ('(prd, Rule prd sc ip a  b  ic'  sp') ': asp)
-  extAspect' _ rule (ConsRec rule' asp)
-    = ConsRec (TagField Label Label (rule `ext` untagField rule')) asp
+-- instance
+--   (sc ~ sc1, ip ~ ip1) => 
+--   ExtAspect' 'EQ (Rule prd sc ip ic sp ic' sp')
+--                  ('(prd, Rule prd sc1 ip1 a  b  ic  sp) ': asp) where
+--   type ExtAspectR' 'EQ (Rule prd sc ip ic sp ic' sp')
+--                  ('(prd, Rule prd sc1 ip1 a  b  ic  sp) ': asp)
+--     = ('(prd, Rule prd sc ip a  b  ic'  sp') ': asp)
+--   extAspect' _ rule (ConsRec rule' asp)
+--     = ConsRec (TagField Label Label (rule `ext` untagField rule')) asp
+
+
+instance
+ ( Update PrdReco prd (Rule prd sc ip ic sp ic'' sp'') a
+ , Lookup PrdReco prd a
+ , LookupR PrdReco prd a ~ Rule prd sc ip ic sp ic' sp' 
+ , IC (LookupR PrdReco prd a) ~ ic
+ , SP (LookupR PrdReco prd a) ~ sp
+ ) =>
+  ExtAspect' 'EQ (Rule prd sc ip ic' sp' ic'' sp'') a where
+  type ExtAspectR' 'EQ (Rule prd sc ip ic' sp' ic'' sp'') a
+    = UpdateR PrdReco prd
+            (Rule prd sc ip
+             (IC (LookupR PrdReco prd a))
+             (SP (LookupR PrdReco prd a))
+            ic'' sp'') a
+  extAspect' _ rule asp
+    = let prd     = Label @ prd
+          oldRule = lookup prd asp
+          newRule = rule `ext` oldRule
+      in  update prd Proxy newRule asp
+
 
 
 ext ::  Rule prd sc ip ic sp ic' sp'
@@ -242,39 +275,6 @@ synmod att prd f
 
 
 synmodM att prd = synmod att prd . runReader
-
-
-
--- inhdef
---   :: (--  RequireEq t t' ctx
---      -- ,
---        RequireR  (OpExtend AttReco att {-('Att att t)-} t r) ctx (Attribution v2)
---      , RequireR (OpUpdate (ChiReco prd {-('Prd prd nt)-})
---                 ('Chi chi prd {-('Prd prd nt)-} ntch) v2 ic) ctx
---                 (ChAttsRec prd {-('Prd prd nt)-} ic')
---      , RequireR (OpLookup (ChiReco prd {-('Prd prd nt)-})
---                 ('Chi chi prd {-('Prd prd nt)-} ntch) ic) ctx
---                 (Attribution r)
---      , RequireEq ntch ('Left n) ctx
---      -- , ctx ~ ((Text "inhdef("
---      --            :<>: ShowT ('Att att t)  :<>: Text ", "
---      --            :<>: ShowT ('Prd prd nt) :<>: Text ", "
---      --            :<>: ShowT ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
---      --            ': ctx)
---      )
---      =>
---      Label att -- ('Att att t)
---      -> Label prd {-('Prd prd nt)-}
---      -> Label ('Chi chi prd {-('Prd prd nt)-} ntch)
---      -> (Proxy ctx -> Fam prd {- ('Prd prd nt)-} sc ip -> t{--})
---      -> CRule ctx prd -- ('Prd prd nt)
---   sc ip ic sp ic' sp
--- inhdef  att prd chi f
---   = CRule $ \ctx inp (Fam ic sp)
---        -> let ic'   = req ctx (OpUpdate chi catts' ic)
---               catts = req ctx (OpLookup chi ic)
---               catts'= req ctx (OpExtend  att (f Proxy inp) catts)
---           in  Fam ic' sp
 
 inhdef ::
      ( Update (ChiReco ('Prd prd nt)) ('Chi chi ('Prd prd nt) ntch) v2 ic
@@ -345,15 +345,7 @@ instance
   at lhs att
     = liftM (\(Fam chi par) -> lookup att par) ask
 
--- ter :: ( LookupR (ChiReco prd) ('Chi ch prd (Right ('T t))) chi ~ Attribution r
---        , Lookup  (ChiReco prd) ('Chi ch prd (Right ('T t))) chi
---        , LookupR AttReco ('Att "term" t) r ~ t
---        , Lookup AttReco ('Att "term" t) r
---        -- , pos ~ ('Chi ch prd (Right ('T t)))
---        , m ~ Reader (Fam prd chi par)
---        , ResAt pos ('Att "term" t) m ~ t
---        )
---     =>  Label ('Chi ch prd (Right ('T t))) -> m (ResAt pos ('Att "term" t) m)
+
 ter :: ( LookupR (ChiReco prd) ('Chi ch prd (Right ('T t))) chi ~ Attribution r
        , Lookup  (ChiReco prd) ('Chi ch prd (Right ('T t))) chi
        , LookupR AttReco ('Att "term" t) r ~ t
@@ -371,72 +363,8 @@ ter (ch :: Label ('Chi ch prd (Right ('T t))))
 
 singAsp r = r .+: emptyAspect
 
-
--- inhmod
---   :: ( -- RequireEq t t' ctx
---      -- , 
---        RequireR (OpUpdate AttReco ('Att att t) t r) ctx
---                 (Attribution v2)
---      , RequireR (OpUpdate (ChiReco ('Prd prd nt))
---                 ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
---                 (ChAttsRec ('Prd prd nt) ic')
---      , RequireR (OpLookup (ChiReco ('Prd prd nt))
---                 ('Chi chi ('Prd prd nt) ntch) ic) ctx
---                 (Attribution r)
---      , RequireEq ntch ('Left n) ctx
---      -- , ctx ~ ((Text "inhmod("
---      --            :<>: ShowT ('Att att t)  :<>: Text ", "
---      --            :<>: ShowT ('Prd prd nt) :<>: Text ", "
---      --            :<>: ShowT ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
---      --            ': ctx)
---      )
---      =>
---      Label ('Att att t)
---      -> Label ('Prd prd nt)
---      -> Label ('Chi chi ('Prd prd nt) ntch)
---      -> (Proxy ctx -> Fam ('Prd prd nt) sc ip -> t{--})
---      -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
--- inhmod att prd chi f
---   = CRule $ \ctx inp (Fam ic sp)
---        -> let ic'   = req ctx (OpUpdate chi catts' ic)
---               catts = req ctx (OpLookup  chi ic)
---               catts'= req ctx (OpUpdate  att (f Proxy inp) catts)
---           in  Fam ic' sp
-
-
--- inhmodM
---   :: (--  RequireEq t t' ctx
---      -- ,
---        RequireR (OpUpdate AttReco ('Att att t) t r) ctx
---                 (Attribution v2)
---      , RequireR (OpUpdate (ChiReco ('Prd prd nt))
---                 ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
---                 (ChAttsRec ('Prd prd nt) ic')
---      , RequireR (OpLookup (ChiReco ('Prd prd nt))
---                 ('Chi chi ('Prd prd nt) ntch) ic) ctx
---                 (Attribution r)
---      , RequireEq ntch ('Left n) ctx
---      -- , ctx ~ ((Text "inhmod("
---      --            :<>: ShowT ('Att att t)  :<>: Text ", "
---      --            :<>: ShowT ('Prd prd nt) :<>: Text ", "
---      --            :<>: ShowT ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
---      --            ': ctx)
---      )
---      =>
---      Label ('Att att t)
---      -> Label ('Prd prd nt)
---      -> Label ('Chi chi ('Prd prd nt) ntch)
---      -> Reader (Proxy ctx, Fam ('Prd prd nt) sc ip) t{--}
---      -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
--- inhmodM att prd chi = inhmod att prd chi . def
-
-
-
 infixr 6 .+.
 (.+.) = ext
-
-
-
 
 class Kn (fcr :: [(Child, Type)]) (prd :: Prod) where
   type ICh fcr :: [(Child, [(Att, Type)])]

@@ -27,11 +27,13 @@ Portability : POSIX
              ScopedTypeVariables,
              TypeFamilies,
              InstanceSigs,
-             AllowAmbiguousTypes,
              TypeApplications,
              PatternSynonyms,
              TypeFamilyDependencies
 #-}
+
+--              AllowAmbiguousTypes,
+
 
 module Language.Grammars.FastAG.GenRecord where
 
@@ -70,7 +72,7 @@ data TagField (cat :: k) (l :: k') (v :: k'') where
 untagField :: TagField c l v -> WrapField c v
 untagField (TagField lc lv v) = v
 
-type family    WrapField (c :: k')  (v :: k) = ftype | ftype -> v
+type family    WrapField (c :: k')  (v :: k) = ftype -- | ftype -> c
 
 {-
   Node: We cannot encode the dependency {ftype, c} -> v since
