@@ -50,9 +50,10 @@ type family a == b where
 -- * Pretty constructors
 
 infixr 2 .*.
-(.*.) :: LabelSet ( '(l, v) ': r) =>
-    TagField c l v -> Rec c r -> Rec c ( '(l,v) ': r)
-(.*.) = ConsRec
+(.*.) :: (Extend c l v r, a ~ WrapField c v)
+ => TagField c l v -> Rec c r -> Rec c (ExtendR c l v r)
+((TagField (labelc :: Label c) (labell :: Label l) (v :: a)) :: TagField c l v ) .*. (r :: Rec c r)
+  = extend labell (Proxy @v) v r
 
 
 tailRec :: Rec c ( '(l,v) ': r) -> Rec c r
@@ -69,7 +70,7 @@ data TagField (cat :: k) (l :: k') (v :: k'') where
 untagField :: TagField c l v -> WrapField c v
 untagField (TagField lc lv v) = v
 
-type family    WrapField (c :: k')  (v :: k) = ftype -- | ftype -> v
+type family    WrapField (c :: k')  (v :: k) = ftype | ftype -> v
 
 {-
   Node: We cannot encode the dependency {ftype, c} -> v since
@@ -98,8 +99,8 @@ instance
 
 instance
   Lookup c l r
-  => Lookup' 'LT c l ( '(l', v) : r) where
-  type LookupR' 'LT c l ( '(l', v) : r) = LookupR c l (r)
+  => Lookup' 'GT c l ( '(l', v) : r) where
+  type LookupR' 'GT c l ( '(l', v) : r) = LookupR c l r
   lookup' cmp l (ConsRec _ r) = lookup l r
 
 instance
@@ -128,8 +129,8 @@ instance Update' (CMP l l') c l v ( '(l' , v') ': r) =>
     = update' (Proxy @(CMP l l')) l (Proxy @v) f r
 
 instance Update c l v r =>
-  Update' 'LT c l v ( '(l' , v') ': r) where
-  type UpdateR' 'LT c l v ( '(l' , v') ': r)
+  Update' 'GT c l v ( '(l' , v') ': r) where
+  type UpdateR' 'GT c l v ( '(l' , v') ': r)
     = '(l' , v') ': UpdateR c l v r
   update' Proxy l Proxy f (ConsRec x xs)
     = ConsRec x $ (update l (Proxy @v) f xs)
@@ -174,17 +175,16 @@ instance ( Extend c l v r
          , Rec c (ExtendR c l v ('(l', v') : r))
            ~ Rec c ( '(l', v') : ExtendR c l v r)
          ) =>
-  Extend' 'LT c l v ( '(l', v') ': r) where
-  type ExtendR' 'LT c l v ( '(l', v') ': r)
+  Extend' 'GT c l v ( '(l', v') ': r) where
+  type ExtendR' 'GT c l v ( '(l', v') ': r)
     = '(l', v') ': ExtendR c l v r
   extend' cmp l _ f (ConsRec x xs)
     = ConsRec x (extend l (Proxy @v) f xs)
 
 instance Rec c (ExtendR c l v ('(l', v') : r))
         ~ Rec c ('(l, v) : '(l', v') : r) =>
-  Extend' 'GT c l v ( '(l', v') ': r) where
-  type ExtendR' 'GT c l v ( '(l', v') ': r)
+  Extend' 'LT c l v ( '(l', v') ': r) where
+  type ExtendR' 'LT c l v ( '(l', v') ': r)
     = ( '(l, v) ': '(l', v') ': r)
   extend' cmp l _ f r
     = ConsRec (TagField Label l f) r
-
