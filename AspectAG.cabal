@@ -72,7 +72,12 @@ library
                        Language.Grammars.AspectAG.TPrelude,
                        Language.Grammars.AspectAG.GenRecord,
                        Language.Grammars.AspectAG.RecordInstances,
-                       Language.Grammars.AspectAG.Require
+                       Language.Grammars.AspectAG.Require,
+                       Language.Grammars.FastAG.GenRecord,
+                       Language.Grammars.FastAG.HList,
+                       Language.Grammars.FastAG.RecordInstances,
+                       Language.Grammars.FastAG.TPrelude,
+                       Language.Grammars.FastAG.TH
   -- LANGUAGE extensions used by modules in this package.
   other-extensions:    TypeInType,
                        TypeFamilies,
