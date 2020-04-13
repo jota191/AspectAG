@@ -102,17 +102,6 @@ type Rule
 emptyAspect :: Aspect '[]
 emptyAspect  = EmptyRec
 
-
-
--- | combination of Aspects
--- comAspect ::
---  ( Require (OpComAsp al ar) ctx
---  , ReqR (OpComAsp al ar) ~ Aspect asp)
---  =>  CAspect ctx al -> CAspect ctx ar -> CAspect ctx asp
--- comAspect al ar
---   = CAspect $ \ctx -> req ctx (OpComAsp (mkAspect al ctx) (mkAspect ar ctx))
-
-
 class ComAspect (r1 :: [(Prod, Type)]) (r2 :: [(Prod, Type)]) where
   type ComAspectR r1 r2 :: [(Prod, Type)]
   comAspect :: Aspect r1 -> Aspect r2 -> Aspect (ComAspectR r1 r2)
@@ -123,9 +112,8 @@ instance ComAspect '[] r where
 
 instance
   ( ComAspect r (ExtAspectR rule r')
-  , ExtAspect rule r'
-  )
-  => ComAspect ('(prd,rule) ': r) r' where
+  , ExtAspect rule r') =>
+  ComAspect ('(prd,rule) ': r) r' where
   type ComAspectR ('(prd,rule) ': r) r'
     = ComAspectR r (ExtAspectR rule r')
   comAspect (ConsRec (TagField Label Label rule) asp) asp'
@@ -166,14 +154,6 @@ instance ExtAspect' 'LT (Rule prd sc ip ic sp ic' sp')
   extAspect' _ rule asp
     = ConsRec (TagField (Label @PrdReco) (Label @prd)  rule) asp
 
--- instance ExtAspect (Rule prd sc ip ic sp ic' sp') asp =>
---   ExtAspect' 'GT (Rule prd sc ip ic sp ic' sp')
---                  ('(prd', rule') : asp) where
---   type ExtAspectR'  'GT (Rule prd sc ip ic sp ic' sp')
---                         ('(prd', rule') ': asp)
---     = '(prd', rule') ': ExtAspectR (Rule prd sc ip ic sp ic' sp') asp
---   extAspect' _ rule (ConsRec rul asp)
---     = ConsRec rul (extAspect rule asp)
 
 instance ExtAspect rule asp =>
   ExtAspect' 'GT (rule)
@@ -183,17 +163,6 @@ instance ExtAspect rule asp =>
     = '(prd', rule') ': ExtAspectR (rule) asp
   extAspect' _ rule (ConsRec rul asp)
     = ConsRec rul (extAspect rule asp)
-
--- instance
---   (sc ~ sc1, ip ~ ip1) => 
---   ExtAspect' 'EQ (Rule prd sc ip ic sp ic' sp')
---                  ('(prd, Rule prd sc1 ip1 a  b  ic  sp) ': asp) where
---   type ExtAspectR' 'EQ (Rule prd sc ip ic sp ic' sp')
---                  ('(prd, Rule prd sc1 ip1 a  b  ic  sp) ': asp)
---     = ('(prd, Rule prd sc ip a  b  ic'  sp') ': asp)
---   extAspect' _ rule (ConsRec rule' asp)
---     = ConsRec (TagField Label Label (rule `ext` untagField rule')) asp
-
 
 instance
  ( Update PrdReco prd (Rule prd sc ip ic sp ic'' sp'') a
@@ -214,8 +183,6 @@ instance
           oldRule = lookup prd asp
           newRule = rule `ext` oldRule
       in  update prd Proxy newRule asp
-
-
 
 ext ::  Rule prd sc ip ic sp ic' sp'
     ->  Rule prd sc ip a b ic sp
@@ -238,7 +205,6 @@ type family IC (rule :: Type) where
 
 type family SP (rule :: Type) where
   SP (Rule prd sc ip ic sp ic' sp') = sp
-
 
 syndef
      :: ( Extend AttReco ('Att att t) t sp
@@ -263,15 +229,15 @@ syndefM att prd = syndef att prd . runReader
 syn = syndefM
 inh = inhdefM
 
-synmod
-  :: (Update AttReco ('Att att t) t r) => 
-    Label ('Att att t)
-     -> Label prd
-     -> (Fam prd sc ip -> t)
-     -> Rule prd sc ip ic' r ic' (UpdateR AttReco ('Att att t) t r)
-synmod att prd f
-  = \inp (Fam ic sp)
-     -> Fam ic $ update att Proxy (f inp) sp -- req ctx (OpUpdate att (f Proxy inp) sp)
+synmod ::
+     (Update AttReco ('Att att t) t r)
+  => Label ('Att att t)
+  -> Label prd
+  -> (Fam prd sc ip -> t)
+  -> Rule prd sc ip ic' r ic' (UpdateR AttReco ('Att att t) t r)
+synmod att prd f =
+  \inp (Fam ic sp) ->
+    Fam ic $ update att Proxy (f inp) sp req ctx (OpUpdate att (f Proxy inp) sp)
 
 
 synmodM att prd = synmod att prd . runReader
@@ -395,7 +361,7 @@ instance ( lch ~ 'Chi l prd nt
    = \((ConsCh pich icr) :: ChAttsRec prd ( '(lch, ich) ': ICh fc))
    -> let scr = kn fcr icr
           ich = unTaggedChAttr pich
-      in extend lch Proxy (fch ich) scr --ConsCh (TaggedChAttr lch (fch ich)) scr
+      in extend lch Proxy (fch ich) scr
 
 
 
