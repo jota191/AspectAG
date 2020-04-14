@@ -52,6 +52,8 @@ type family ShowEM (m :: ErrorMessage) :: ErrorMessage
 
 type family ShowT (t :: k) :: ErrorMessage
 type instance ShowT (t :: Type) = ShowType t
+type instance ShowT (t :: Symbol) = Text t
+
 {-
 Abro esta familia para poder definirla de manera extensible, porque no sabemos
 en GenReord como se muestran los tipos para instancias concretas. El problema es
