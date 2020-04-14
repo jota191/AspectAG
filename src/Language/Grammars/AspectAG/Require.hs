@@ -25,8 +25,12 @@ module Language.Grammars.AspectAG.Require where
 import Data.Kind
 import Data.Proxy
 import GHC.TypeLits
-import Language.Grammars.AspectAG.TPrelude
+import Data.Type.Bool
 import Data.Type.Equality
+
+type family Equal (a:: k)(b :: k') :: Bool where
+  Equal a a = True
+  Equal a b = False
 
 class Require (op   :: Type)
               (ctx  :: [ErrorMessage])  where
