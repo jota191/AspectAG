@@ -237,7 +237,7 @@ synmod ::
   -> Rule prd sc ip ic' r ic' (UpdateR AttReco ('Att att t) t r)
 synmod att prd f =
   \inp (Fam ic sp) ->
-    Fam ic $ update att Proxy (f inp) sp req ctx (OpUpdate att (f Proxy inp) sp)
+    Fam ic $ update att Proxy (f inp) sp
 
 
 synmodM att prd = synmod att prd . runReader
