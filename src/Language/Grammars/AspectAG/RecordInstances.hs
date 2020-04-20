@@ -26,7 +26,7 @@ module Language.Grammars.AspectAG.RecordInstances where
 
 import Language.Grammars.AspectAG.Require
 import Language.Grammars.AspectAG.GenRecord
-import Language.Grammars.AspectAG.TPrelude
+import Language.Grammars.AspectAG.Label
 import GHC.TypeLits
 import Data.Kind
 import Data.Proxy
@@ -37,7 +37,14 @@ data Child = Chi Symbol Prod (Either NT T)  --deriving Eq
 data NT    = NT Symbol                      --deriving Eq
 data T     = T Type                        -- deriving Eq
 
+type instance Cmp ('Att a _) ('Att b _) =
+  CmpSymbol a b
 
+type instance Cmp ('Prd a _) ('Prd b _) =
+  CmpSymbol a b
+
+type instance Cmp ('Chi a _ _) ('Chi b _ _) =
+  CmpSymbol a b
 
 
 type instance  ShowT ('Att l t)   = Text  "Attribute " :<>: Text l
@@ -72,11 +79,10 @@ type instance ShowField Reco       = "field named "
 
 
 -- | ** Pattern Synonyms
-pattern EmptyR :: Rec Reco '[]
-pattern EmptyR = EmptyRec :: Rec Reco '[]
-pattern ConsR :: (LabelSet ( '(l,v ) ': xs))
-  => Tagged l v -> Rec Reco xs -> Rec Reco ( '(l,v ) ': xs) 
-pattern ConsR lv r = ConsRec lv r
+-- pattern EmptyR :: Rec Reco '[]
+-- pattern EmptyR = EmptyRec :: Rec Reco '[]
+-- pattern ConsR :: Tagged l v -> Rec Reco xs -> Rec Reco ( '(l,v ) ': xs) 
+-- pattern ConsR lv r = lv .*. r
 
 
 type Tagged = TagField Reco
@@ -93,7 +99,7 @@ l .=. v = Tagged v
 
 -- | For the empty Record
 emptyRecord :: Record '[]
-emptyRecord = EmptyR
+emptyRecord = EmptyRec
 
 unTagged :: Tagged l v -> v
 unTagged (TagField _ _ v) = v
@@ -112,11 +118,11 @@ labelTChAtt _ = Label
 instance Show (Record '[]) where
   show _ = "{}"
 
-instance (Show v, Show (Record xs), (LabelSet ('(l, v) : xs))) =>
+instance (Show v, Show (Record xs)) =>
          Show (Record ( '(l,v) ': xs ) ) where
-  show (ConsR lv xs) = let tail = show xs
-                       in "{" ++ show (unTagged lv)
-                          ++ "," ++ drop 1 tail
+  show (ConsRec lv xs) = let tail = show xs
+                         in "{" ++ show (unTagged lv)
+                            ++ "," ++ drop 1 tail
 
 
 
@@ -137,11 +143,11 @@ type instance ShowRec AttReco      = "Attribution"
 type instance ShowField AttReco       = "attribute named "
 
 -- | Pattern Synonyms
-pattern EmptyAtt :: Attribution '[]
-pattern EmptyAtt = EmptyRec
-pattern ConsAtt :: LabelSet ( '(att, val) ': atts) =>
-    Attribute att val -> Attribution atts -> Attribution ( '(att,val) ': atts)
-pattern ConsAtt att atts = ConsRec att atts
+-- pattern EmptyAtt :: Attribution '[]
+-- pattern EmptyAtt = EmptyRec
+-- pattern ConsAtt :: LabelSet ( '(att, val) ': atts) =>
+--     Attribute att val -> Attribution atts -> Attribution ( '(att,val) ': atts)
+-- pattern ConsAtt att atts = ConsRec att atts
 
 -- | Attribute
 
@@ -159,10 +165,9 @@ Label =. v = Attribute v
 
 -- | Extending
 infixr 2 *.
-(*.) :: LabelSet ('(att, val) : atts) =>
-    Attribute att val -> Attribution atts
-      -> Attribution ('(att, val) : atts)
-(*.) = ConsRec
+-- (*.) :: Attribute att val -> Attribution atts
+--       -> Attribution (ReqR (OpExtend AttReco att val atts) ctx)
+(l :: Attribute att val) *. (r :: Attribution atts) = l .*. r
 
 -- | Empty
 emptyAtt :: Attribution '[]
@@ -209,12 +214,12 @@ type instance ShowField (ChiReco a)   = "child labelled "
 
 -- |since now we implement ChAttsRec as a generic record, this allows us to
 --   recover pattern matching
-pattern EmptyCh :: ChAttsRec prd '[]
-pattern EmptyCh = EmptyRec
-pattern ConsCh :: (LabelSet ( '( 'Chi ch prd nt, v) ': xs)) =>
-  TaggedChAttr prd ( 'Chi ch prd nt) v -> ChAttsRec prd xs
-                         -> ChAttsRec prd ( '( 'Chi ch prd nt,v) ': xs)
-pattern ConsCh h t = ConsRec h t
+-- pattern EmptyCh :: ChAttsRec prd '[]
+-- pattern EmptyCh = EmptyRec
+-- pattern ConsCh :: (LabelSet ( '( 'Chi ch prd nt, v) ': xs)) =>
+--   TaggedChAttr prd ( 'Chi ch prd nt) v -> ChAttsRec prd xs
+--                          -> ChAttsRec prd ( '( 'Chi ch prd nt,v) ': xs)
+-- pattern ConsCh h t = ConsRec h t
 
 -- | Attributions tagged by a child
 type TaggedChAttr prd = TagField (ChiReco prd)
@@ -232,10 +237,8 @@ infixr 4 .=
 
 -- | Pretty constructors
 infixr 2 .*
-(.*) :: LabelSet ('(ch, attrib) ':  attribs) =>
-  TaggedChAttr prd ch attrib -> ChAttsRec prd attribs
-    -> ChAttsRec prd ('(ch, attrib) ': attribs)
-(.*) = ConsRec
+(tch :: TaggedChAttr prd ch attrib) .* (chs :: ChAttsRec prd attribs) = tch .*. chs
+-- TODO: error instances if different prds are used?
 
 -- | empty
 emptyCh :: ChAttsRec prd '[]

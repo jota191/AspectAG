@@ -54,6 +54,9 @@ data Rec (c :: k) (r :: [(k', k'')]) :: Type where
 data TagField (cat :: k) (l :: k') (v :: k'') where
   TagField :: Label c -> Label l -> WrapField c v -> TagField c l v
 
+-- | operator
+(l :: Label l) .=. (v :: v) = TagField Label l v
+
 type family  WrapField (c :: k')  (v :: k)
 
 type family UnWrap (t :: Type) :: [(k,k')]
@@ -134,7 +137,7 @@ instance (Require (OpLookup c l r) ctx)
     req ctx (OpLookup l r)
 
 -- | ERROR, we are beyond the supposed position for the label |l|,
--- so we can assert there is no field labelled b |l|
+-- so we can assert there is no field labelled |l|
 -- (ot the record is ill-formed)
 instance Require (OpError (Text "field not Found on " :<>: Text (ShowRec c)
                      :$$: Text "looking up the " :<>: Text (ShowField c)
@@ -200,10 +203,8 @@ instance
 
 instance
   ( Require (OpUpdate c l v r) ctx
-  , UnWrap (ReqR (OpUpdate c l v r)) ~ r0
-  , ReqR (OpUpdate c l v r) ~ Rec c (UnWrap (Rec c r0))
-  , UnWrap (Rec c r0) ~ r0
-  ,  LabelSet ( '(l', v') : r0)
+  , ( '(l', v') : r0)  ~ a -- only to unify kinds
+  , ReqR (OpUpdate c l v r) ~ Rec c r0
   )
    =>
   Require (OpUpdate' 'GT c l v ( '(l',v') ': r)) ctx where
@@ -212,62 +213,109 @@ instance
   req ctx (OpUpdate' _ l f (ConsRec field (r :: Rec c r))) =
     ConsRec field $ (req @(OpUpdate _ _ v r)) ctx (OpUpdate l f r)
 
+-- | ERROR, we are beyond the supposed position for the label |l|,
+-- so we can assert there is no field labelled with |l| to update
+-- (or the record is ill-formed)
+instance (Require (OpError (Text "field not Found on " :<>: Text (ShowRec c)
+                    :$$: Text "updating the " :<>: Text (ShowField c)
+                     :<>: ShowT l)) ctx)
+  =>
+  Require (OpUpdate' 'LT c l v ( '(l',v') ': r)) ctx where
+  type ReqR (OpUpdate' 'LT c l v ( '(l',v') ': r)) =
+    ()
+  req = undefined
+
+
+update (l :: Label l) (v :: v) (r :: Rec c r) =
+  req Proxy (OpUpdate @l @c @v @r l v r)
+
+
+-- ** Extension
+
+-- | extension operator (wrapper)
+data OpExtend (c :: Type)
+              (l  :: k)
+              (v  :: k')
+              (r  :: [(k, k')]) :: Type where
+  OpExtend :: Label l -> WrapField c v -> Rec c r
+           -> OpExtend c l v r
+
+-- | Extension operator (inner)
+data OpExtend' (b   :: Ordering)
+               (c   :: Type)
+               (l   :: k)
+               (v   :: k')
+               (r   :: [(k, k')]) :: Type where
+  OpExtend' :: Proxy b -> Label l -> WrapField c v -> Rec c r
+           -> OpExtend' b c l v r
+
+-- | extending an empty record
+instance
+  Require (OpExtend c l v '[]) ctx where
+  type ReqR (OpExtend c l v '[]) =
+    Rec c '[ '(l , v)]
+  req ctx (OpExtend l v EmptyRec) =
+    ConsRec (TagField (Label @c) l v) EmptyRec
+
+-- | wrapper instance
+
+instance
+  Require (OpExtend' (Cmp l l') c l v ('(l', v') : r)) ctx
+  =>
+  Require (OpExtend c l v ( '(l', v') ': r)) ctx where
+  type ReqR (OpExtend c l v ( '(l', v') ': r)) =
+    ReqR (OpExtend' (Cmp l l') c l v ( '(l', v') ': r))
+  req ctx (OpExtend l v (r :: Rec c ( '(l', v') ': r)) ) =
+    req ctx (OpExtend' @(Cmp l l') @l @c @v Proxy l v r)
+
+-- | keep looking
+instance
+  (Require (OpExtend c l v r) ctx
+  , ( '(l', v') ': r0 ) ~ a
+  , ReqR (OpExtend c l v r) ~ Rec c r0
+  )
+  =>
+  Require (OpExtend' 'GT c l v ( '(l', v') ': r)) ctx where
+  type ReqR (OpExtend' 'GT c l v ( '(l', v') ': r)) =
+    Rec c ( '(l', v') ': UnWrap (ReqR (OpExtend c l v r)))
+  req ctx (OpExtend' Proxy l v (ConsRec lv r)) =
+    ConsRec lv $ req ctx (OpExtend @_ @_ @v l v r)
+
+instance
+  Require (OpExtend' 'LT c l v ( '(l', v') ': r)) ctx where
+  type ReqR (OpExtend' 'LT c l v ( '(l', v') ': r)) =
+    Rec c ( '(l, v) ': ( '(l', v') ': r))
+  req ctx (OpExtend' Proxy l v r) =
+    ConsRec (TagField Label l v) r
+
+instance
+  (Require (OpError (Text "cannot extend " :<>: Text (ShowRec c)
+                     -- :<>: Text " because the label (" :<>: ShowT l
+                     -- :<>: Text ") already exists"
+                    :$$: Text "colision in " :<>: Text (ShowField c)
+                     :<>: Text " ":<>: ShowT l)) ctx)
+  =>
+  Require (OpExtend' 'EQ c l v ( '(l, v') ': r)) ctx where
+  type ReqR (OpExtend' 'EQ c l v ( '(l, v') ': r)) = ()
+  req ctx = undefined
+
+
+infixr 2 .*.
+-- | operator
+(TagField c l v) .*. r = req Proxy (OpExtend l v r)
 
 
 
-
-
-
-
-
--- data OpExtend (c :: Type)
---               (l  :: k)
---               (v  :: k')
---               (r  :: [(k, k')]) :: Type where
---   OpExtend :: Label l -> WrapField c v -> Rec c r
---            -> OpExtend c l v r
-
--- data OpExtend' (b :: Bool)
---                (c :: Type)
---                (l  :: k)
---                (v  :: k')
---                (r  :: [(k, k')]) :: Type where
---   OpExtend' :: Proxy b -> Label l -> WrapField c v -> Rec c r
---            -> OpExtend' b c l v r
-
-
--- instance (LabelSetF ( '(l, v) ': r) ~ 'True)
---   => Require (OpExtend' True  c l v r) ctx where
---   type ReqR (OpExtend' True c l v r) = Rec c ( '(l, v) ': r)
---   req ctx (OpExtend' _ l f r) = ConsRec (TagField (Label @c) l f) r
-
-
--- instance ( LabelSetF ( '(l, v) ':  r) ~ b
---          , Require (OpExtend' b c l v r) ctx)
---   => Require (OpExtend c l v r) ctx where
---   type ReqR (OpExtend c l v r)
---     = ReqR (OpExtend' (LabelSetF ( '(l, v) ': r)) c l v r)
---   req ctx (OpExtend l v r)
---     = req @(OpExtend' (LabelSetF ( '(l, v) ': r)) _ _ v _ )
---       ctx (OpExtend' Proxy l v r) 
-
--- instance Require (OpError (Text "Duplicated Labels on " :<>: Text (ShowRec c)
---                           :$$: Text "on the " :<>: Text (ShowField c)
---                            :<>: ShowT l
---                           )) ctx
---   => Require (OpExtend' False c l v (r :: [(k, k')])) ctx where
---   type ReqR (OpExtend' False c l v r) = Rec c (r :: [(k, k')])
---   req ctx (OpExtend' p l v r) = undefined
-
-
+-- | non emptyness test
 
 -- data OpNonEmpty (c :: Type) (r :: [(k, k')]) where
 --   OpNonEmpty :: Rec c r -> OpNonEmpty c r
 
 
--- instance Require (OpNonEmpty c ( '(l, v) ': r)) ctx where {}
+-- instance Require (OpNonEmpty c ( '(l, v) ': r)) ctx where
+--   ReqR 
 
--- instance (Require (OpError (Text "Empty " :<>: Text (ShowRec c)
---                           :$$: Text " Required to be nonempty "
---                           )) ctx)
---   => Require (OpNonEmpty c '[]) ctx where {}
+-- -- instance (Require (OpError (Text "Empty " :<>: Text (ShowRec c)
+-- --                           :$$: Text " Required to be nonempty "
+-- --                           )) ctx)
+-- --   => Require (OpNonEmpty c '[]) ctx where {}

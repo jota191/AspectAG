@@ -33,16 +33,6 @@ import GHC.TypeLits
 import Data.Proxy
 
 
-data Label l = Label
-sndLabel :: Label '(a,b) -> Label b
-sndLabel _ = undefined
-
-getProxy :: a -> Proxy a ; getProxy _ = Proxy
-getLabel :: a -> Label a ; getLabel _ = Label
-
-proxyFrom :: t a -> Proxy a
-proxyFrom _ = Proxy
-
 
 -- | If construction, purely computed at type level
 -- type family If (cond:: Bool) (thn :: k) (els :: k) :: k where
