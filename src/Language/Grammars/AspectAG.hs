@@ -174,13 +174,13 @@ instance MapCtxAsp ('[] :: [(Prod,Type)]) ctx ctx' where
   -- CRule ctx prd sc ip ic sp ic' sp'
   --    -> CAspect ctx a -> CAspect ctx asp
 
-extAspect
-  :: (Require
-        (OpComRA ctx1 prd (CRule ctx1 prd sc ip ic sp ic' sp') a) ctx2,
-      ReqR (OpComRA ctx1 prd (CRule ctx1 prd sc ip ic sp ic' sp') a)
-      ~ Rec PrdReco asp) =>
-     CRule ctx1 prd sc ip ic sp ic' sp'
-     -> CAspect ctx2 a -> CAspect ctx2 asp
+-- extAspect
+--   :: (Require
+--         (OpComRA ctx1 prd (CRule ctx1 prd sc ip ic sp ic' sp') a) ctx1,
+--       ReqR (OpComRA ctx1 prd (CRule ctx1 prd sc ip ic sp ic' sp') a)
+--       ~ Rec PrdReco asp) =>
+--      CRule ctx1 prd sc ip ic sp ic' sp'
+--      -> CAspect ctx1 a -> CAspect ctx1 asp
 extAspect rule (CAspect fasp)
   = CAspect $ \ctx -> req ctx (OpComRA rule (fasp ctx))
 
@@ -241,17 +241,18 @@ instance
     ConsRec (cRuleToTagField rule) EmptyRec
 
 instance
-  Require (OpComRA' (Cmp prd prd') ctx prd rule ( '(prd', rule') ': '[])) ctx
+  Require (OpComRA' (Cmp prd prd') ctx prd rule ( '(prd', rule') ': asp )) ctx
   =>
-  Require (OpComRA ctx prd rule ( '(prd', rule') ': '[])) ctx where
-  type ReqR (OpComRA ctx prd rule ( '(prd', rule') ': '[])) =
-    ReqR (OpComRA' (Cmp prd prd') ctx prd rule ( '(prd', rule') ': '[]))
+  Require (OpComRA ctx prd rule ( '(prd', rule') ': asp )) ctx where
+  type ReqR (OpComRA ctx prd rule ( '(prd', rule') ': asp )) =
+    ReqR (OpComRA' (Cmp prd prd') ctx prd rule ( '(prd', rule') ': asp ))
   req ctx (OpComRA rule asp) =
     req ctx (OpComRA' (Proxy @ (Cmp prd prd')) rule asp)
 
 instance
   ( Require (OpUpdate PrdReco prd (CRule ctx prd sc ip ic sp ic'' sp'') a) ctx
-  , RequireR (OpLookup PrdReco prd a) ctx (CRule ctx prd sc ip ic sp ic' sp')
+  , Require (OpLookup PrdReco prd a) ctx
+  , ReqR (OpLookup PrdReco prd a) ~ CRule ctx prd sc ip ic sp ic' sp'
   , (IC (ReqR (OpLookup PrdReco prd a))) ~ ic
   , (SP (ReqR (OpLookup PrdReco prd a))) ~ sp
   ) =>
@@ -271,10 +272,10 @@ instance
 
 instance
   ( Require (OpComRA ctx prd rule asp) ctx
-  , ReqR (OpComRA ctx prd rule asp) ~ Rec
-                            PrdReco
-                            (UnWrap
-                               (ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') asp)))
+  -- , ReqR (OpComRA ctx prd rule asp) ~ Rec
+  --                           PrdReco
+  --                           (UnWrap
+  --                              (ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') asp)))
   , ReqR (OpComRA ctx prd rule asp) ~ Aspect a0
   )
   =>
