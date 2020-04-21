@@ -70,6 +70,7 @@ library
                        Language.Grammars.AspectAG.TH,
                        Language.Grammars.AspectAG.HList,
                        Language.Grammars.AspectAG.TPrelude,
+                       Language.Grammars.AspectAG.Label
                        Language.Grammars.AspectAG.GenRecord,
                        Language.Grammars.AspectAG.RecordInstances,
                        Language.Grammars.AspectAG.Require,

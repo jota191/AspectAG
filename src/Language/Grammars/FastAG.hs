@@ -239,7 +239,6 @@ synmod att prd f =
   \inp (Fam ic sp) ->
     Fam ic $ update att Proxy (f inp) sp
 
-
 synmodM att prd = synmod att prd . runReader
 
 inhdef ::

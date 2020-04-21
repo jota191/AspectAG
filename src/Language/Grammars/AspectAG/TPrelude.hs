@@ -28,25 +28,16 @@ Portability : POSIX
 module Language.Grammars.AspectAG.TPrelude where
 import Data.Kind
 import Data.Type.Equality
+import Data.Type.Bool
 import GHC.TypeLits
 import Data.Proxy
 
 
-data Label l = Label
-sndLabel :: Label '(a,b) -> Label b
-sndLabel _ = undefined
-
-getProxy :: a -> Proxy a ; getProxy _ = Proxy
-getLabel :: a -> Label a ; getLabel _ = Label
-
-proxyFrom :: t a -> Proxy a
-proxyFrom _ = Proxy
-
 
 -- | If construction, purely computed at type level
-type family If (cond:: Bool) (thn :: k) (els :: k) :: k where
-  If 'True  thn els = thn
-  If 'False thn els = els
+-- type family If (cond:: Bool) (thn :: k) (els :: k) :: k where
+--   If 'True  thn els = thn
+--   If 'False thn els = els
 
 -- | Or, purely computed at type level
 type family Or (l :: Bool)(r :: Bool) :: Bool where
@@ -54,15 +45,15 @@ type family Or (l :: Bool)(r :: Bool) :: Bool where
   Or True b  = 'True
 
 
--- | And, purely computed at type level
-type family And (l :: Bool)(r :: Bool) :: Bool where
-  And False b = False
-  And True b  = b
+-- -- | And, purely computed at type level
+-- type family And (l :: Bool)(r :: Bool) :: Bool where
+--   And False b = False
+--   And True b  = b
 
--- | Not, purely computed at type level
-type family Not (l :: Bool) :: Bool where
-  Not False = True
-  Not True  = False
+-- -- | Not, purely computed at type level
+-- type family Not (l :: Bool) :: Bool where
+--   Not False = True
+--   Not True  = False
 
 
 -- | LabelSet is a predicate over lists of pairs.
@@ -129,7 +120,7 @@ type family HasLabel (l :: k) (r :: [(k, k')]) :: Bool where
   HasLabel l ( '(l', v) ': r) = Or (l == l') (HasLabel l r)
 
 
-type family Equal (a:: k)(b :: k') :: Bool where
---  Equal (f a) (g b) = And (Equal f g) (Equal a b) 
-  Equal a a = True
-  Equal a b = False
+-- type family Equal (a:: k)(b :: k') :: Bool where
+-- --  Equal (f a) (g b) = And (Equal f g) (Equal a b) 
+--   Equal a a = True
+--   Equal a b = False

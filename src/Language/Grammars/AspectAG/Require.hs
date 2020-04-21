@@ -25,8 +25,12 @@ module Language.Grammars.AspectAG.Require where
 import Data.Kind
 import Data.Proxy
 import GHC.TypeLits
-import Language.Grammars.AspectAG.TPrelude
+import Data.Type.Bool
 import Data.Type.Equality
+
+type family Equal (a:: k)(b :: k') :: Bool where
+  Equal a a = True
+  Equal a b = False
 
 class Require (op   :: Type)
               (ctx  :: [ErrorMessage])  where
@@ -48,6 +52,8 @@ type family ShowEM (m :: ErrorMessage) :: ErrorMessage
 
 type family ShowT (t :: k) :: ErrorMessage
 type instance ShowT (t :: Type) = ShowType t
+type instance ShowT (t :: Symbol) = Text t
+
 {-
 Abro esta familia para poder definirla de manera extensible, porque no sabemos
 en GenReord como se muestran los tipos para instancias concretas. El problema es

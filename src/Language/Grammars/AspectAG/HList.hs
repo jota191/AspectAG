@@ -27,6 +27,7 @@ Implementation of strongly typed heterogeneous lists.
 
 module Language.Grammars.AspectAG.HList where
 import Language.Grammars.AspectAG.TPrelude
+import Language.Grammars.AspectAG.Label
 import Data.Proxy
 import Data.Type.Equality
 import Data.Kind
