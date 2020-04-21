@@ -6,7 +6,6 @@ License     : GPL
 Maintainer  : jpgarcia@fing.edu.uy
 Stability   : experimental
 Portability : POSIX
-
 -}
 
 {-# LANGUAGE PolyKinds                 #-}
@@ -165,22 +164,14 @@ instance MapCtxAsp ('[] :: [(Prod,Type)]) ctx ctx' where
      =  '[]
   mapCtxRec _ EmptyRec = EmptyRec
 
--- extAspect
-  -- ::  ( Require (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') a) ctx
-  --    , ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') a)     
-  --      ~ Rec PrdReco asp
-  --    )
-  -- =>
-  -- CRule ctx prd sc ip ic sp ic' sp'
-  --    -> CAspect ctx a -> CAspect ctx asp
 
--- extAspect
---   :: (Require
---         (OpComRA ctx1 prd (CRule ctx1 prd sc ip ic sp ic' sp') a) ctx1,
---       ReqR (OpComRA ctx1 prd (CRule ctx1 prd sc ip ic sp ic' sp') a)
---       ~ Rec PrdReco asp) =>
---      CRule ctx1 prd sc ip ic sp ic' sp'
---      -> CAspect ctx1 a -> CAspect ctx1 asp
+extAspect
+  :: (Require
+        (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') a) ctx,
+      ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') a)
+      ~ Rec PrdReco asp) =>
+     CRule ctx prd sc ip ic sp ic' sp'
+     -> CAspect ctx a -> CAspect ctx asp
 extAspect rule (CAspect fasp)
   = CAspect $ \ctx -> req ctx (OpComRA rule (fasp ctx))
 
