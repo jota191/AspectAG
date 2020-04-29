@@ -37,7 +37,9 @@ module Language.Grammars.AspectAG (
               mod, synmod, synmodM,
               at, lhs,
               Label, Prod, NT, Child, (#.), (=.),
-              emptyAtt
+              emptyAtt,
+              emptyAspect,
+              ter
              ) where
 
 
