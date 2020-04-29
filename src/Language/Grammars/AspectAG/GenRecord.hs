@@ -45,12 +45,25 @@ import GHC.TypeLits
 
 type family a == b where
   a == b = Equal a b
-  
-data Rec (c :: k) (r :: [(k', k'')]) :: Type where
-  EmptyRec :: Rec c '[]
-  ConsRec :: TagField c l v -> Rec c r -> Rec c ('( l, v) ': r)
--- doc: comentar diseño, y falta de LabelSet
 
+
+-- | Record data structure for generic records (Internal). The `c`
+-- index indicates the kind of record (for each record instance, the
+-- user should define an index). The `r` index represents the mapping
+-- from labels to values.  Labels are of kind `k'`. Values are still
+-- polykinded (`k''`) since rich information can be statically
+-- represented here (for instance, when a record of records, or a
+-- record of Vectors is represented).  `k'` must implement the 'CMP'
+-- family, although it is not visible here for simplicity. Records are
+-- built putting fields ordered according to the `CMP` result of its
+-- labels. __This is not intended to be used to build records__
+
+data Rec (c :: k) (r :: [(k', k'')]) :: Type where
+  EmptyRec :: Rec c '[] -- ^ empty record
+  ConsRec :: TagField c l v -> Rec c r -> Rec c ('( l, v) ': r) -- ^ `ConsRec`
+-- takes a field (`TagField`) and a 
+
+-- | doc: comentar diseño, y falta de LabelSet
 data TagField (cat :: k) (l :: k') (v :: k'') where
   TagField :: Label c -> Label l -> WrapField c v -> TagField c l v
 
@@ -100,7 +113,7 @@ data OpLookup' (b  :: Ordering)
 
 -- | wrapper instance
 instance
-  (Require (OpLookup' (Cmp l l') c l ('( l', v) ': r)) ctx)
+  Require (OpLookup' (Cmp l l') c l ('( l', v) ': r)) ctx
   =>
   Require (OpLookup c l ('( l', v) ': r)) ctx where
   type ReqR (OpLookup c l ('( l', v) ': r)) =
@@ -199,7 +212,6 @@ instance
     Rec c ( '(l, v) ': r)
   req ctx (OpUpdate' proxy label field (ConsRec tgf r)) =
     ConsRec (TagField Label label field) r
-
 
 instance
   ( Require (OpUpdate c l v r) ctx

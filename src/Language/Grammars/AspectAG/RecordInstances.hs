@@ -77,14 +77,6 @@ type instance ShowRec Reco         = "Record"
 type instance ShowField Reco       = "field named "
 
 
-
--- | ** Pattern Synonyms
--- pattern EmptyR :: Rec Reco '[]
--- pattern EmptyR = EmptyRec :: Rec Reco '[]
--- pattern ConsR :: Tagged l v -> Rec Reco xs -> Rec Reco ( '(l,v ) ': xs) 
--- pattern ConsR lv r = lv .*. r
-
-
 type Tagged = TagField Reco
 pattern Tagged :: v -> Tagged l v
 pattern Tagged v = TagField Label Label v

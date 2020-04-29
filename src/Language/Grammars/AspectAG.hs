@@ -1,7 +1,7 @@
 {-|
 Module      : Language.Grammars.AspectAG
 Description : Main module, First-class attribute grammars
-Copyright   : (c) Juan García Garland, Marcos Viera, 2019
+Copyright   : (c) Juan García-Garland, Marcos Viera, 2019, 2020
 License     : GPL
 Maintainer  : jpgarcia@fing.edu.uy
 Stability   : experimental
@@ -31,13 +31,14 @@ Portability : POSIX
 {-# LANGUAGE AllowAmbiguousTypes       #-}
 
 module Language.Grammars.AspectAG (
-              module Language.Grammars.AspectAG,
-              module Language.Grammars.AspectAG.HList,
-              module Language.Grammars.AspectAG.Label,
-              module Language.Grammars.AspectAG.GenRecord,
-              module Language.Grammars.AspectAG.RecordInstances,
-              module Language.Grammars.AspectAG.TPrelude
-            ) where
+              (.+:),
+              (.:+:),
+              syn, syndef, syndefM,
+              mod, synmod, synmodM,
+              at, lhs,
+              Label, Prod, NT, Child, (#.), (=.),
+              emptyAtt
+             ) where
 
 
 import Language.Grammars.AspectAG.HList
@@ -634,6 +635,9 @@ knitAspect (prd :: Label prd) asp fc ip
     in  knit ctx (req ctx' (OpLookup prd ((mkAspect asp) ctx))) fc ip
 
 
+
+
+ --  use
 -- class Use (att :: Att) (prd :: Prod) (nts :: [NT]) (a :: Type) sc
 --  where
 --   usechi :: Label att -> Label prd -> KList nts -> (a -> a -> a) -> ChAttsRec prd sc

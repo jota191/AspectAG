@@ -41,6 +41,9 @@ import qualified Data.Set as S
 import Control.Monad
 
 import Language.Grammars.AspectAG
+import Language.Grammars.AspectAG.GenRecord
+import Language.Grammars.AspectAG.RecordInstances
+import Language.Grammars.AspectAG.Label
 import qualified Data.Kind as DK
 
 
