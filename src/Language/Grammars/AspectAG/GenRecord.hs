@@ -68,13 +68,14 @@ data TagField (cat :: k) (l :: k') (v :: k'') where
   TagField :: Label c -> Label l -> WrapField c v -> TagField c l v
 
 -- | operator
-(l :: Label l) .=. (v :: v) = TagField Label l v
+-- (l :: Label l) .=. (v :: v) = TagField Label l v
 
 type family  WrapField (c :: k')  (v :: k)
 
 type family UnWrap (t :: Type) :: [(k,k')]
 type instance UnWrap (Rec c (r :: [(k, k')])) = (r :: [(k, k')])
 
+-- emptyRecord = EmptyRec
 
 untagField :: TagField c l v -> WrapField c v
 untagField (TagField lc lv v) = v
@@ -100,8 +101,8 @@ type family ShowField c :: Symbol
 
 -- | Datatype for lookup (wrapper)
 data OpLookup (c :: Type)
-              (l  :: k)
-              (r  :: [(k, k')]) :: Type where
+              (l :: k)
+              (r :: [(k, k')]) :: Type where
   OpLookup :: Label l -> Rec c r -> OpLookup c l r
 
 -- | Datatype for lookup (internal)

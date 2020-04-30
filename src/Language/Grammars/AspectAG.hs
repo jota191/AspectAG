@@ -30,17 +30,27 @@ Portability : POSIX
 {-# LANGUAGE IncoherentInstances       #-}
 {-# LANGUAGE AllowAmbiguousTypes       #-}
 
-module Language.Grammars.AspectAG (
-              (.+:),
-              (.:+:),
-              syn, syndef, syndefM,
-              mod, synmod, synmodM,
-              at, lhs,
-              Label, Prod, NT, Child, (#.), (=.),
-              emptyAtt,
-              emptyAspect,
-              ter
-             ) where
+module Language.Grammars.AspectAG
+  (
+    (.+:),
+    (.:+:),
+    syn, syndef, syndefM,
+    mod, synmod, synmodM,
+    inh, inhdef, inhdefM,
+    inhmod, inhmodM, 
+    at, lhs,
+    Label, Prod, NT, Child,
+    (#.), (=.), (.=.), (.*.),
+    (*.), (#.),
+    emptyAtt,
+    emptyRecord,
+    singAsp,
+    emptyAspect,
+    ter,
+    sem_Lit,
+    knitAspect
+  )
+  where
 
 
 import Language.Grammars.AspectAG.HList
@@ -199,6 +209,8 @@ ext ::  RequireEq prd prd' (Text "ext":ctx)
      -> CRule ctx prd sc ip a b ic' sp'
 ext = ext'
 
+singAsp r
+  = r .+: emptyAspect
 
 infixr 6 .+.
 (.+.) = ext
@@ -638,7 +650,6 @@ knitAspect (prd :: Label prd) asp fc ip
 
 
 
-
  --  use
 -- class Use (att :: Att) (prd :: Prod) (nts :: [NT]) (a :: Type) sc
 --  where
@@ -704,7 +715,6 @@ knitAspect (prd :: Label prd) asp fc ip
 
 
 -- -----------------------------------------------------------------------------
--- singAsp r = r .+: emptyAspect
 
 -- tyAppAtt :: (forall b. Label ('Att name b)) -> Proxy a -> Label ('Att name a)
 -- att `tyAppAtt` Proxy = att
