@@ -41,7 +41,7 @@ test/Test2.hs
 test/TypedArithExtension.hs
 .gitignore
 ./papers
-./benchmark
+./benchmarks
 
 TAGS
 doc/Fatal

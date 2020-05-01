@@ -1,1 +1,0 @@
-ghc -O2 -o benchNew Repmin.hs
