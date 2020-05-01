@@ -40,7 +40,8 @@ test/GraphsBroken.hs
 test/Test2.hs
 test/TypedArithExtension.hs
 .gitignore
-
+./papers
+./benchmark
 
 TAGS
 doc/Fatal
