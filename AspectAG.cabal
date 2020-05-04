@@ -66,20 +66,11 @@ cabal-version:       >=1.10
 library
   -- Modules exported by the library.
   exposed-modules:     Language.Grammars.AspectAG,
-                       Language.Grammars.FastAG,
                        Language.Grammars.AspectAG.TH,
                        Language.Grammars.AspectAG.HList,
-                       Language.Grammars.AspectAG.TPrelude,
-                       Language.Grammars.AspectAG.Label
-                       Language.Grammars.AspectAG.GenRecord,
-                       Language.Grammars.AspectAG.RecordInstances,
-                       Language.Grammars.AspectAG.Require,
-                       Language.Grammars.FastAG.GenRecord,
-                       Language.Grammars.FastAG.HList,
-                       Language.Grammars.FastAG.RecordInstances,
-                       Language.Grammars.FastAG.TPrelude,
-                       Language.Grammars.FastAG.TH
-  -- LANGUAGE extensions used by modules in this package.
+                       Language.Grammars.AspectAG.RecordInstances
+
+-- LANGUAGE extensions used by modules in this package.
   other-extensions:    TypeInType,
                        TypeFamilies,
                        FlexibleContexts,
@@ -104,11 +95,13 @@ library
                        InstanceSigs
 
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.11 && <4.13,
+  build-depends:       base >=4.11,
                        tagged >=0.8,
                        containers >= 0.5,
                        template-haskell >= 2.13,
-                       mtl >= 2.0
+                       mtl >= 2.0,
+                       require >=0.6 && <0.7,
+                       poly-rec >=0.6 && <0.7
  
 
   -- Directories containing source files.
