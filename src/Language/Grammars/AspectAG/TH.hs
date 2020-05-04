@@ -246,7 +246,7 @@ mkClause i
 
 toSemRec :: [(Name, Name)] -> Exp
 toSemRec
-  = foldr mkChSem (VarE (mkName "emptyRecord"))
+  = foldr mkChSem (VarE (mkName "emptyGenRec"))
   where mkChSem (n,pos) xs
           | "Nt_" `isPrefixOf` nameBase pos =
           (AppE (AppE (VarE $ mkName ".*.")

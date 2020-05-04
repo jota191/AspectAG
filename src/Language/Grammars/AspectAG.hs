@@ -40,7 +40,7 @@ module Language.Grammars.AspectAG
     inhmod, inhmodM, 
     at, lhs,
     Label(Label), Prod(..), T(..), NT(..), Child(..), Att(..),
-    (#.), (=.), (.=), (.*), -- (.=.), (.*.),
+    (.#), (#.), (=.), (.=), (.*), (*.),
     emptyAtt,
     singAsp,
     emptyAspect,
@@ -50,7 +50,6 @@ module Language.Grammars.AspectAG
     traceAspect,
     traceRule,
     module Data.GenRec
-
   )
   where
 
