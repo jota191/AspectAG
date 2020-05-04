@@ -1,7 +1,3 @@
-
-
-
-
 To use AspectAG in a module, some extensions must be enabled,
 otherwise type errors we won't have readable type errors.
 
@@ -18,13 +14,14 @@ otherwise type errors we won't have readable type errors.
 > {-# LANGUAGE FlexibleInstances #-}
 > {-# LANGUAGE MultiParamTypeClasses #-}
 > {-# LANGUAGE TypeApplications #-}
+> {-# LANGUAGE PartialTypeSignatures     #-}
 
 
 > module RepminTH where
 
 > import Language.Grammars.AspectAG
 > import Language.Grammars.AspectAG.TH
-
+> import Data.GenRec
 
 To add a nonterminal we can use the TH function |addNont|:
 
@@ -53,10 +50,11 @@ Semantic functions and a datatype by hand (for now)
 > data Root = Root Tree deriving Show
 > data Tree = Leaf Int | Node Tree Tree deriving Show
 
+> t1 = Node (Leaf 4) (Node (Leaf 5) (Leaf 1))
+
 
 > sem_Root asp (Root t)
 >  = knitAspect p_Root asp $ ch_tree .=. sem_Tree asp t .*. EmptyRec
-
 > sem_Tree asp (Leaf i)
 >  = knitAspect p_Leaf asp $ ch_val .=. sem_Lit i .*. EmptyRec
 > sem_Tree asp (Node l r)
@@ -65,17 +63,17 @@ Semantic functions and a datatype by hand (for now)
 >  .*. ch_r .=. sem_Tree asp r
 >  .*. EmptyRec
 
-
 > $(attLabels [("sres", ''Tree), ("smin", ''Int), ("ival", ''Int)])
 
 > asp_smin
->  =   syn smin p_Node (min @ Int <$> at ch_l smin <*> at ch_r smin)
->  .+: syn smin p_Leaf (ter ch_val)
->  .+: emptyAspect
+>   = 
+>  syn smin p_Leaf (ter ch_val) .+:
+>  syn smin p_Node (min @ Int <$> at ch_l smin <*> at ch_r smin) .+:
+>  emptyAspect
 
 > asp_sres
->  =    syn sres p_Node (Node <$> at ch_l sres <*> at ch_r sres)
->  .+:  syn sres p_Leaf (Leaf <$> at lhs ival)
+>  =    syn sres p_Leaf (Leaf <$> at lhs ival)
+>  .+:  syn sres p_Node (Node <$> at ch_l sres <*> at ch_r sres)
 >  .+:  syn sres p_Root (at ch_tree sres)
 >  .+:  emptyAspect
 
@@ -88,30 +86,31 @@ Semantic functions and a datatype by hand (for now)
 > asp_repmin
 >   = asp_smin .:+: asp_sres .:+: asp_ival
 
+> mini t = sem_Tree asp_smin t emptyAtt #. smin
+
 > repmin t
 >   = sem_Root asp_repmin (Root t)
 >          emptyAtt #. sres
 
 
-Another way to build  semantic functions:
+-- Another way to build  semantic functions:
 
-> semRoot_Root asp tree
->  = knitAspect p_Root asp
->  $ ch_tree .=. tree .*. EmptyRec
+-- > semRoot_Root asp tree
+-- >  = knitAspect p_Root asp
+-- >  $ ch_tree .==. tree .**. EmptyRec
 
-> semTree_Node asp l r
->  = knitAspect p_Node asp
->  $    ch_l .=. l
->  .*.  ch_r .=. r
->  .*.  EmptyRec
+-- > semTree_Node asp l r
+-- >  = knitAspect p_Node asp
+-- >  $    ch_l .==. l
+-- >  .**.  ch_r .==. r
+-- >  .**.  EmptyRec
 
-> semTree_Leaf asp i
->  = knitAspect p_Leaf asp
->  $ ch_val .=. i .*. EmptyRec
+-- > semTree_Leaf asp i
+-- >  = knitAspect p_Leaf asp
+-- >  $ ch_val .==. i .**. EmptyRec
 
-> semR asp (Root t)    = semRoot_Root asp (semT asp t)
-> semT asp (Node l r)  = semTree_Node asp (semT asp l) (semT asp r)
-> semT asp (Leaf i)    = semTree_Leaf asp (sem_Lit i)
+-- > semR asp (Root t)    = semRoot_Root asp (semT asp t)
+-- > semT asp (Node l r)  = semTree_Node asp (semT asp l) (semT asp r)
+-- > semT asp (Leaf i)    = semTree_Leaf asp (sem_Lit i)
 
-
-> repmin' t = sem_Root asp_repmin (Root t) emptyAtt #. sres
+-- > repmin' t = sem_Root asp_repmin (Root t) emptyAtt #. sres

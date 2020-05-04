@@ -151,14 +151,21 @@ A possibly better alternative:
 
 
 avoid annotations, without touching attribute definitions:
-< tyApp :: (forall b. Label ('Att name b)) -> Proxy a -> Label ('Att name a)
-< att `tyApp` Proxy = att
 
-> cata'' :: (a -> b -> b) -> b -> [a] -> b  -- needed
-> cata'' f e xs
->   = semListPoly (asp_cata (getProxy e) f e) xs emptyAtt
->       #. (scata `tyAppAtt` (getProxy e))
+-- > tyApp :: (forall b. Label ('Att name b)) -> Proxy a -> Label ('Att name a)
+-- > att `tyApp` Proxy = att
+
+-- > cata'' :: (a -> b -> b) -> b -> [a] -> b  -- needed
+-- > cata'' f e xs
+-- >   = semListPoly (asp_cata (getProxy e) f e) xs emptyAtt
+-- >       #. (scata `tyAppAtt` (getProxy e))
 
 
 -------------------------------------------------------------------------------
 testing use
+
+> proxyFrom :: f a -> Proxy a
+> proxyFrom _ = Proxy
+
+> getProxy :: a -> Proxy a
+> getProxy _ = Proxy
