@@ -40,10 +40,10 @@ import qualified Data.Set as S
 
 import Control.Monad
 
+import Data.GenRec.Label
+import Data.GenRec
 import Language.Grammars.AspectAG
-import Language.Grammars.AspectAG.GenRecord
 import Language.Grammars.AspectAG.RecordInstances
-import Language.Grammars.AspectAG.Label
 import qualified Data.Kind as DK
 
 
@@ -176,12 +176,6 @@ typeList = foldr f promotedNilT
           -> appT (appT promotedConsT (appT (appT (promotedTupleT 2)
                                               (nameToSymbol n))
                                        (nameToSymbolBase t))) xs
-  -- where f = \x xs -> if isNTName x
-  --         then ((appT (appT promotedConsT
-  --                      ((appT [t| Left |]) (conT x))))) xs
-  --         else ((appT (appT promotedConsT
-  --                      ((appT [t| Right |])
-  --                       (appT [t| 'T |] (conT x)))))) xs
 
 nameToSymbol = litT . strTyLit . show
 nameToSymbolBase = litT . strTyLit . nameBase
@@ -189,7 +183,6 @@ nameToSymbolBase = litT . strTyLit . nameBase
 isNTName :: Name -> Bool
 isNTName n
   = "Nt_" `isPrefixOf` nameBase n
-
 
 closeNT :: Name -> Q [Dec]
 closeNT nt
@@ -223,8 +216,6 @@ getTList (AppT (AppT (PromotedConsT)
      if "Nt_" `isPrefixOf` pos then mkName $ drop 3 pos else mkName pos)
     : getTList ts
 getTList _ = []
-
-
 
 -- | keeps nt info
 getTListNT :: Type -> [(Name, Name)]

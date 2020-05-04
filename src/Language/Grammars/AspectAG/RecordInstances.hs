@@ -19,23 +19,23 @@
              InstanceSigs,
              AllowAmbiguousTypes,
              TypeApplications,
-             PatternSynonyms
+             PatternSynonyms,
+             PartialTypeSignatures
 #-}
 
 module Language.Grammars.AspectAG.RecordInstances where
 
-import Language.Grammars.AspectAG.Require
-import Language.Grammars.AspectAG.GenRecord
-import Language.Grammars.AspectAG.Label
+import Data.Type.Require
+import Data.GenRec
 import GHC.TypeLits
 import Data.Kind
 import Data.Proxy
 
-data Att   = Att Symbol Type               -- deriving Eq
-data Prod  = Prd Symbol NT                  --deriving Eq
-data Child = Chi Symbol Prod (Either NT T)  --deriving Eq
-data NT    = NT Symbol                      --deriving Eq
-data T     = T Type                        -- deriving Eq
+data Att   = Att Symbol Type                -- deriving Eq
+data Prod  = Prd Symbol NT                  -- deriving Eq
+data Child = Chi Symbol Prod (Either NT T)  -- deriving Eq
+data NT    = NT Symbol                      -- deriving Eq
+data T     = T Type                         -- deriving Eq
 
 type instance Cmp ('Att a _) ('Att b _) =
   CmpSymbol a b
@@ -47,17 +47,17 @@ type instance Cmp ('Chi a _ _) ('Chi b _ _) =
   CmpSymbol a b
 
 
-type instance  ShowT ('Att l t)   = Text  "Attribute " :<>: Text l
-                                                       :<>: Text ":"
-                                                       :<>: ShowT t 
-type instance  ShowT ('Prd l nt)  = ShowT nt :<>: Text "::Production "
-                                             :<>: Text l
-type instance  ShowT ('Chi l p s) = ShowT p :<>:  Text "::Child " :<>: Text l 
-                                            :<>:  Text ":" :<>: ShowT s
-type instance  ShowT ('Left l)    = ShowT l
-type instance  ShowT ('Right r)   = ShowT r
-type instance  ShowT ('NT l)      = Text "Non-Terminal " :<>: Text l
-type instance  ShowT ('T  l)      = Text "Terminal " :<>: ShowT l
+type instance  ShowTE ('Att l t)   = Text  "Attribute " :<>: Text l
+                                                        :<>: Text ":"
+                                                        :<>: ShowTE t 
+type instance  ShowTE ('Prd l nt)  = ShowTE nt :<>: Text "::Production "
+                                              :<>: Text l
+type instance  ShowTE ('Chi l p s) = ShowTE p :<>:  Text "::Child " :<>: Text l 
+                                            :<>:  Text ":" :<>: ShowTE s
+type instance  ShowTE ('Left l)    = ShowTE l
+type instance  ShowTE ('Right r)   = ShowTE r
+type instance  ShowTE ('NT l)      = Text "Non-Terminal " :<>: Text l
+type instance  ShowTE ('T  l)      = Text "Terminal " :<>: ShowTE l
 
 
 
@@ -84,37 +84,37 @@ pattern Tagged v = TagField Label Label v
 
 -- ** Constructors
 
--- | Pretty Constructor
-infixr 4 .=.
-(.=.) :: Label l -> v -> Tagged l v
-l .=. v = Tagged v
+-- -- | Pretty Constructor
+-- infixr 4 .=.
+-- (.=.) :: Label l -> v -> Tagged l v
+-- l .=. v = Tagged v
 
--- | For the empty Record
-emptyRecord :: Record '[]
-emptyRecord = EmptyRec
+-- -- | For the empty Record
+-- emptyRecord :: Record '[]
+-- emptyRecord = EmptyRec
 
-unTagged :: Tagged l v -> v
-unTagged (TagField _ _ v) = v
+-- unTagged :: Tagged l v -> v
+-- unTagged (TagField _ _ v) = v
 
--- * Destructors
--- | Get a label
-label :: Tagged l v -> Label l
-label _ = Label
+-- -- * Destructors
+-- -- | Get a label
+-- label :: Tagged l v -> Label l
+-- label _ = Label
 
--- | Same, mnemonically defined
-labelTChAtt :: Tagged l v -> Label l
-labelTChAtt _ = Label
+-- -- | Same, mnemonically defined
+-- labelTChAtt :: Tagged l v -> Label l
+-- labelTChAtt _ = Label
 
 
--- | Show instance, used for debugging
-instance Show (Record '[]) where
-  show _ = "{}"
+-- -- | Show instance, used for debugging
+-- instance Show (Record '[]) where
+--   show _ = "{}"
 
-instance (Show v, Show (Record xs)) =>
-         Show (Record ( '(l,v) ': xs ) ) where
-  show (ConsRec lv xs) = let tail = show xs
-                         in "{" ++ show (unTagged lv)
-                            ++ "," ++ drop 1 tail
+-- instance (Show v, Show (Record xs)) =>
+--          Show (Record ( '(l,v) ': xs ) ) where
+--   show (ConsRec lv xs) = let tail = show xs
+--                          in "{" ++ show (unTagged lv)
+--                             ++ "," ++ drop 1 tail
 
 
 
@@ -169,15 +169,15 @@ emptyAtt = EmptyRec
 infixl 7 #.
 
 (#.) ::
-  ( msg ~ '[Text "looking up attribute " :<>: ShowT l :$$:
-            Text "on " :<>: ShowT r
+  ( msg ~ '[Text "looking up attribute " :<>: ShowTE l :$$:
+            Text "on " :<>: ShowTE r
            ]
   , Require (OpLookup AttReco l r) msg
   )
   => Attribution r -> Label l -> ReqR (OpLookup AttReco l r)
 (attr :: Attribution r) #. (l :: Label l)
-  = let prctx = Proxy @ '[Text "looking up attribute " :<>: ShowT l :$$:
-                          Text "on " :<>: ShowT r
+  = let prctx = Proxy @ '[Text "looking up attribute " :<>: ShowTE l :$$:
+                          Text "on " :<>: ShowTE r
                          ]
     in req prctx (OpLookup @_ @(AttReco) l attr)
 
@@ -246,17 +246,17 @@ labelChAttr _ = Label
 infixl 8 .#
 (.#) ::
   (  c ~ ('Chi ch prd nt)
-  ,  ctx ~ '[Text "looking up " :<>: ShowT c :$$:
-            Text "on " :<>: ShowT r :$$:
-            Text "producion: " :<>: ShowT prd
+  ,  ctx ~ '[Text "looking up " :<>: ShowTE c :$$:
+            Text "on " :<>: ShowTE r :$$:
+            Text "producion: " :<>: ShowTE prd
            ]
   , Require (OpLookup (ChiReco prd) c r) ctx
   ) =>
      Rec (ChiReco prd) r -> Label c -> ReqR (OpLookup (ChiReco prd) c r)
 (chi :: Rec (ChiReco prd) r) .# (l :: Label c)
-  = let prctx = Proxy @ '[Text "looking up " :<>: ShowT c :$$:
-                          Text "on " :<>: ShowT r :$$:
-                          Text "producion: " :<>: ShowT prd
+  = let prctx = Proxy @ '[Text "looking up " :<>: ShowTE c :$$:
+                          Text "on " :<>: ShowTE r :$$:
+                          Text "producion: " :<>: ShowTE prd
                          ]
     in req prctx (OpLookup @_ @(ChiReco prd) l chi)
 
@@ -270,5 +270,5 @@ type instance  WrapField PrdReco (rule :: Type)
   = rule
 
 type Aspect (asp :: [(Prod, Type)]) = Rec PrdReco asp
-type instance ShowRec PrdReco      = "Aspect"
-type instance ShowField PrdReco       = "production named "
+type instance ShowRec PrdReco       = "Aspect"
+type instance ShowField PrdReco     = "production named "

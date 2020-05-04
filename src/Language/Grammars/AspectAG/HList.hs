@@ -26,8 +26,9 @@ Implementation of strongly typed heterogeneous lists.
 #-}
 
 module Language.Grammars.AspectAG.HList where
-import Language.Grammars.AspectAG.TPrelude
-import Language.Grammars.AspectAG.Label
+
+import Data.Type.Bool
+import Data.GenRec.Label
 import Data.Proxy
 import Data.Type.Equality
 import Data.Kind
@@ -50,7 +51,7 @@ instance HMember t '[] where
   hMember _ _ = Proxy
 
 instance HMember t (t' ': ts) where
-  type HMemberRes t (t' ': ts) = Or (t == t') (HMemberRes t ts)
+  type HMemberRes t (t' ': ts) = t == t' || HMemberRes t ts
   hMember _ _ = Proxy
 
 -- | HMember' is a test membership function.
@@ -64,7 +65,7 @@ instance HMember' t '[] where
   hMember' _ _ = Proxy
 
 instance HMember' t (t' ': ts) where
-  type HMemberRes' t (t' ': ts) = Or (t == t') (HMemberRes' t ts)
+  type HMemberRes' t (t' ': ts) = t == t' || HMemberRes' t ts
   hMember' _ _ = Proxy
 
 

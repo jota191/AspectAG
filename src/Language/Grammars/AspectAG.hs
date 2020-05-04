@@ -39,30 +39,32 @@ module Language.Grammars.AspectAG
     inh, inhdef, inhdefM,
     inhmod, inhmodM, 
     at, lhs,
-    Label, Prod, NT, Child,
-    (#.), (=.), (.=.), (.*.),
-    (*.), (#.),
+    Label(Label), Prod(..), T(..), NT(..), Child(..), Att(..),
+    (#.), (=.), (.=), (.*), -- (.=.), (.*.),
     emptyAtt,
-    emptyRecord,
     singAsp,
     emptyAspect,
     ter,
     sem_Lit,
-    knitAspect
+    knitAspect,
+    traceAspect,
+    traceRule,
+    module Data.GenRec
+
   )
   where
 
 
 import Language.Grammars.AspectAG.HList
-import Data.Kind
-import Language.Grammars.AspectAG.Label
-import Language.Grammars.AspectAG.TPrelude hiding (Label)
-import Data.Proxy
-
-
 import Language.Grammars.AspectAG.RecordInstances
-import Language.Grammars.AspectAG.Require
-import Language.Grammars.AspectAG.GenRecord hiding ((.=.))
+
+import Data.Type.Require hiding (emptyCtx)
+
+import Data.GenRec
+import Data.GenRec.Label
+
+import Data.Kind
+import Data.Proxy
 import GHC.TypeLits
 
 import Data.Maybe
@@ -163,8 +165,9 @@ class MapCtxAsp (r :: [(Prod,Type)]) (ctx :: [ErrorMessage])
 
 instance ( MapCtxAsp r ctx ctx' 
          , ResMapCtx r ctx ctx' ~ r'
-         , LabelSetF ('(l, CRule ctx prd sc ip ic sp ic' sp') : r')
-         ~ True) =>
+        --  , LabelSetF ('(l, CRule ctx prd sc ip ic sp ic' sp') : r')
+        --  ~ True
+         ) =>
   MapCtxAsp ( '(l, CRule ctx' prd sc ip ic sp ic' sp') ': r) ctx ctx' where
   type ResMapCtx ( '(l, CRule ctx' prd sc ip ic sp ic' sp') ': r) ctx ctx'
      =  '(l, CRule ctx prd sc ip ic sp ic' sp') ':  ResMapCtx r ctx ctx'
@@ -342,8 +345,8 @@ syndef
      , RequireR (OpExtend AttReco ('Att att t) t sp) ctx (Attribution sp')
      , ctx'
          ~ ((Text "syndef("
-             :<>: ShowT ('Att att t) :<>: Text ", "
-             :<>: ShowT prd :<>: Text ")") ': ctx)
+             :<>: ShowTE ('Att att t) :<>: Text ", "
+             :<>: ShowTE prd :<>: Text ")") ': ctx)
      )
      => Label ('Att att t)
      -> Label prd
@@ -359,8 +362,8 @@ syndefM
      , RequireR (OpExtend AttReco ('Att att t) t sp) ctx (Attribution sp')
      , ctx'
          ~ ((Text "syndef("
-             :<>: ShowT ('Att att t) :<>: Text ", "
-             :<>: ShowT prd :<>: Text ")") ': ctx)
+             :<>: ShowTE ('Att att t) :<>: Text ", "
+             :<>: ShowTE prd :<>: Text ")") ': ctx)
      )
      => Label ('Att att t)
      -> Label prd
@@ -377,8 +380,8 @@ synmod
   => Label ('Att att t)
      -> Label prd
      -> (Proxy
-           ((('Text "synmod(" ':<>: ShowT ('Att att t)) :<>: Text ", "
-                              ':<>: ShowT prd :<>: Text ")")
+           ((('Text "synmod(" ':<>: ShowTE ('Att att t)) :<>: Text ", "
+                              ':<>: ShowTE prd :<>: Text ")")
               : ctx)
          -> Fam prd sc ip -> t)
      -> CRule ctx prd sc ip ic' r ic' sp'
@@ -391,8 +394,8 @@ synmodM
   :: RequireR (OpUpdate AttReco ('Att att t) t r) ctx (Attribution sp')
   => Label ('Att att t)
      -> Label prd
-     -> Reader ( Proxy ((('Text "synmod(" ':<>: ShowT ('Att att t)) :<>: Text ", "
-                                          ':<>: ShowT prd :<>: Text ")")
+     -> Reader ( Proxy ((('Text "synmod(" ':<>: ShowTE ('Att att t)) :<>: Text ", "
+                                          ':<>: ShowTE prd :<>: Text ")")
                        : ctx)
                , Fam prd sc ip)
                t
@@ -412,9 +415,9 @@ inhdef
                 (Attribution r)
      , RequireEq ntch ('Left n) ctx'
      , ctx' ~ ((Text "inhdef("
-                :<>: ShowT ('Att att t)  :<>: Text ", "
-                :<>: ShowT ('Prd prd nt) :<>: Text ", "
-                :<>: ShowT ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
+                :<>: ShowTE ('Att att t)  :<>: Text ", "
+                :<>: ShowTE ('Prd prd nt) :<>: Text ", "
+                :<>: ShowTE ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
                 ': ctx))
      =>
      Label ('Att att t)
@@ -442,9 +445,9 @@ inhdefM
                 (Attribution r)
      , RequireEq ntch ('Left n) ctx'
      , ctx' ~ ((Text "inhdef("
-                :<>: ShowT ('Att att t')  :<>: Text ", "
-                :<>: ShowT ('Prd prd nt) :<>: Text ", "
-                :<>: ShowT ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
+                :<>: ShowTE ('Att att t')  :<>: Text ", "
+                :<>: ShowTE ('Prd prd nt) :<>: Text ", "
+                :<>: ShowTE ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
                 ': ctx))
      =>
      Label ('Att att t)
@@ -469,9 +472,9 @@ inhmod
                 (Attribution r)
      , RequireEq ntch ('Left n) ctx'
      , ctx' ~ ((Text "inhmod("
-                :<>: ShowT ('Att att t)  :<>: Text ", "
-                :<>: ShowT ('Prd prd nt) :<>: Text ", "
-                :<>: ShowT ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
+                :<>: ShowTE ('Att att t)  :<>: Text ", "
+                :<>: ShowTE ('Prd prd nt) :<>: Text ", "
+                :<>: ShowTE ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
                 ': ctx))
      =>
      Label ('Att att t)
@@ -499,9 +502,9 @@ inhmodM
                 (Attribution r)
      , RequireEq ntch ('Left n) ctx'
      , ctx' ~ ((Text "inhmod("
-                :<>: ShowT ('Att att t)  :<>: Text ", "
-                :<>: ShowT ('Prd prd nt) :<>: Text ", "
-                :<>: ShowT ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
+                :<>: ShowTE ('Att att t)  :<>: Text ", "
+                :<>: ShowTE ('Prd prd nt) :<>: Text ", "
+                :<>: ShowTE ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
                 ': ctx))
      =>
      Label ('Att att t)
@@ -580,8 +583,8 @@ instance Kn '[] prod where
 
 instance ( lch ~ 'Chi l prd nt
          , Kn fc prd
-         , LabelSet ('(lch, sch) : SCh fc)
-         , LabelSet ('(lch, ich) : ICh fc)
+         -- , LabelSet ('(lch, sch) : SCh fc)
+         -- , LabelSet ('(lch, ich) : ICh fc)
          ) =>
   Kn ( '(lch , Attribution ich -> Attribution sch) ': fc) prd where
   type ICh ( '(lch , Attribution ich -> Attribution sch) ': fc)
@@ -645,7 +648,7 @@ knit (ctx  :: Proxy ctx)
 
 knitAspect (prd :: Label prd) asp fc ip
   = let ctx  = Proxy @ '[]
-        ctx' = Proxy @ '[Text "knit" :<>: ShowT prd]
+        ctx' = Proxy @ '[Text "knit" :<>: ShowTE prd]
     in  knit ctx (req ctx' (OpLookup prd ((mkAspect asp) ctx))) fc ip
 
 
@@ -680,8 +683,8 @@ knitAspect (prd :: Label prd) asp fc ip
 --   usechi' _ att prd nts op (ConsRec _ cs) = usechi att prd nts op cs
 
 -- instance ( Require (OpLookup AttReco att attr)
---            '[('Text "looking up attribute " ':<>: ShowT att)
---               ':$$: ('Text "on " ':<>: ShowT attr)]
+--            '[('Text "looking up attribute " ':<>: ShowTE att)
+--               ':$$: ('Text "on " ':<>: ShowTE attr)]
 --          , ReqR (OpLookup AttReco att attr) ~ a
 --          , Use att prd nts a cs
 --          , LabelSet ( '( 'Chi ch prd ('Left nt), attr) : cs)
