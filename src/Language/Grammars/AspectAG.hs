@@ -39,6 +39,7 @@ module Language.Grammars.AspectAG
     inh, inhdef, inhdefM,
     inhmod, inhmodM, 
     at, lhs,
+    CAspect(..),
     Label(Label), Prod(..), T(..), NT(..), Child(..), Att(..),
     (.#), (#.), (=.), (.=), (.*), (*.),
     emptyAtt,
@@ -49,7 +50,8 @@ module Language.Grammars.AspectAG
     knitAspect,
     traceAspect,
     traceRule,
-    module Data.GenRec
+    module Data.GenRec,
+    module Language.Grammars.AspectAG.HList
   )
   where
 
@@ -339,35 +341,33 @@ type family SP (rule :: Type) where
   SP (Rule prd sc ip ic sp ic' sp') = sp
   SP (CRule ctx prd sc ip ic sp ic' sp') = sp
 
-syndef
-  :: ( RequireEq t t' ctx'
+
+type family Syndef t t' ctx ctx' att sp sp' prd :: Constraint where
+  Syndef t t' ctx ctx' att sp sp' prd =
+     ( RequireEq t t' ctx'
      , RequireR (OpExtend AttReco ('Att att t) t sp) ctx (Attribution sp')
      , ctx'
          ~ ((Text "syndef("
              :<>: ShowTE ('Att att t) :<>: Text ", "
              :<>: ShowTE prd :<>: Text ")") ': ctx)
      )
-     => Label ('Att att t)
-     -> Label prd
-     -> (Proxy ctx' -> Fam prd sc ip -> t')
-     -> CRule ctx prd sc ip ic sp ic sp'
+
+syndef
+  :: Syndef t t' ctx ctx' att sp sp' prd
+  => forall sc ip ic . Label ('Att att t)
+  -> Label prd
+  -> (Proxy ctx' -> Fam prd sc ip -> t')
+  -> CRule ctx prd sc ip ic sp ic sp'
 syndef att prd f
   = CRule $ \ctx inp (Fam ic sp)
    ->  Fam ic $ req ctx (OpExtend att (f Proxy inp) sp)
 
-
 syndefM
-  :: ( RequireEq t t' ctx'
-     , RequireR (OpExtend AttReco ('Att att t) t sp) ctx (Attribution sp')
-     , ctx'
-         ~ ((Text "syndef("
-             :<>: ShowTE ('Att att t) :<>: Text ", "
-             :<>: ShowTE prd :<>: Text ")") ': ctx)
-     )
-     => Label ('Att att t)
-     -> Label prd
-     -> Reader (Proxy ctx', Fam prd sc ip) t'
-     -> CRule ctx prd sc ip ic sp ic sp'
+  :: Syndef t t' ctx ctx' att sp sp' prd
+  => forall sc ip ic . Label ('Att att t)
+  -> Label prd
+  -> Reader (Proxy ctx', Fam prd sc ip) t'
+  -> CRule ctx prd sc ip ic sp ic sp'
 syndefM att prd = syndef att prd . def
 
 syn = syndefM
@@ -652,7 +652,7 @@ knitAspect (prd :: Label prd) asp fc ip
 
 
 
- --  use
+--  use
 -- class Use (att :: Att) (prd :: Prod) (nts :: [NT]) (a :: Type) sc
 --  where
 --   usechi :: Label att -> Label prd -> KList nts -> (a -> a -> a) -> ChAttsRec prd sc
@@ -736,3 +736,54 @@ knitAspect (prd :: Label prd) asp fc ip
 
 -- -- | Copy Rule
 -- copyAtCh att prd chi = singAsp $ inh att prd chi $ at lhs att
+
+
+prdFromChi :: Label (Chi nam prd tnt) -> Label prd
+prdFromChi _ = Label
+
+copyatChi (att :: Label ('Att att t))
+          (chi :: Label ('Chi chi ('Prd prd nt) ('Left n)))
+  = inh att (prdFromChi chi) chi (at lhs att)
+
+
+-- copyatChildren (att :: Label ('Att att t)) NilCh = emptyAspect
+-- copyatChildren att (ConsCh chi chs) = copyatChi att chi .+: copyatChildren att chs
+
+class CopyInChs (att :: Att) (chs :: [Child]) where
+  type CopyInChsR att chs :: [(Prod, Type)]
+  copyinChs :: Label att -> ChiList chs -> CAspect '[] (CopyInChsR att chs)
+
+instance CopyInChs att '[] where
+  type CopyInChsR att '[] = '[]
+  copyinChs att NilCh = emptyAspect
+
+-- instance CopyInChs ('Att att t) chs
+--   =>
+--   CopyInChs ('Att att t) (Chi ch prd tnt ': chs) where
+--   type CopyInChsR ('Att att t) (Chi ch prd tnt ': chs) =
+--     '(prd, Type) ': CopyInChsR ('Att att t) chs
+--   copyinChs att (ConsCh chi chs) =
+--     inh att (prdFromChi chi :: Label ('Prd prd nt))
+--     (chi :: Label ('Chi chi ('Prd prd nt) ntch)) (at lhs att) .+: copyinChs att chs
+
+
+--    Label ('Att att t)
+-- -> Label ('Prd prd nt)
+-- -> Label ('Chi chi ('Prd prd nt) ntch)
+-- -> (Proxy ctx' -> Fam ('Prd prd nt) sc ip -> t')
+-- -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
+
+-- instance CopyInChs att '[ Chi nam prd tnt] where
+--   type CopyInChsR '[ Chi nam prd tnt] = '[ '(prd, Type)]
+--   copyInChs att (KCons ch KNil) = singAsp (inh att (prdFromChi ch) ch (at lhs att))
+
+data ChiList (chs :: [Child]) :: Type where
+  NilCh  :: ChiList '[]
+  ConsCh :: Label ch -> ChiList chs -> ChiList (ch ': chs)
+
+data PrdList (chs :: [Prod]) :: Type where
+  NilPrd  :: PrdList '[]
+  ConsPrd :: Label pr -> PrdList prs ->  PrdList (pr ': prs)
+
+-- copyAtChildren :: Label att -> ChiList chis -> CAspect '[] asp
+-- copyAtChildren att NilCh = emptyAspect
