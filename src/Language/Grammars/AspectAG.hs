@@ -29,27 +29,50 @@ Portability : POSIX
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE IncoherentInstances       #-}
 {-# LANGUAGE AllowAmbiguousTypes       #-}
+{-# LANGUAGE UnicodeSyntax             #-}
 
 module Language.Grammars.AspectAG
   (
-    (.+:),
-    (.:+:),
-    syn, syndef, syndefM,
-    mod, synmod, synmodM,
+
+    -- * Rules
+    Rule, CRule(..),
+    
+    -- ** Defining Rules
+    syndef, syndefM, syn,
+    
+    synmod, synmodM,
+
+
     inh, inhdef, inhdefM,
+
     inhmod, inhmodM, 
-    at, lhs,
+
+    ext,
+    
+    -- * Aspects 
+    -- ** Building Aspects.
+    
+    emptyAspect,
+    singAsp,
+    extAspect,
+    comAspect,
+    (.+:),(◃),
+    (.:+.),(▹),
+    (.:+:),(⋈),
+    
+    
     CAspect(..),
     Label(Label), Prod(..), T(..), NT(..), Child(..), Att(..),
     (.#), (#.), (=.), (.=), (.*), (*.),
     emptyAtt,
-    singAsp,
-    emptyAspect,
     ter,
+    at, lhs,
     sem_Lit,
     knitAspect,
     traceAspect,
     traceRule,
+    copyatChi,
+    use,
     module Data.GenRec,
     module Language.Grammars.AspectAG.HList
   )
@@ -93,18 +116,20 @@ data Fam (prd :: Prod)
   Fam :: ChAttsRec prd c -> Attribution p -> Fam prd c p
 
 
--- | Getters
+-- | getter
 chi :: Fam prd c p -> ChAttsRec prd c
 chi (Fam c p) = c
 
+-- | getter
 par :: Fam prd c p -> Attribution p
 par (Fam c p) = p
 
+-- | getter (extracts a 'Label')
 prd :: Fam prd c p -> Label prd
 prd (Fam c p) = Label
 
--- | Rules are a function from the input family to the output family.
--- They are indexed by a production.
+-- | Rules are a function from the input family to the output family,
+-- with an extra arity to make them composable.  They are indexed by a production.
 type Rule
   (prd  :: Prod)
   (sc   :: [(Child, [(Att, Type)])])
@@ -115,22 +140,26 @@ type Rule
   (sp'  :: [(Att,       Type)])
   = Fam prd sc ip -> Fam prd ic sp -> Fam prd ic' sp'
 
--- | Rules with context.
+-- | Rules with context (used to print domain specific type errors).
 newtype CRule (ctx :: [ErrorMessage]) prd sc ip ic sp ic' sp'
   = CRule { mkRule :: (Proxy ctx -> Rule prd sc ip ic sp ic' sp')}
 
 
--- * Aspects
--- | Context tagged aspects.
+-- | Aspects, tagged with context. 'Aspect' is a record instance having
+-- productions as labels, containing 'Rule's as fields.
 newtype CAspect (ctx :: [ErrorMessage]) (asp :: [(Prod, Type)] )
   = CAspect { mkAspect :: Proxy ctx -> Aspect asp}
 
--- | Empty Aspect.
+-- | Recall that Aspects are mappings from productions to rules. They
+-- have a record-like interface to build them. This is the constructor
+-- for the empty Aspect.
 emptyAspect :: CAspect ctx '[]
 emptyAspect  = CAspect $ const EmptyRec
 
-
--- | combination of Aspects
+-- | combination of two Aspects. It merges them. When both aspects
+-- have rules for a given production, in the resulting Aspect the rule
+-- at that field is the combination of the rules for the arguments
+-- (with 'ext').
 comAspect ::
   ( Require (OpComAsp al ar) ctx
   , ReqR (OpComAsp al ar) ~ Aspect asp
@@ -164,11 +193,11 @@ class MapCtxAsp (r :: [(Prod,Type)]) (ctx :: [ErrorMessage])
   mapCtxRec :: (Proxy ctx -> Proxy ctx')
             -> Aspect r -> Aspect (ResMapCtx r ctx ctx')
 
-instance ( MapCtxAsp r ctx ctx' 
-         , ResMapCtx r ctx ctx' ~ r'
-        --  , LabelSetF ('(l, CRule ctx prd sc ip ic sp ic' sp') : r')
-        --  ~ True
-         ) =>
+instance
+  ( MapCtxAsp r ctx ctx' 
+  , ResMapCtx r ctx ctx' ~ r'
+  )
+  =>
   MapCtxAsp ( '(l, CRule ctx' prd sc ip ic sp ic' sp') ': r) ctx ctx' where
   type ResMapCtx ( '(l, CRule ctx' prd sc ip ic sp ic' sp') ': r) ctx ctx'
      =  '(l, CRule ctx prd sc ip ic sp ic' sp') ':  ResMapCtx r ctx ctx'
@@ -182,6 +211,10 @@ instance MapCtxAsp ('[] :: [(Prod,Type)]) ctx ctx' where
   mapCtxRec _ EmptyRec = EmptyRec
 
 
+-- | The "cons" for 'CAspect's. It adds a 'Rule' `rule`
+-- to a 'CAspect'. If there is no rule for that production in the
+-- argument it is a record extension. If the production is there, the
+-- rules are combined.
 extAspect
   :: (Require
         (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') a) ctx,
@@ -192,14 +225,34 @@ extAspect
 extAspect rule (CAspect fasp)
   = CAspect $ \ctx -> req ctx (OpComRA rule (fasp ctx))
 
+
+-- | An operator, alias for 'extAspect'. It combines a rule with an
+-- aspect, to build a bigger one.
 (.+:) = extAspect
 infixr 3 .+:
 
+-- | Unicode version of 'extAspect' or '.+:' (\\triangleleft)
+(◃) = extAspect
+infixr 3 ◃
+
+-- | The other way, combines an aspect with a rule. It is a `flip`ped
+-- 'extAspect'.
 (.:+.) = flip extAspect
 infixl 3 .:+.
 
+-- | Unicode operator for '.:+.' or `flip extAspect`.
+(▹) = flip extAspect
+infixl 3 ▹
+
+
+-- | Operator for 'comAspect'. It takes two 'CAspect's to build the
+-- combination of both.
 (.:+:) = comAspect
 infixr 4 .:+:
+
+-- | Unicode operator for 'comAspect' or '.:+:'. (\\bowtie)
+(⋈) = comAspect
+infixr 4 ⋈
 
 ext' ::  CRule ctx prd sc ip ic sp ic' sp'
      ->  CRule ctx prd sc ip a b ic sp
@@ -207,12 +260,17 @@ ext' ::  CRule ctx prd sc ip ic sp ic' sp'
 (CRule f) `ext'` (CRule g)
  = CRule $ \ctx input -> f ctx input . g ctx input
 
+
+-- | Given two rules for a given (the same) production, it combines
+-- them. Note that the production equality is visible in the context,
+-- not sintactically. This is a use of the 'Require' pattern.
 ext ::  RequireEq prd prd' (Text "ext":ctx) 
      => CRule ctx prd sc ip ic sp ic' sp'
      -> CRule ctx prd' sc ip a b ic sp
      -> CRule ctx prd sc ip a b ic' sp'
 ext = ext'
 
+-- | Singleton Aspect. Wraps a rule to build an Aspect from it.
 singAsp r
   = r .+: emptyAspect
 
@@ -352,6 +410,12 @@ type family Syndef t t' ctx ctx' att sp sp' prd :: Constraint where
              :<>: ShowTE prd :<>: Text ")") ': ctx)
      )
 
+-- | The function 'syndef' adds the definition of a synthesized
+--   attribute.  It takes an attribute label 'att' representing the
+--   name of the new attribute; a production label 'prd' representing
+--   the production where the rule is defined; a value 't'' to be
+--   assigned to this attribute, given a context and an input
+--   family. It updates the output constructed thus far.
 syndef
   :: Syndef t t' ctx ctx' att sp sp' prd
   => forall sc ip ic . Label ('Att att t)
@@ -362,15 +426,37 @@ syndef att prd f
   = CRule $ \ctx inp (Fam ic sp)
    ->  Fam ic $ req ctx (OpExtend att (f Proxy inp) sp)
 
+-- | As 'syndef', the function 'syndefM' adds the definition of a
+--   synthesized attribute.  It takes an attribute label 'att'
+--   representing the name of the new attribute; a production label
+--   'prd' representing the production where the rule is defined; a
+--   value 't'' to be assigned to this attribute, given a context and
+--   an input family. It updates the output constructed thus far. This
+--   function captures the monadic behaviour of the family
+--   updating. For instance, the following definition specifies a rule
+--   for an attribute `att_size :: Label (Att "size" Int)` at the
+--   prduction `p_cons :: Label (Prd "cons" (NT "List"))`. The value
+--   is computed from the very same attribute value at a child
+--   `ch_tail :: Chi "tail" (Prd "cons" (NT "List") (Left NT))`
+--
+-- @
+-- foo = syndefM att_size p_cons $ do sizeatchi <- at ch_tail att_size
+--                                    return (sizeatchi + 1)
+-- @
 syndefM
   :: Syndef t t' ctx ctx' att sp sp' prd
-  => forall sc ip ic . Label ('Att att t)
+  => Label ('Att att t)
   -> Label prd
   -> Reader (Proxy ctx', Fam prd sc ip) t'
   -> CRule ctx prd sc ip ic sp ic sp'
 syndefM att prd = syndef att prd . def
 
+
+-- | This is simply an alias for 'syndefM'
 syn = syndefM
+
+
+-- | This is simply an alias for 'inhdefM'
 inh = inhdefM
 
 
@@ -402,28 +488,33 @@ synmodM
 synmodM att prd = synmod att prd . def
 
 
-
-inhdef
-  :: ( RequireEq t t' ctx'
-     , RequireR  (OpExtend AttReco ('Att att t) t r) ctx (Attribution v2)
-     , RequireR (OpUpdate (ChiReco ('Prd prd nt))
-                ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
-                (ChAttsRec ('Prd prd nt) ic')
-     , RequireR (OpLookup (ChiReco ('Prd prd nt))
-                ('Chi chi ('Prd prd nt) ntch) ic) ctx
-                (Attribution r)
-     , RequireEq ntch ('Left n) ctx'
-     , ctx' ~ ((Text "inhdef("
+type family Inhdef t t' ctx ctx' att r v2 prd nt chi ntch ic ic' n where
+  Inhdef t t' ctx ctx' att r v2 prd nt chi ntch ic ic' n =
+    ( RequireEq t t' ctx'
+    , RequireR  (OpExtend AttReco ('Att att t) t r) ctx (Attribution v2)
+    , RequireR (OpUpdate (ChiReco ('Prd prd nt))
+                 ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
+                 (ChAttsRec ('Prd prd nt) ic')
+    , RequireR (OpLookup (ChiReco ('Prd prd nt))
+                 ('Chi chi ('Prd prd nt) ntch) ic) ctx
+                 (Attribution r)
+    , RequireEq ntch ('Left n) ctx'
+    , ctx' ~ ((Text "inhdef("
                 :<>: ShowTE ('Att att t)  :<>: Text ", "
                 :<>: ShowTE ('Prd prd nt) :<>: Text ", "
                 :<>: ShowTE ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
-                ': ctx))
+                ': ctx)
+    )
+  
+
+inhdef
+  :: Inhdef t t' ctx ctx' att r v2 prd nt chi ntch ic ic' n
      =>
      Label ('Att att t)
      -> Label ('Prd prd nt)
      -> Label ('Chi chi ('Prd prd nt) ntch)
      -> (Proxy ctx' -> Fam ('Prd prd nt) sc ip -> t')
-     -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
+     -> forall sp . CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
 inhdef  att prd chi f
   = CRule $ \ctx inp (Fam ic sp)
        -> let ic'   = req ctx (OpUpdate chi catts' ic)
@@ -434,26 +525,13 @@ inhdef  att prd chi f
 
 
 inhdefM
-  :: ( RequireEq t t' ctx'
-     , RequireR  (OpExtend AttReco ('Att att t) t r) ctx (Attribution v2)
-     , RequireR (OpUpdate (ChiReco ('Prd prd nt))
-                ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
-                (ChAttsRec ('Prd prd nt) ic')
-     , RequireR (OpLookup (ChiReco ('Prd prd nt))
-                ('Chi chi ('Prd prd nt) ntch) ic) ctx
-                (Attribution r)
-     , RequireEq ntch ('Left n) ctx'
-     , ctx' ~ ((Text "inhdef("
-                :<>: ShowTE ('Att att t')  :<>: Text ", "
-                :<>: ShowTE ('Prd prd nt) :<>: Text ", "
-                :<>: ShowTE ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
-                ': ctx))
-     =>
-     Label ('Att att t)
-     -> Label ('Prd prd nt)
-     -> Label ('Chi chi ('Prd prd nt) ntch)
-     -> Reader (Proxy ctx', Fam ('Prd prd nt) sc ip) t'
-     -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
+  :: Inhdef t t' ctx ctx' att r v2 prd nt chi ntch ic ic' n
+  =>
+  Label ('Att att t)
+  -> Label ('Prd prd nt)
+  -> Label ('Chi chi ('Prd prd nt) ntch)
+  -> Reader (Proxy ctx', Fam ('Prd prd nt) sc ip) t'
+  -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
 inhdefM att prd chi = inhdef att prd chi . def
 
 
@@ -652,138 +730,77 @@ knitAspect (prd :: Label prd) asp fc ip
 
 
 
---  use
--- class Use (att :: Att) (prd :: Prod) (nts :: [NT]) (a :: Type) sc
---  where
---   usechi :: Label att -> Label prd -> KList nts -> (a -> a -> a) -> ChAttsRec prd sc
---          -> Maybe a
+-- | use
+class Use (att :: Att) (prd :: Prod) (nts :: [NT]) (a :: Type) sc
+ where
+  usechi :: Label att -> Label prd -> KList nts -> (a -> a -> a) -> ChAttsRec prd sc
+         -> Maybe a
 
--- class Use' (mnts :: Bool) (att :: Att) (prd :: Prod) (nts :: [NT])
---            (a :: Type) sc
---  where
---   usechi' :: Proxy mnts -> Label att -> Label prd -> KList nts
---    -> (a -> a -> a)
---    -> ChAttsRec prd sc -> Maybe a
+class Use' (mnts :: Bool) (att :: Att) (prd :: Prod) (nts :: [NT])
+           (a :: Type) sc
+ where
+  usechi' :: Proxy mnts -> Label att -> Label prd -> KList nts
+   -> (a -> a -> a)
+   -> ChAttsRec prd sc -> Maybe a
 
--- instance Use prd att nts a '[] where
---   usechi _ _ _ _ _ = Nothing
+instance Use prd att nts a '[] where
+  usechi _ _ _ _ _ = Nothing
 
--- instance( HMember' nt nts
---         , HMemberRes' nt nts ~ mnts
---         , Use' mnts att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs))
---   => Use att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs) where
---   usechi att prd nts op ch
---     = usechi' (Proxy @ mnts) att prd nts op ch
+instance( HMember' nt nts
+        , HMemberRes' nt nts ~ mnts
+        , Use' mnts att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs))
+  => Use att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs) where
+  usechi att prd nts op ch
+    = usechi' (Proxy @ mnts) att prd nts op ch
 
--- instance ( LabelSet ( '( 'Chi ch prd ('Left nt), attr) : cs)
---          , Use att prd nts a cs)
---   => Use' False att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs)
---  where
---   usechi' _ att prd nts op (ConsRec _ cs) = usechi att prd nts op cs
+instance Use att prd nts a cs
+  =>
+  Use' False att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs) where
+  usechi' _ att prd nts op (ConsRec _ cs) = usechi att prd nts op cs
 
--- instance ( Require (OpLookup AttReco att attr)
---            '[('Text "looking up attribute " ':<>: ShowTE att)
---               ':$$: ('Text "on " ':<>: ShowTE attr)]
---          , ReqR (OpLookup AttReco att attr) ~ a
---          , Use att prd nts a cs
---          , LabelSet ( '( 'Chi ch prd ('Left nt), attr) : cs)
---          , WrapField (ChiReco prd) attr ~ Attribution attr)  --ayudín
---   => Use' True att prd nts a ( '( 'Chi ch prd ('Left nt), attr) : cs) where
---   usechi' _ att prd nts op (ConsRec lattr scr)
---     = let attr = unTaggedChAttr lattr
---           val  = attr #. att
---       in  Just $ maybe val (op val) $ usechi att prd nts op scr
-
-
--- use
---   :: UseC att prd nts t' sp sc sp' ctx =>
---      Label ('Att att t')
---      -> Label prd
---      -> KList nts
---      -> (t' -> t' -> t')
---      -> t'
---      -> forall ip ic' . CAspect ctx '[ '(prd, CRule ctx prd sc ip ic' sp ic' sp')]
--- use att prd nts op unit
---   = singAsp $ syndef att prd
---   $ \_ fam -> maybe unit id (usechi att prd nts op $ chi fam)
-
-
--- type UseC att prd nts t' sp sc sp' ctx
---   =  ( Require (OpExtend  AttReco ('Att att t') t' sp) ctx,
---       Use ('Att att t') prd nts t' sc,
---       ReqR (OpExtend AttReco ('Att att t') t' sp)
---       ~ Rec AttReco sp')
+instance ( Require (OpLookup AttReco att attr)
+           '[('Text "looking up attribute " ':<>: ShowTE att)
+              ':$$: ('Text "on " ':<>: ShowTE attr)]
+         , ReqR (OpLookup AttReco att attr) ~ a
+         , Use att prd nts a cs
+         , WrapField (ChiReco prd) attr ~ Attribution attr)  --ayudín
+  => Use' True att prd nts a ( '( 'Chi ch prd ('Left nt), attr) : cs) where
+  usechi' _ att prd nts op (ConsRec lattr scr)
+    = let attr = unTaggedChAttr lattr
+          val  = attr #. att
+      in  Just $ maybe val (op val) $ usechi att prd nts op scr
 
 
 
--- -----------------------------------------------------------------------------
-
--- tyAppAtt :: (forall b. Label ('Att name b)) -> Proxy a -> Label ('Att name a)
--- att `tyAppAtt` Proxy = att
-
--- tyAppChi :: (forall b. Label ('Chi name prd b))
---   -> Proxy a -> Label ('Chi name prd a)
--- att `tyAppChi` Proxy = att
-
--- proxy2Label :: forall k (a :: k). Proxy a -> Label a
--- proxy2Label Proxy = Label
-
--- label2Proxy :: Label a -> Proxy a
--- label2Proxy Label = Proxy
--- ----------------------------------------------------------------------------
+-- | defines a rule to compute `att` 'use'  
+use
+  :: UseC att prd nts t' sp sc sp' ctx =>
+     Label ('Att att t')
+     -> Label prd
+     -> KList nts
+     -> (t' -> t' -> t')
+     -> t'
+     -> forall ip ic' . CRule ctx prd sc ip ic' sp ic' sp'
+use att prd nts op unit
+  = syndef att prd
+  $ \_ fam -> maybe unit id (usechi att prd nts op $ chi fam)
 
 
+type UseC att prd nts t' sp sc sp' ctx
+  =  ( Require (OpExtend  AttReco ('Att att t') t' sp) ctx,
+      Use ('Att att t') prd nts t' sc,
+      ReqR (OpExtend AttReco ('Att att t') t' sp)
+      ~ Rec AttReco sp')
 
--- -- | Copy Rule
--- copyAtCh att prd chi = singAsp $ inh att prd chi $ at lhs att
-
-
-prdFromChi :: Label (Chi nam prd tnt) -> Label prd
-prdFromChi _ = Label
-
-copyatChi (att :: Label ('Att att t))
-          (chi :: Label ('Chi chi ('Prd prd nt) ('Left n)))
+-- | 
+copyatChi att chi
   = inh att (prdFromChi chi) chi (at lhs att)
 
 
--- copyatChildren (att :: Label ('Att att t)) NilCh = emptyAspect
--- copyatChildren att (ConsCh chi chs) = copyatChi att chi .+: copyatChildren att chs
+-- data ChiList (chs :: [Child]) :: Type where
+--   NilCh  :: ChiList '[]
+--   ConsCh :: Label ch -> ChiList chs -> ChiList (ch ': chs)
 
-class CopyInChs (att :: Att) (chs :: [Child]) where
-  type CopyInChsR att chs :: [(Prod, Type)]
-  copyinChs :: Label att -> ChiList chs -> CAspect '[] (CopyInChsR att chs)
-
-instance CopyInChs att '[] where
-  type CopyInChsR att '[] = '[]
-  copyinChs att NilCh = emptyAspect
-
--- instance CopyInChs ('Att att t) chs
---   =>
---   CopyInChs ('Att att t) (Chi ch prd tnt ': chs) where
---   type CopyInChsR ('Att att t) (Chi ch prd tnt ': chs) =
---     '(prd, Type) ': CopyInChsR ('Att att t) chs
---   copyinChs att (ConsCh chi chs) =
---     inh att (prdFromChi chi :: Label ('Prd prd nt))
---     (chi :: Label ('Chi chi ('Prd prd nt) ntch)) (at lhs att) .+: copyinChs att chs
-
-
---    Label ('Att att t)
--- -> Label ('Prd prd nt)
--- -> Label ('Chi chi ('Prd prd nt) ntch)
--- -> (Proxy ctx' -> Fam ('Prd prd nt) sc ip -> t')
--- -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
-
--- instance CopyInChs att '[ Chi nam prd tnt] where
---   type CopyInChsR '[ Chi nam prd tnt] = '[ '(prd, Type)]
---   copyInChs att (KCons ch KNil) = singAsp (inh att (prdFromChi ch) ch (at lhs att))
-
-data ChiList (chs :: [Child]) :: Type where
-  NilCh  :: ChiList '[]
-  ConsCh :: Label ch -> ChiList chs -> ChiList (ch ': chs)
-
-data PrdList (chs :: [Prod]) :: Type where
-  NilPrd  :: PrdList '[]
-  ConsPrd :: Label pr -> PrdList prs ->  PrdList (pr ': prs)
-
--- copyAtChildren :: Label att -> ChiList chis -> CAspect '[] asp
--- copyAtChildren att NilCh = emptyAspect
+-- data PrdList (chs :: [Prod]) :: Type where
+--   NilPrd  :: PrdList '[]
+--   ConsPrd :: Label pr -> PrdList prs ->  PrdList (pr ': prs)
