@@ -37,6 +37,10 @@ data Child = Chi Symbol Prod (Either NT T)  -- deriving Eq
 data NT    = NT Symbol                      -- deriving Eq
 data T     = T Type                         -- deriving Eq
 
+prdFromChi :: Label (Chi nam prd tnt) -> Label prd
+prdFromChi _ = Label
+
+
 type instance Cmp ('Att a _) ('Att b _) =
   CmpSymbol a b
 
