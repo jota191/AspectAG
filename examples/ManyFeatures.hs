@@ -69,12 +69,22 @@ asp_res =
   emptyAspect
 
 replace o n t =
-  sem_Tree (asp_old .:+: asp_new .:+: asp_res) t (old .=. o .*. new .=. n .*. emptyAtt) #.res
+  sem_Tree (asp_old .:+: asp_new .:+: asp_res)
+           t
+           (old .=. o .*. new .=. n .*. emptyAtt) #.res
 
 examplet =
   Fork (Node (Leaf 5) 3 (Leaf 4))
        (Fork (Node (Leaf 2) 4 (Leaf 5))
-             (Leaf 3))
-
+             (Fork (Leaf 3)(Leaf 5)))
 
 $(attLabels [("size", ''Int)])
+
+asp_size =
+  syn size p_Leaf (return 1) .+:
+  use size p_Fork (nt_Tree .:. eL) (+) 0 .+:
+  use size p_Node (nt_Tree .:. eL) (\l r -> 1 + l + r) 0 .+:
+  emptyAspect
+
+
+siz t = sem_Tree asp_size t emptyAtt #. size

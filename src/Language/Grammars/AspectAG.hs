@@ -679,18 +679,19 @@ instance ( lch ~ 'Chi l prd nt
 
 emptyCtx = Proxy @ '[]
 
-knit' :: ( Kn fc prd
-        , Empties fc prd)
- => CRule '[] prd (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp
+knit'
+  :: ( Kn fc prd
+     , Empties fc prd)
+  => CRule '[] prd (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp
   -> Record fc -> Attribution ip -> Attribution sp
 knit' (rule :: CRule '[] prd (SCh fc) ip
               (EmptiesR fc) '[] (ICh fc) sp)
-              (fc :: Record fc) ip
-  = let (Fam ic sp) = mkRule rule emptyCtx
-                       (Fam sc ip) (Fam ec emptyAtt)
-        sc          = kn fc ic
-        ec          = empties fc
-    in  sp
+              (fc :: Record fc) ip =
+  let (Fam ic sp) = mkRule rule emptyCtx
+                    (Fam sc ip) (Fam ec emptyAtt)
+      sc          = kn fc ic
+      ec          = empties fc
+  in  sp
 
 
 class Empties (fc :: [(Child,Type)]) (prd :: Prod) where
@@ -701,14 +702,16 @@ instance Empties '[] prd where
   type EmptiesR '[] = '[]
   empties _ = emptyCh
 
-instance ( Empties fcr prd
-         , chi ~ 'Chi ch prd nt
-         )
- => Empties ( '(chi, Attribution e -> Attribution a) ': fcr) prd where
-  type EmptiesR ( '(chi, Attribution e -> Attribution a) ': fcr)
-    = '(chi, '[]) ': EmptiesR fcr
+instance
+  ( Empties fcr prd
+  , chi ~ 'Chi ch prd nt
+  )
+  =>
+  Empties ( '(chi, Attribution e -> Attribution a) ': fcr) prd where
+  type EmptiesR ( '(chi, Attribution e -> Attribution a) ': fcr) =
+    '(chi, '[]) ': EmptiesR fcr
   empties (ConsRec (TagField labelc
-                    (labelch :: Label chi) fch) r) =
+                   (labelch :: Label chi) fch) r) =
     ConsRec (TagField (Label @(ChiReco prd)) labelch emptyAtt) $ empties r
 
 
@@ -728,8 +731,6 @@ knitAspect (prd :: Label prd) asp fc ip
         ctx' = Proxy @ '[Text "knit" :<>: ShowTE prd]
     in  knit ctx (req ctx' (OpLookup prd ((mkAspect asp) ctx))) fc ip
 
-
-
 -- | use
 class Use (att :: Att) (prd :: Prod) (nts :: [NT]) (a :: Type) sc
  where
@@ -746,53 +747,69 @@ class Use' (mnts :: Bool) (att :: Att) (prd :: Prod) (nts :: [NT])
 instance Use prd att nts a '[] where
   usechi _ _ _ _ _ = Nothing
 
-instance( HMember' nt nts
-        , HMemberRes' nt nts ~ mnts
-        , Use' mnts att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs))
-  => Use att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs) where
+instance
+  ( HMember' nt nts
+  , HMemberRes' nt nts ~ mnts
+  , Use' mnts att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs))
+  =>
+  Use att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs) where
   usechi att prd nts op ch
     = usechi' (Proxy @ mnts) att prd nts op ch
 
-instance Use att prd nts a cs
+instance
+  Use att prd nts a cs
+  =>
+  Use att prd nts a ( '( 'Chi ch prd ('Right t), attr) ': cs) where
+  usechi att prd nts op (ConsRec _ ch)
+    = usechi att prd nts op ch
+
+
+instance
+  Use att prd nts a cs
   =>
   Use' False att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs) where
   usechi' _ att prd nts op (ConsRec _ cs) = usechi att prd nts op cs
 
-instance ( Require (OpLookup AttReco att attr)
-           '[('Text "looking up attribute " ':<>: ShowTE att)
+instance
+  ( Require (OpLookup AttReco att attr)
+            '[('Text "looking up attribute " ':<>: ShowTE att)
               ':$$: ('Text "on " ':<>: ShowTE attr)]
-         , ReqR (OpLookup AttReco att attr) ~ a
-         , Use att prd nts a cs
-         , WrapField (ChiReco prd) attr ~ Attribution attr)  --ayudín
-  => Use' True att prd nts a ( '( 'Chi ch prd ('Left nt), attr) : cs) where
-  usechi' _ att prd nts op (ConsRec lattr scr)
-    = let attr = unTaggedChAttr lattr
-          val  = attr #. att
-      in  Just $ maybe val (op val) $ usechi att prd nts op scr
+  , ReqR (OpLookup AttReco att attr) ~ a
+  , Use att prd nts a cs
+  , WrapField (ChiReco prd) attr ~ Attribution attr)  --ayudín
+  =>
+  Use' True att prd nts a ( '( 'Chi ch prd ('Left nt), attr) : cs) where
+  usechi' _ att prd nts op (ConsRec lattr scr) =
+    let attr = unTaggedChAttr lattr
+        val  = attr #. att
+    in  Just $ maybe val (op val) $ usechi att prd nts op scr
 
 
+-- | Defines a rule to compute an attribute 'att' in the production
+-- 'prd', by applying an operator to the values of 'att' in each non
+-- terminal in the list 'nts'.
 
--- | defines a rule to compute `att` 'use'  
 use
-  :: UseC att prd nts t' sp sc sp' ctx =>
-     Label ('Att att t')
-     -> Label prd
-     -> KList nts
-     -> (t' -> t' -> t')
-     -> t'
-     -> forall ip ic' . CRule ctx prd sc ip ic' sp ic' sp'
+  :: UseC att prd nts t' sp sc sp' ctx
+  => Label ('Att att t')
+  -> Label prd
+  -> KList nts
+  -> (t' -> t' -> t')
+  -> t'
+  -> forall ip ic' . CRule ctx prd sc ip ic' sp ic' sp'
 use att prd nts op unit
   = syndef att prd
   $ \_ fam -> maybe unit id (usechi att prd nts op $ chi fam)
 
 
-type UseC att prd nts t' sp sc sp' ctx
-  =  ( Require (OpExtend  AttReco ('Att att t') t' sp) ctx,
-      Use ('Att att t') prd nts t' sc,
-      ReqR (OpExtend AttReco ('Att att t') t' sp)
-      ~ Rec AttReco sp')
+type UseC att prd nts t' sp sc sp' ctx =
+  ( Require (OpExtend  AttReco ('Att att t') t' sp) ctx
+  ,  Use ('Att att t') prd nts t' sc
+  ,  ReqR (OpExtend AttReco ('Att att t') t' sp)
+     ~ Rec AttReco sp'
+  )
 
--- | 
+-- | copy rule
 copyatChi att chi
   = inh att (prdFromChi chi) chi (at lhs att)
 
