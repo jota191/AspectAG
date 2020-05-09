@@ -1,22 +1,16 @@
 
 -- testear atributos polimorficos -- OK
+-- crear infraestructura para manejar este polimorfismo
 
--- mas ejemplos
+-- mas common patterns
 
--- common patterns
-   copy
-   copies
-   uses
-   chn
+-- bug use (view at examples/Rose.hs)
 
--- haddock
-
--- pragmas
--- export list
-
-
--- new TH -- OK
-  -- TH RecordTypes
-
-
--- subir a hackage
+hacer disponibles datos sobre la gramatica:
+- emptyAspect teniendo reglas vacías para cada producción,
+  lo que motiva lo siguiente:
+  + tf para, dado un nt, obtener todas las producciones que usa.
+  + tf para, dado un nt, obtener todas las producciones que usa (recursivamente)
+  + tf para, dado prd obtener los nt que usa..
+  + tf para, dado un nt, obtener todos los nt que usa
+  + tc para, dado un nt, generar un emptyAspect.

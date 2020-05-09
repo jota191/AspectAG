@@ -47,6 +47,8 @@ module Language.Grammars.AspectAG
 
     inhmod, inhmodM, 
 
+    emptyRule,
+    emptyRuleatPrd,
     ext,
     
     -- * Aspects 
@@ -144,6 +146,11 @@ type Rule
 newtype CRule (ctx :: [ErrorMessage]) prd sc ip ic sp ic' sp'
   = CRule { mkRule :: (Proxy ctx -> Rule prd sc ip ic sp ic' sp')}
 
+emptyRule =
+  CRule $ \Proxy -> \fam inp -> inp
+
+emptyRuleatPrd :: Label prd -> CRule ctx prd sc ip ic' sp' ic' sp'
+emptyRuleatPrd Label = emptyRule
 
 -- | Aspects, tagged with context. 'Aspect' is a record instance having
 -- productions as labels, containing 'Rule's as fields.
