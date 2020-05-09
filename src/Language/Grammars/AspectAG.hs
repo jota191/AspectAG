@@ -75,6 +75,8 @@ module Language.Grammars.AspectAG
     traceRule,
     copyatChi,
     use,
+    PrdList(..),
+    emptyAspectC,
     module Data.GenRec,
     module Language.Grammars.AspectAG.HList
   )
@@ -223,15 +225,17 @@ instance MapCtxAsp ('[] :: [(Prod,Type)]) ctx ctx' where
 -- argument it is a record extension. If the production is there, the
 -- rules are combined.
 extAspect
-  :: (Require
-        (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') a) ctx,
-      ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') a)
-      ~ Rec PrdReco asp) =>
+  :: ExtAspect ctx prd sc ip ic sp ic' sp' a asp =>
      CRule ctx prd sc ip ic sp ic' sp'
      -> CAspect ctx a -> CAspect ctx asp
 extAspect rule (CAspect fasp)
   = CAspect $ \ctx -> req ctx (OpComRA rule (fasp ctx))
 
+type ExtAspect ctx prd sc ip ic sp ic' sp' a asp
+  = (Require
+        (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') a) ctx,
+      ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') a)
+      ~ Rec PrdReco asp) 
 
 -- | An operator, alias for 'extAspect'. It combines a rule with an
 -- aspect, to build a bigger one.
@@ -816,7 +820,7 @@ type UseC att prd nts t' sp sc sp' ctx =
      ~ Rec AttReco sp'
   )
 
--- | copy rule
+-- | a rule to copy one attribute `att` from the parent to the children `chi`
 copyatChi att chi
   = inh att (prdFromChi chi) chi (at lhs att)
 
@@ -828,3 +832,46 @@ copyatChi att chi
 -- data PrdList (chs :: [Prod]) :: Type where
 --   NilPrd  :: PrdList '[]
 --   ConsPrd :: Label pr -> PrdList prs ->  PrdList (pr ': prs)
+
+class EmptyAspectSameShape (es1 :: [k]) (es2 :: [m])
+
+instance (es2 ~ '[]) => EmptyAspectSameShape '[] es2
+instance (EmptyAspectSameShape xs ys, es2 ~ ( '(y1,y2,y3,y4) ': ys))
+  => EmptyAspectSameShape (x ': xs) es2
+
+
+class
+  EmptyAspectSameShape prds polyArgs
+  =>
+  EmptyAspect (prds :: [Prod])
+              (polyArgs :: [([(Child, [(Att, Type)])], [(Att, Type)],
+                             [(Child, [(Att, Type)])], [(Att, Type)] )])
+              ctx where
+  type EmptyAspectR prds polyArgs :: [(Prod, Type)]
+  emptyAspectC :: PrdList prds -> Proxy polyArgs
+    -> CAspect ctx (EmptyAspectR prds polyArgs)
+
+instance
+  EmptyAspect '[] '[] ctx where
+  type EmptyAspectR '[] '[] = '[]
+  emptyAspectC _ _ = emptyAspect 
+
+instance
+  ( EmptyAspect prds polys '[]
+  , ReqR (OpComRA '[] prd ((CRule '[] prd sc ip ic' sp' ic' sp'))
+                  (EmptyAspectR prds polys)) ~ Rec PrdReco asp
+  , ExtAspect '[] prd sc ip ic' sp' ic' sp'
+    (EmptyAspectR prds polys) (EmptyAspectR (prd ': prds) ( '(sc, ip, ic', sp') ': polys))
+  )
+  =>
+  EmptyAspect (prd ': prds) ( '(sc, ip, ic', sp') ': polys) '[] where
+  type EmptyAspectR (prd ': prds) ( '(sc, ip, ic', sp') ': polys) =
+    UnWrap (ReqR (OpComRA '[] prd ((CRule '[] prd sc ip ic' sp' ic' sp'))
+                  (EmptyAspectR prds polys)))
+  emptyAspectC (ConsPrd prd prds) (p :: Proxy ( '(sc, ip, ic', sp') ': polys)) =
+    (emptyRule :: CRule '[] prd sc ip ic' sp' ic' sp') 
+    .+: emptyAspectC @prds @polys prds (Proxy @ polys)
+
+data PrdList (l :: [Prod]) :: Type  where
+  EP :: PrdList '[]
+  ConsPrd :: Label prd -> PrdList prds -> PrdList (prd ': prds)
