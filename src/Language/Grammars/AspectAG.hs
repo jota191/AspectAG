@@ -75,7 +75,6 @@ module Language.Grammars.AspectAG
     traceRule,
     copyatChi,
     use,
-    PrdList(..),
     emptyAspectC,
     module Data.GenRec,
     module Language.Grammars.AspectAG.HList
@@ -824,15 +823,6 @@ type UseC att prd nts t' sp sc sp' ctx =
 copyatChi att chi
   = inh att (prdFromChi chi) chi (at lhs att)
 
-
--- data ChiList (chs :: [Child]) :: Type where
---   NilCh  :: ChiList '[]
---   ConsCh :: Label ch -> ChiList chs -> ChiList (ch ': chs)
-
--- data PrdList (chs :: [Prod]) :: Type where
---   NilPrd  :: PrdList '[]
---   ConsPrd :: Label pr -> PrdList prs ->  PrdList (pr ': prs)
-
 class EmptyAspectSameShape (es1 :: [k]) (es2 :: [m])
 
 instance (es2 ~ '[]) => EmptyAspectSameShape '[] es2
@@ -847,31 +837,26 @@ class
               (polyArgs :: [([(Child, [(Att, Type)])], [(Att, Type)],
                              [(Child, [(Att, Type)])], [(Att, Type)] )])
               ctx where
-  type EmptyAspectR prds polyArgs :: [(Prod, Type)]
-  emptyAspectC :: PrdList prds -> Proxy polyArgs
-    -> CAspect ctx (EmptyAspectR prds polyArgs)
+  type EmptyAspectR prds polyArgs ctx :: [(Prod, Type)]
+  emptyAspectC :: KList prds -> Proxy polyArgs
+    -> CAspect ctx (EmptyAspectR prds polyArgs ctx)
 
 instance
   EmptyAspect '[] '[] ctx where
-  type EmptyAspectR '[] '[] = '[]
-  emptyAspectC _ _ = emptyAspect 
+  type EmptyAspectR '[] '[] ctx = '[]
+  emptyAspectC _ _ = emptyAspect
 
 instance
-  ( EmptyAspect prds polys '[]
-  , ReqR (OpComRA '[] prd ((CRule '[] prd sc ip ic' sp' ic' sp'))
-                  (EmptyAspectR prds polys)) ~ Rec PrdReco asp
-  , ExtAspect '[] prd sc ip ic' sp' ic' sp'
-    (EmptyAspectR prds polys) (EmptyAspectR (prd ': prds) ( '(sc, ip, ic', sp') ': polys))
+  ( EmptyAspect prds polys ctx
+  , ExtAspect ctx prd sc ip ic sp ic sp
+    (EmptyAspectR prds polys ctx)
+    (EmptyAspectR (prd ': prds) ( '(sc, ip, ic, sp) ': polys) ctx)
   )
   =>
-  EmptyAspect (prd ': prds) ( '(sc, ip, ic', sp') ': polys) '[] where
-  type EmptyAspectR (prd ': prds) ( '(sc, ip, ic', sp') ': polys) =
-    UnWrap (ReqR (OpComRA '[] prd ((CRule '[] prd sc ip ic' sp' ic' sp'))
-                  (EmptyAspectR prds polys)))
-  emptyAspectC (ConsPrd prd prds) (p :: Proxy ( '(sc, ip, ic', sp') ': polys)) =
-    (emptyRule :: CRule '[] prd sc ip ic' sp' ic' sp') 
+  EmptyAspect (prd ': prds) ( '(sc, ip, ic, sp) ': polys) ctx where
+  type EmptyAspectR (prd ': prds) ( '(sc, ip, ic, sp) ': polys) ctx =
+    UnWrap (ReqR (OpComRA '[] prd ((CRule '[] prd sc ip ic sp ic sp))
+                  (EmptyAspectR prds polys ctx)))
+  emptyAspectC (KCons prd prds) (p :: Proxy ( '(sc, ip, ic, sp) ': polys)) =
+    (emptyRule :: CRule ctx prd sc ip ic sp ic sp) 
     .+: emptyAspectC @prds @polys prds (Proxy @ polys)
-
-data PrdList (l :: [Prod]) :: Type  where
-  EP :: PrdList '[]
-  ConsPrd :: Label prd -> PrdList prds -> PrdList (prd ': prds)
