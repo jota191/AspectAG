@@ -76,6 +76,7 @@ module Language.Grammars.AspectAG
     copyAtChi,
     use,
     emptyAspectC,
+    emptyAspectForProds,
     module Data.GenRec,
     module Language.Grammars.AspectAG.HList
   )
