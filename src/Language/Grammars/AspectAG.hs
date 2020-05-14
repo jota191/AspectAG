@@ -48,7 +48,7 @@ module Language.Grammars.AspectAG
     inhmod, inhmodM, 
 
     emptyRule,
-    emptyRuleatPrd,
+    emptyRuleAtPrd,
     ext,
     
     -- * Aspects 
@@ -73,7 +73,7 @@ module Language.Grammars.AspectAG
     knitAspect,
     traceAspect,
     traceRule,
-    copyatChi,
+    copyAtChi,
     use,
     emptyAspectC,
     module Data.GenRec,
@@ -150,8 +150,8 @@ newtype CRule (ctx :: [ErrorMessage]) prd sc ip ic sp ic' sp'
 emptyRule =
   CRule $ \Proxy -> \fam inp -> inp
 
-emptyRuleatPrd :: Label prd -> CRule ctx prd sc ip ic' sp' ic' sp'
-emptyRuleatPrd Label = emptyRule
+emptyRuleAtPrd :: Label prd -> CRule ctx prd sc ip ic' sp' ic' sp'
+emptyRuleAtPrd Label = emptyRule
 
 -- | Aspects, tagged with context. 'Aspect' is a record instance having
 -- productions as labels, containing 'Rule's as fields.
@@ -819,10 +819,6 @@ type UseC att prd nts t' sp sc sp' ctx =
      ~ Rec AttReco sp'
   )
 
--- | a rule to copy one attribute `att` from the parent to the children `chi`
-copyatChi att chi
-  = inh att (prdFromChi chi) chi (at lhs att)
-
 class EmptyAspectSameShape (es1 :: [k]) (es2 :: [m])
 
 instance (es2 ~ '[]) => EmptyAspectSameShape '[] es2
@@ -830,6 +826,7 @@ instance (EmptyAspectSameShape xs ys, es2 ~ ( '(y1,y2,y3,y4) ': ys))
   => EmptyAspectSameShape (x ': xs) es2
 
 
+-- require KLIST de prods?, NO, eso está en el kind!
 class
   EmptyAspectSameShape prds polyArgs
   =>
@@ -860,3 +857,44 @@ instance
   emptyAspectC (KCons prd prds) (p :: Proxy ( '(sc, ip, ic, sp) ': polys)) =
     (emptyRule :: CRule ctx prd sc ip ic sp ic sp) 
     .+: emptyAspectC @prds @polys prds (Proxy @ polys)
+
+emptyAspectForProds prdList = emptyAspectC prdList Proxy
+
+-- ** copy rules
+
+-- | a rule to copy one attribute `att` from the parent to the children `chi`
+
+copyAtChi att chi
+  = inh att (prdFromChi chi) chi (at lhs att)
+
+-- | to copy at many children
+class CopyAtChiList (att :: Att)
+                    (chi :: [Child])
+                    (polyArgs :: [([(Child, [(Att, Type)])], [(Att, Type)],
+                                   [(Child, [(Att, Type)])], [(Att, Type)],
+                                   [(Child, [(Att, Type)])], [(Att, Type)] )])
+                     ctx where
+  type CopyAtChiListR att chi polyArgs ctx :: [(Prod, Type)]
+  copyAtChiList :: Label att -> KList chi -> Proxy polyArgs
+                -> CAspect ctx (CopyAtChiListR att chi polyArgs ctx)
+
+instance CopyAtChiList att '[] '[] ctx where
+  type CopyAtChiListR att '[] '[] ctx = '[]
+  copyAtChiList _ _ _ = emptyAspect
+
+-- instance
+--   ( CopyAtChiList ('Att att t) chi polys ctx
+--   , prd ~ Prd p nt
+--   , tnt ~ Left nc
+--   )
+--   =>
+--   CopyAtChiList ('Att att t) (Chi ch prd tnt ': chi)
+--    ('(sc, ip, ic, sp, ic', sp') ': polys) ctx where
+--   type CopyAtChiListR ('Att att t) (Chi ch prd tnt ': chi)
+--    ('(sc, ip, ic, sp, ic', sp') ': polys) ctx =
+--     UnWrap (ReqR (OpComRA '[] prd ((CRule '[] prd sc ip ic sp ic' sp'))
+--                   (CopyAtChiListR ('Att att t) chi polys ctx)))
+--   copyAtChiList att (KCons chi chs :: KList ('Chi ch prd tnt ': chs) )
+--    (p :: Proxy ( '(sc, ip, ic, sp, ic', sp') ': polys))
+--     = copyAtChi att chi
+--     .+: copyAtChiList @('Att att t) @chs att chs (Proxy @polys)
