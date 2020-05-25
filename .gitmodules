@@ -1,0 +1,6 @@
+[submodule "lib/poly-rec"]
+	path = lib/poly-rec
+	url = https://github.com/jota191/polyrec
+[submodule "lib/require"]
+	path = lib/require
+	url = https://github.com/jota191/require
