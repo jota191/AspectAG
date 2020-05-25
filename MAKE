@@ -1,0 +1,39 @@
+#!/usr/bin/runhaskell
+
+import System.Environment
+import System.Process
+import System.Console.ANSI
+import Data.List
+import Data.Maybe
+
+main = do
+  args <- getArgs
+  case args of
+    ["buildAll"] -> buildAll
+    ["dist"] -> dist
+    _ -> putStrLn "argument not recognised."
+
+dist = return ()
+     -- locally edited, for privacy reasons (it could be parametrised
+     -- by the environment, but i'll kis)
+
+line = take 80 $ repeat '%'
+
+buildAll = do
+  env <- getEnvironment
+  let pwd = fromJust $ lookup "PWD" env
+  alert "BUILDING REQUIRE" Red
+  callCommand $
+    "cd " ++
+    pwd ++ "/lib/require ; cabal install --force-reinstalls; cabal haddock"
+  alert  "BUILDING POLYREC" Red
+  callCommand $
+    "cd " ++
+    pwd ++ "/lib/poly-rec ; cabal install --force-reinstalls; cabal haddock"
+  alert "BUILDING AAG" Red
+  callCommand "cabal install; cabal haddock"
+
+alert s c = do
+  setSGR [SetColor Foreground Vivid c]
+  putStrLn $ line ++ "\n" ++ s ++ "\n" ++ line
+  setSGR [Reset]
