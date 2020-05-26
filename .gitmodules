@@ -1,6 +1,6 @@
 [submodule "lib/poly-rec"]
 	path = lib/poly-rec
-	url = hhttps://gitlab.fing.edu.uy/aspectag/poly-rec
+	url = https://gitlab.fing.edu.uy/aspectag/poly-rec
 [submodule "lib/require"]
 	path = lib/require
 	url = https://gitlab.fing.edu.uy/aspectag/require
