@@ -34,51 +34,51 @@ Portability : POSIX
 module Language.Grammars.AspectAG
   (
 
-    -- * Rules
-    Rule, CRule(..),
+    -- -- * Rules
+    -- Rule, CRule(..),
     
-    -- ** Defining Rules
-    syndef, syndefM, syn,
+    -- -- ** Defining Rules
+    -- syndef, syndefM, syn,
     
-    synmod, synmodM,
+    -- synmod, synmodM,
 
 
-    inh, inhdef, inhdefM,
+    -- inh, inhdef, inhdefM,
 
-    inhmod, inhmodM, 
+    -- inhmod, inhmodM, 
 
-    emptyRule,
-    emptyRuleAtPrd,
-    ext,
+    -- emptyRule,
+    -- emptyRuleAtPrd,
+    -- ext,
     
-    -- * Aspects 
-    -- ** Building Aspects.
+    -- -- * Aspects 
+    -- -- ** Building Aspects.
     
-    emptyAspect,
-    singAsp,
-    extAspect,
-    comAspect,
-    (.+:),(◃),
-    (.:+.),(▹),
-    (.:+:),(⋈),
+    -- emptyAspect,
+    -- singAsp,
+    -- extAspect,
+    -- comAspect,
+    -- (.+:),(◃),
+    -- (.:+.),(▹),
+    -- (.:+:),(⋈),
     
     
-    CAspect(..),
-    Label(Label), Prod(..), T(..), NT(..), Child(..), Att(..),
-    (.#), (#.), (=.), (.=), (.*), (*.),
-    emptyAtt,
-    ter,
-    at, lhs,
-    sem_Lit,
-    knitAspect,
-    traceAspect,
-    traceRule,
-    copyAtChi,
-    use,
-    emptyAspectC,
-    emptyAspectForProds,
-    module Data.GenRec,
-    module Language.Grammars.AspectAG.HList
+    -- CAspect(..),
+    -- Label(Label), Prod(..), T(..), NT(..), Child(..), Att(..),
+    -- (.#), (#.), (=.), (.=), (.*), (*.),
+    -- emptyAtt,
+    -- ter,
+    -- at, lhs,
+    -- sem_Lit,
+    -- knitAspect,
+    -- traceAspect,
+    -- traceRule,
+    -- copyAtChi,
+    -- use,
+    -- emptyAspectC,
+    -- emptyAspectForProds,
+    -- module Data.GenRec,
+    -- module Language.Grammars.AspectAG.HList
   )
   where
 
@@ -99,13 +99,21 @@ import Data.Maybe
 import Data.Type.Equality
 import Control.Monad.Reader
 
+import Data.Singletons
+import Data.Singletons.TH
+import Data.Singletons.TypeLits
+import Data.Singletons.Prelude.Ord
+import Data.Singletons.Prelude.Eq
+import Data.Singletons.CustomStar
+
+
 class SemLit a where
   sem_Lit :: a -> Attribution ('[] :: [(Att,Type)])
                -> Attribution '[ '( 'Att "term" a , a)]
-  lit     :: Label ('Att "term" a)
+  lit     :: Sing ('Att "term" a)
 instance SemLit a where
-  sem_Lit a _ = (Label =. a) *. emptyAtt
-  lit         = Label @ ('Att "term" a)
+  sem_Lit a _ = (SAtt (SSym :: Sing "term") undefined =. a) *. emptyAtt
+  lit         = SAtt (SSym @ "term") undefined
 
 
 -- * Families and Rules
@@ -117,20 +125,20 @@ data Fam (prd :: Prod)
          (c :: [(Child, [(Att, Type)])])
          (p :: [(Att, Type)]) :: Type
  where
-  Fam :: ChAttsRec prd c -> Attribution p -> Fam prd c p
+  Fam :: Sing prd -> ChAttsRec prd c -> Attribution p -> Fam prd c p
 
 
 -- | getter
 chi :: Fam prd c p -> ChAttsRec prd c
-chi (Fam c p) = c
+chi (Fam _ c _) = c
 
 -- | getter
 par :: Fam prd c p -> Attribution p
-par (Fam c p) = p
+par (Fam _ _  p) = p
 
 -- | getter (extracts a 'Label')
-prd :: Fam prd c p -> Label prd
-prd (Fam c p) = Label
+prd :: Fam prd c p -> Sing prd
+prd (Fam l _ _) = l
 
 -- | Rules are a function from the input family to the output family,
 -- with an extra arity to make them composable.  They are indexed by a production.
@@ -145,81 +153,114 @@ type Rule
   = Fam prd sc ip -> Fam prd ic sp -> Fam prd ic' sp'
 
 -- | Rules with context (used to print domain specific type errors).
-newtype CRule (ctx :: [ErrorMessage]) prd sc ip ic sp ic' sp'
-  = CRule { mkRule :: (Proxy ctx -> Rule prd sc ip ic sp ic' sp')}
+data CRule prd sc ip ic sp ic' sp'
+  = CRule { prod :: Sing prd,
+            mkRule :: Rule prd sc ip ic sp ic' sp'}
 
 emptyRule =
-  CRule $ \Proxy -> \fam inp -> inp
+  CRule sing (\fam inp -> inp)
 
-emptyRuleAtPrd :: Label prd -> CRule ctx prd sc ip ic' sp' ic' sp'
-emptyRuleAtPrd Label = emptyRule
+emptyRuleAtPrd :: Sing prd -> CRule prd sc ip ic' sp' ic' sp'
+emptyRuleAtPrd prd = CRule prd (\fam inp -> inp)
 
 -- | Aspects, tagged with context. 'Aspect' is a record instance having
 -- productions as labels, containing 'Rule's as fields.
-newtype CAspect (ctx :: [ErrorMessage]) (asp :: [(Prod, Type)] )
-  = CAspect { mkAspect :: Proxy ctx -> Aspect asp}
+--newtype CAspect (asp :: [(Prod, Type)] )
+--  = CAspect { mkAspect :: Proxy ctx -> Aspect asp}
 
 -- | Recall that Aspects are mappings from productions to rules. They
 -- have a record-like interface to build them. This is the constructor
 -- for the empty Aspect.
-emptyAspect :: CAspect ctx '[]
-emptyAspect  = CAspect $ const EmptyRec
+emptyAspect :: Aspect '[]
+emptyAspect  = EmptyRec
 
 -- | combination of two Aspects. It merges them. When both aspects
 -- have rules for a given production, in the resulting Aspect the rule
 -- at that field is the combination of the rules for the arguments
 -- (with 'ext').
-comAspect ::
-  ( Require (OpComAsp al ar) ctx
-  , ReqR (OpComAsp al ar) ~ Aspect asp
-  )
-  =>  CAspect ctx al -> CAspect ctx ar -> CAspect ctx asp
-comAspect al ar
-  = CAspect $ \ctx -> req ctx (OpComAsp (mkAspect al ctx) (mkAspect ar ctx))
+-- comAspect ::
+--   ( Require (OpComAsp al ar) ctx
+--   , ReqR (OpComAsp al ar) ~ Aspect asp
+--   )
+--   =>  CAspect ctx al -> CAspect ctx ar -> CAspect ctx asp
+-- comAspect al ar
+--   = CAspect $ \ctx -> req ctx (OpComAsp (mkAspect al ctx) (mkAspect ar ctx))
 
 
--- * Trace utils
 
--- | |traceAspect| adds context to an aspect.
-traceAspect (_ :: Proxy (e::ErrorMessage))
-  = mapCAspect $ \(_ :: Proxy ctx) -> Proxy @ ((Text "aspect ":<>: e) : ctx)
-
-traceRule (_ :: Proxy (e::ErrorMessage))
-  = mapCRule $ \(_ :: Proxy ctx) -> Proxy @ ((Text "rule ":<>: e) : ctx)
+ext' ::  CRule prd sc ip ic sp ic' sp'
+     ->  CRule prd sc ip a b ic sp
+     ->  CRule prd sc ip a b ic' sp'
+(CRule p f) `ext'` (CRule _ g)
+ = CRule p $ \input -> f input . g input
 
 
-mapCRule :: (Proxy ctx -> Proxy ctx')
-          -> CRule ctx' prd sc ip ic sp ic' sp'
-          -> CRule ctx  prd sc ip ic sp ic' sp'
-mapCRule fctx (CRule frule) = CRule $ frule . fctx
+-- | Given two rules for a given (the same) production, it combines
+-- them. Note that the production equality is visible in the context,
+-- not sintactically. This is a use of the 'Require' pattern.
+ext ::  RequireEq prd prd' (Text "ext":ctx) 
+     => CRule prd sc ip ic sp ic' sp'
+     -> CRule prd' sc ip a b ic sp
+     -> CRule prd sc ip a b ic' sp'
+ext = ext'
 
-mapCAspect fctx (CAspect fasp) = CAspect $
-       mapCtxRec fctx . fasp . fctx
+type family (r :: Type) :+. (r' :: Type) :: Type
+type instance
+ (CRule prd sc ip ic sp ic' sp') :+.
+ (CRule prd sc ip a  b  ic  sp ) =
+  CRule prd sc ip a  b  ic' sp'
 
-class MapCtxAsp (r :: [(Prod,Type)]) (ctx :: [ErrorMessage])
-                                     (ctx' :: [ErrorMessage])  where
-  type ResMapCtx r ctx ctx' :: [(Prod,Type)]
-  mapCtxRec :: (Proxy ctx -> Proxy ctx')
-            -> Aspect r -> Aspect (ResMapCtx r ctx ctx')
+type family
+ ComRA (prd :: Prod) (rule :: Type) (r :: [(Prod, Type)]) :: [(Prod, Type)]
+ where
+  ComRA prd rule '[] = '[ '(prd, rule)]
+  ComRA prd (CRule prd sc ip ic sp ic' sp')
+         ( '(prd', CRule prd sc ip a  b  ic  sp ) ': r) =
+    FoldOrdering (Compare prd prd')
+     {-LT-} (  '(prd, CRule prd sc ip ic sp ic' sp')
+            ': '(prd', CRule prd sc ip a  b  ic  sp )
+            ': r)
+    
+     {-EQ-} ( '(prd, (CRule prd sc ip ic sp ic' sp')
+                 :+. (CRule prd sc ip a  b  ic  sp))
+            ': r)
 
-instance
-  ( MapCtxAsp r ctx ctx' 
-  , ResMapCtx r ctx ctx' ~ r'
-  )
+     {-GT-} ('(prd', CRule prd sc ip a  b  ic  sp)
+            ':  ComRA prd (CRule prd sc ip ic sp ic' sp') r)
+
+
+class ExtAspect a where
+  extAspect
+   :: CRule prd sc ip ic sp ic' sp'
+   -> Aspect (a :: [(Prod, Type)])
+   -> Aspect (ComRA prd (CRule prd sc ip ic sp ic' sp') a)
+
+instance ExtAspect '[] where
+  extAspect cr@(CRule p r) EmptyRec = ConsRec (TagField Proxy p cr) EmptyRec
+
+instance ( CRule prd sc ip a1 b  ic  sp  ~ WrapField PrdReco v
+         , ExtAspect a)
   =>
-  MapCtxAsp ( '(l, CRule ctx' prd sc ip ic sp ic' sp') ': r) ctx ctx' where
-  type ResMapCtx ( '(l, CRule ctx' prd sc ip ic sp ic' sp') ': r) ctx ctx'
-     =  '(l, CRule ctx prd sc ip ic sp ic' sp') ':  ResMapCtx r ctx ctx'
-  mapCtxRec fctx (ConsRec (TagField c l r) rs) = (ConsRec (TagField c l
-                                                            (mapCRule fctx r))
-                                                          (mapCtxRec fctx rs))
+  ExtAspect ('(prd, CRule prd sc ip a1 b  ic  sp ) ': a) where
+  extAspect cr@((CRule p r) :: CRule prd sc ip ic sp ic' sp')
+            re@(ConsRec lv@(TagField _ p' (r' :: CRule prd sc ip a1 b  ic  sp )) rs) =
+    case sCompare p p' of
+      SLT -> ConsRec (TagField Proxy p cr) re
+      SEQ -> ConsRec (TagField Proxy p ((cr `ext'` r') :: CRule prd sc ip a  b  ic' sp')) rs
+      SGT -> ConsRec lv (extAspect cr rs)
 
-instance MapCtxAsp ('[] :: [(Prod,Type)]) ctx ctx' where
-  type ResMapCtx ('[] :: [(Prod,Type)]) ctx ctx'
-     =  '[]
-  mapCtxRec _ EmptyRec = EmptyRec
+-- extAspect
+--   :: CRule prd sc ip ic sp ic' sp'
+--   -> Aspect (a :: [(Prod, Type)])
+--   -> Aspect (ComRA prd (CRule prd sc ip ic sp ic' sp') a)
+-- extAspect cr@(CRule p r) EmptyRec = ConsRec (TagField Proxy p cr) EmptyRec
+-- extAspect cr@(CRule p r) re@(ConsRec (TagField _ p' r') rs) =
+--   case sCompare p p' of
+--     SLT -> ConsRec (TagField Proxy p cr) re
+--     SEQ -> ConsRec (TagField Proxy p (cr `ext` r')) rs
 
 
+{-
 -- | The "cons" for 'CAspect's. It adds a 'Rule' `rule`
 -- to a 'CAspect'. If there is no rule for that production in the
 -- argument it is a record extension. If the production is there, the
@@ -264,22 +305,6 @@ infixr 4 .:+:
 -- | Unicode operator for 'comAspect' or '.:+:'. (\\bowtie)
 (⋈) = comAspect
 infixr 4 ⋈
-
-ext' ::  CRule ctx prd sc ip ic sp ic' sp'
-     ->  CRule ctx prd sc ip a b ic sp
-     ->  CRule ctx prd sc ip a b ic' sp'
-(CRule f) `ext'` (CRule g)
- = CRule $ \ctx input -> f ctx input . g ctx input
-
-
--- | Given two rules for a given (the same) production, it combines
--- them. Note that the production equality is visible in the context,
--- not sintactically. This is a use of the 'Require' pattern.
-ext ::  RequireEq prd prd' (Text "ext":ctx) 
-     => CRule ctx prd sc ip ic sp ic' sp'
-     -> CRule ctx prd' sc ip a b ic sp
-     -> CRule ctx prd sc ip a b ic' sp'
-ext = ext'
 
 -- | Singleton Aspect. Wraps a rule to build an Aspect from it.
 singAsp r
@@ -899,3 +924,4 @@ instance CopyAtChiList att '[] '[] ctx where
 --    (p :: Proxy ( '(sc, ip, ic, sp, ic', sp') ': polys))
 --     = copyAtChi att chi
 --     .+: copyAtChiList @('Att att t) @chs att chs (Proxy @polys)
+-}
