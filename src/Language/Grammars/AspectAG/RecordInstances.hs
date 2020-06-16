@@ -43,7 +43,7 @@ import Data.Singletons.Prelude.Ord
 import Data.Singletons.Prelude.Eq
 import Data.Singletons.CustomStar
 
-data Att   = Att Symbol Type               -- deriving Eq
+data Att   = Att Symbol Type                -- deriving Eq
 data Prod  = Prd Symbol NT                  -- deriving Eq
 data Child = Chi Symbol Prod (Either NT T)  -- deriving Eq
 data NT    = NT Symbol                      -- deriving Eq
@@ -68,7 +68,7 @@ data instance Sing (nt :: T) where
 $(singletonStar [''Bool, ''Maybe, ''Either, ''Char, ''Int])
 $(singEqInstances [''Att, ''Prod, ''Child, ''NT, ''T])
 $(singOrdInstances [''Att, ''Prod, ''Child, ''NT, ''T])
-
+$(singDecideInstances [''Prod, ''NT])
 
 
 type instance  ShowTE ('Att l t)   = Text  "Attribute " :<>: Text l
@@ -258,7 +258,8 @@ labelChAttr (TagField proxy s _)= s
 
 data PrdReco
 
-type instance  WrapField PrdReco (rule :: Type) = rule
+--type instance  WrapField PrdReco (CRule p a b c d e f :: Type)
+--  = CRule p a b c d e f
 
 type Aspect (asp :: [(Prod, Type)]) = Rec PrdReco asp
 type instance ShowRec PrdReco       = "Aspect"

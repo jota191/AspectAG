@@ -249,7 +249,8 @@ decideEquality a b =
     Disproved _ -> Nothing
 
 instance 
-         (ExtAspect (CRule prd sc ip ic sp ic' sp') a) -- solo llamo en un caso
+         (ExtAspect (CRule prd sc ip ic sp ic' sp') a)
+         -- solo llamo en un caso
   =>
   ExtAspect (CRule prd sc ip ic sp ic' sp')
             ('(prd', CRule prd' sc ip a1 b  ic  sp ) ': a) where
@@ -317,8 +318,12 @@ instance
             r2@(ConsRec (TagField _ prd2 crule2) asp2) =
     comAspect' (sCompare prd1 prd2) r1 r2
 
-class ComAspect' (ord :: Ordering)(r1 :: [(Prod, Type)])(r2 :: [(Prod, Type)]) where
-  comAspect' :: Sing ord -> Aspect r1 -> Aspect r2 -> Aspect (ComAsp r1 r2)
+class
+  ComAspect' (ord :: Ordering)
+             (r1 :: [(Prod, Type)])
+             (r2 :: [(Prod, Type)]) where
+  comAspect' :: Sing ord -> Aspect r1 -> Aspect r2
+             -> Aspect (ComAsp r1 r2)
 
 instance
   ( Compare prd1 prd2 ~ LT
@@ -329,18 +334,26 @@ instance
   comAspect' _ r1@(ConsRec cr1@(TagField _ prd1 crule1) asp1) 
                r2@(ConsRec cr2@(TagField _ prd2 crule2) asp2) =
     ConsRec cr1 $ comAspect asp1 r2
+instance
+  ( Compare prd1 prd2 ~ EQ
+  , prd1 ~ prd2
+  , ComAspect r1 r2)
+  => ComAspect' EQ
+            ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) 
+            ('(prd2, CRule prd2 sc1 ip1 ic2 sp2 ic1  sp1) ': r2) where
+  comAspect' _ r1@(ConsRec cr1@(TagField p prd1 crule1) asp1) 
+               r2@(ConsRec cr2@(TagField _ prd2 crule2) asp2) =
+    ConsRec (TagField p prd1 (crule1 `ext` crule2))$ comAspect asp1 asp2
+instance
+  ( Compare prd1 prd2 ~ GT
+  , ComAspect ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) r2)
+  => ComAspect' GT
+            ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) 
+            ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2) where
+  comAspect' _ r1@(ConsRec cr1@(TagField _ prd1 crule1) asp1) 
+               r2@(ConsRec cr2@(TagField _ prd2 crule2) asp2) =
+    ConsRec cr2 $ comAspect r1 asp2
 
-
-comAspectLT
-  :: ( Compare prd1 prd2 ~ LT
-     , ComAspect r1 ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2))
-  => Aspect ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) 
-  -> Aspect ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2)
-  -> Aspect (ComAsp ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1)
-                    ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2))
-comAspectLT r1@(ConsRec cr1@(TagField _ prd1 crule1) asp1) 
-            r2@(ConsRec cr2@(TagField _ prd2 crule2) asp2) =
-  ConsRec cr1 $ comAspect asp1 r2
 
 -- | Operator for 'comAspect'. It takes two 'CAspect's to build the
 -- combination of both.
@@ -359,130 +372,32 @@ infixr 6 .+.
 (.+.) = ext
 
 
-{-
-
-
-
-type family Syndef t t' ctx ctx' att sp sp' prd :: Constraint where
-  Syndef t t' ctx ctx' att sp sp' prd =
-     ( RequireEq t t' ctx'
-     , RequireR (OpExtend AttReco ('Att att t) t sp) ctx (Attribution sp')
-     , ctx'
-         ~ ((Text "syndef("
-             :<>: ShowTE ('Att att t) :<>: Text ", "
-             :<>: ShowTE prd :<>: Text ")") ': ctx)
-     )
-
--- | The function 'syndef' adds the definition of a synthesized
---   attribute.  It takes an attribute label 'att' representing the
---   name of the new attribute; a production label 'prd' representing
---   the production where the rule is defined; a value 't'' to be
---   assigned to this attribute, given a context and an input
---   family. It updates the output constructed thus far.
-syndef
-  :: Syndef t t' ctx ctx' att sp sp' prd
-  => forall sc ip ic . Label ('Att att t)
-  -> Label prd
-  -> (Proxy ctx' -> Fam prd sc ip -> t')
-  -> CRule ctx prd sc ip ic sp ic sp'
 syndef att prd f
-  = CRule $ \ctx inp (Fam ic sp)
-   ->  Fam ic $ req ctx (OpExtend att (f Proxy inp) sp)
-
--- | As 'syndef', the function 'syndefM' adds the definition of a
---   synthesized attribute.  It takes an attribute label 'att'
---   representing the name of the new attribute; a production label
---   'prd' representing the production where the rule is defined; a
---   value 't'' to be assigned to this attribute, given a context and
---   an input family. It updates the output constructed thus far. This
---   function captures the monadic behaviour of the family
---   updating. For instance, the following definition specifies a rule
---   for an attribute `att_size :: Label (Att "size" Int)` at the
---   prduction `p_cons :: Label (Prd "cons" (NT "List"))`. The value
---   is computed from the very same attribute value at a child
---   `ch_tail :: Chi "tail" (Prd "cons" (NT "List") (Left NT))`
---
--- @
--- foo = syndefM att_size p_cons $ do sizeatchi <- at ch_tail att_size
---                                    return (sizeatchi + 1)
--- @
-syndefM
-  :: Syndef t t' ctx ctx' att sp sp' prd
-  => Label ('Att att t)
-  -> Label prd
-  -> Reader (Proxy ctx', Fam prd sc ip) t'
-  -> CRule ctx prd sc ip ic sp ic sp'
-syndefM att prd = syndef att prd . def
+  = CRule prd $ \inp (Fam prd' ic sp)
+   ->  Fam prd ic $ att =. (f inp) *. sp
 
 
--- | This is simply an alias for 'syndefM'
+syndefM att prd = syndef att prd . runReader
 syn = syndefM
 
+type Nt_List = 'NT "List"
+list = SNT (SSym @ "List")
+--cons = Sing @ P_Cons
+-- type P_Nil = 'Prd "Nil" Nt_List
+-- nil = Sing @ P_Nil
+-- asp_cata (Proxy :: Proxy a) f e
+--   =   (syndefM (scata @ a) cons $ f <$> ter head <*> at tail (scata @ a))
+--   .+: (syndefM (scata @ a) nil $ pure e)
+--   .+: emptyAspect
 
--- | This is simply an alias for 'inhdefM'
-inh = inhdefM
+--inh = inhdefM
 
-
-synmod
-  :: RequireR (OpUpdate AttReco ('Att att t) t r) ctx (Attribution sp')
-  => Label ('Att att t)
-     -> Label prd
-     -> (Proxy
-           ((('Text "synmod(" ':<>: ShowTE ('Att att t)) :<>: Text ", "
-                              ':<>: ShowTE prd :<>: Text ")")
-              : ctx)
-         -> Fam prd sc ip -> t)
-     -> CRule ctx prd sc ip ic' r ic' sp'
-synmod att prd f
-  = CRule $ \ctx  inp (Fam ic sp)
-           -> Fam ic $ req ctx (OpUpdate att (f Proxy inp) sp)
-
-
-synmodM
-  :: RequireR (OpUpdate AttReco ('Att att t) t r) ctx (Attribution sp')
-  => Label ('Att att t)
-     -> Label prd
-     -> Reader ( Proxy ((('Text "synmod(" ':<>: ShowTE ('Att att t)) :<>: Text ", "
-                                          ':<>: ShowTE prd :<>: Text ")")
-                       : ctx)
-               , Fam prd sc ip)
-               t
-     -> CRule ctx prd sc ip ic' r ic' sp'
-synmodM att prd = synmod att prd . def
-
-
-type family Inhdef t t' ctx ctx' att r v2 prd nt chi ntch ic ic' n where
-  Inhdef t t' ctx ctx' att r v2 prd nt chi ntch ic ic' n =
-    ( RequireEq t t' ctx'
-    , RequireR  (OpExtend AttReco ('Att att t) t r) ctx (Attribution v2)
-    , RequireR (OpUpdate (ChiReco ('Prd prd nt))
-                 ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
-                 (ChAttsRec ('Prd prd nt) ic')
-    , RequireR (OpLookup (ChiReco ('Prd prd nt))
-                 ('Chi chi ('Prd prd nt) ntch) ic) ctx
-                 (Attribution r)
-    , RequireEq ntch ('Left n) ctx'
-    , ctx' ~ ((Text "inhdef("
-                :<>: ShowTE ('Att att t)  :<>: Text ", "
-                :<>: ShowTE ('Prd prd nt) :<>: Text ", "
-                :<>: ShowTE ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
-                ': ctx)
-    )
-  
-
-inhdef
-  :: Inhdef t t' ctx ctx' att r v2 prd nt chi ntch ic ic' n
-     =>
-     Label ('Att att t)
-     -> Label ('Prd prd nt)
-     -> Label ('Chi chi ('Prd prd nt) ntch)
-     -> (Proxy ctx' -> Fam ('Prd prd nt) sc ip -> t')
-     -> forall sp . CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
-inhdef  att prd chi f
-  = CRule $ \ctx inp (Fam ic sp)
-       -> let ic'   = req ctx (OpUpdate chi catts' ic)
-              catts = req ctx (OpLookup chi ic)
-              catts'= req ctx (OpExtend  att (f Proxy inp) catts)
+{-
+inhdef att prd chi f
+  = CRule prd $ \inp (Fam ic sp)
+       -> let ic'   = -- req ctx (OpUpdate chi catts' ic)
+              catts = --req ctx (OpLookup chi ic)
+              catts'= --req ctx (OpExtend  att (f Proxy inp) catts)
           in  Fam ic' sp
 
 
