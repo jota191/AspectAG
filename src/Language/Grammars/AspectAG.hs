@@ -105,7 +105,7 @@ import Data.Singletons.TypeLits
 import Data.Singletons.Prelude.Ord
 import Data.Singletons.Prelude.Eq
 import Data.Singletons.CustomStar
-
+import Data.Singletons.Decide
 
 class SemLit a where
   sem_Lit :: a -> Attribution ('[] :: [(Att,Type)])
@@ -115,6 +115,8 @@ instance SemLit a where
   sem_Lit a _ = (SAtt (SSym :: Sing "term") undefined =. a) *. emptyAtt
   lit         = SAtt (SSym @ "term") undefined
 
+type instance  WrapField PrdReco (CRule p a b c d e f :: Type)
+  = CRule p a b c d e f
 
 -- * Families and Rules
 
@@ -211,72 +213,53 @@ type instance
   CRule prd sc ip a  b  ic' sp'
 
 type family
- ComRA (prd :: Prod) (rule :: Type) (r :: [(Prod, Type)]) :: [(Prod, Type)]
+ ComRA  (rule :: Type) (r :: [(Prod, Type)]) :: [(Prod, Type)]
  where
-  ComRA prd rule '[] = '[ '(prd, rule)]
-  ComRA prd (CRule prd sc ip ic sp ic' sp')
-         ( '(prd', CRule prd sc ip a  b  ic  sp ) ': r) =
+  ComRA (CRule prd sc ip ic sp ic' sp') '[] =
+    '[ '(prd, CRule prd sc ip ic sp ic' sp')]
+  ComRA (CRule prd sc ip ic sp ic' sp')
+         ( '(prd', CRule prd' sc ip a  b  ic  sp ) ': r) =
     FoldOrdering (Compare prd prd')
      {-LT-} (  '(prd, CRule prd sc ip ic sp ic' sp')
-            ': '(prd', CRule prd sc ip a  b  ic  sp )
+            ': '(prd', CRule prd' sc ip a  b  ic  sp )
             ': r)
     
      {-EQ-} ( '(prd, (CRule prd sc ip ic sp ic' sp')
-                 :+. (CRule prd sc ip a  b  ic  sp))
+                 :+. (CRule prd' sc ip a  b  ic  sp))
             ': r)
 
-     {-GT-} ('(prd', CRule prd sc ip a  b  ic  sp)
-            ':  ComRA prd (CRule prd sc ip ic sp ic' sp') r)
+     {-GT-} ('(prd', CRule prd' sc ip a  b  ic  sp)
+            ':  ComRA (CRule prd sc ip ic sp ic' sp') r)
 
 
-class ExtAspect a where
+class ExtAspect r a where
   extAspect
-   :: CRule prd sc ip ic sp ic' sp'
+   :: r
    -> Aspect (a :: [(Prod, Type)])
-   -> Aspect (ComRA prd (CRule prd sc ip ic sp ic' sp') a)
+   -> Aspect (ComRA r a)
 
-instance ExtAspect '[] where
+instance ExtAspect (CRule prd sc ip ic sp ic' sp') '[] where
   extAspect cr@(CRule p r) EmptyRec = ConsRec (TagField Proxy p cr) EmptyRec
 
-instance ( CRule prd sc ip a1 b  ic  sp  ~ WrapField PrdReco v
-         , ExtAspect a)
+decideEquality :: forall k (a :: k) (b :: k). SDecide k
+               => Sing a -> Sing b -> Maybe (a :~: b)
+decideEquality a b =
+  case a %~ b of
+    Proved Refl -> Just Refl
+    Disproved _ -> Nothing
+
+instance 
+         (ExtAspect (CRule prd sc ip ic sp ic' sp') a) -- solo llamo en un caso
   =>
-  ExtAspect ('(prd, CRule prd sc ip a1 b  ic  sp ) ': a) where
+  ExtAspect (CRule prd sc ip ic sp ic' sp')
+            ('(prd', CRule prd' sc ip a1 b  ic  sp ) ': a) where
   extAspect cr@((CRule p r) :: CRule prd sc ip ic sp ic' sp')
-            re@(ConsRec lv@(TagField _ p' (r' :: CRule prd sc ip a1 b  ic  sp )) rs) =
+            re@(ConsRec lv@(TagField _ p' r') rs) =
     case sCompare p p' of
       SLT -> ConsRec (TagField Proxy p cr) re
-      SEQ -> ConsRec (TagField Proxy p ((cr `ext'` r') :: CRule prd sc ip a  b  ic' sp')) rs
+      SEQ -> case decideEquality p p' of
+               Just Refl -> ConsRec (TagField Proxy p (cr `ext` r')) rs
       SGT -> ConsRec lv (extAspect cr rs)
-
--- extAspect
---   :: CRule prd sc ip ic sp ic' sp'
---   -> Aspect (a :: [(Prod, Type)])
---   -> Aspect (ComRA prd (CRule prd sc ip ic sp ic' sp') a)
--- extAspect cr@(CRule p r) EmptyRec = ConsRec (TagField Proxy p cr) EmptyRec
--- extAspect cr@(CRule p r) re@(ConsRec (TagField _ p' r') rs) =
---   case sCompare p p' of
---     SLT -> ConsRec (TagField Proxy p cr) re
---     SEQ -> ConsRec (TagField Proxy p (cr `ext` r')) rs
-
-
-{-
--- | The "cons" for 'CAspect's. It adds a 'Rule' `rule`
--- to a 'CAspect'. If there is no rule for that production in the
--- argument it is a record extension. If the production is there, the
--- rules are combined.
-extAspect
-  :: ExtAspect ctx prd sc ip ic sp ic' sp' a asp =>
-     CRule ctx prd sc ip ic sp ic' sp'
-     -> CAspect ctx a -> CAspect ctx asp
-extAspect rule (CAspect fasp)
-  = CAspect $ \ctx -> req ctx (OpComRA rule (fasp ctx))
-
-type ExtAspect ctx prd sc ip ic sp ic' sp' a asp
-  = (Require
-        (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') a) ctx,
-      ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') a)
-      ~ Rec PrdReco asp) 
 
 -- | An operator, alias for 'extAspect'. It combines a rule with an
 -- aspect, to build a bigger one.
@@ -297,6 +280,68 @@ infixl 3 .:+.
 infixl 3 ▹
 
 
+type family
+  ComAsp (r1 :: [(Prod, Type)]) (r2 :: [(Prod, Type)]) :: [(Prod, Type)]
+ where
+  ComAsp '[] r2 = r2
+  ComAsp r1 '[] = r1
+  ComAsp ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1)
+         ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2) =
+    FoldOrdering (Compare prd1 prd2)
+    {-LT-} ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1')
+           ': ComAsp r1 ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2)
+           ) 
+    {-EQ-} ( '(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1'
+                     :+. CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2')
+           ': ComAsp r1 r2
+           )
+    {-GT-} ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2')
+           ': ComAsp ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) r2
+           )
+
+class ComAspect (r1 :: [(Prod, Type)])(r2 :: [(Prod, Type)]) where
+  comAspect :: Aspect r1 -> Aspect r2 -> Aspect (ComAsp r1 r2)
+instance ComAspect '[] r2 where
+  comAspect _ r = r
+instance ComAspect r1 '[] where
+  comAspect r _= r
+
+instance
+  (ComAspect' (Compare prd1 prd2)
+       ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1)
+       ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2) )
+  => ComAspect
+       ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1)
+       ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2) where
+  comAspect r1@(ConsRec (TagField _ prd1 crule1) asp1) 
+            r2@(ConsRec (TagField _ prd2 crule2) asp2) =
+    comAspect' (sCompare prd1 prd2) r1 r2
+
+class ComAspect' (ord :: Ordering)(r1 :: [(Prod, Type)])(r2 :: [(Prod, Type)]) where
+  comAspect' :: Sing ord -> Aspect r1 -> Aspect r2 -> Aspect (ComAsp r1 r2)
+
+instance
+  ( Compare prd1 prd2 ~ LT
+  , ComAspect r1 ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2))
+  => ComAspect' LT
+            ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) 
+            ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2) where
+  comAspect' _ r1@(ConsRec cr1@(TagField _ prd1 crule1) asp1) 
+               r2@(ConsRec cr2@(TagField _ prd2 crule2) asp2) =
+    ConsRec cr1 $ comAspect asp1 r2
+
+
+comAspectLT
+  :: ( Compare prd1 prd2 ~ LT
+     , ComAspect r1 ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2))
+  => Aspect ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) 
+  -> Aspect ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2)
+  -> Aspect (ComAsp ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1)
+                    ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2))
+comAspectLT r1@(ConsRec cr1@(TagField _ prd1 crule1) asp1) 
+            r2@(ConsRec cr2@(TagField _ prd2 crule2) asp2) =
+  ConsRec cr1 $ comAspect asp1 r2
+
 -- | Operator for 'comAspect'. It takes two 'CAspect's to build the
 -- combination of both.
 (.:+:) = comAspect
@@ -313,127 +358,9 @@ singAsp r
 infixr 6 .+.
 (.+.) = ext
 
--- | combine a rule with an aspect (wrapper)
-data OpComRA (ctx  :: [ErrorMessage])
-             (prd  :: Prod)
-             (rule :: Type) -- TODO : doc this
-             (a    :: [(Prod, Type)]) where
-  OpComRA :: CRule ctx prd sc ip ic sp ic' sp'
-          -> Aspect a -> OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') a
 
--- | combine a rule with an aspect (inner)
-data OpComRA' (cmp  :: Ordering)
-              (ctx  :: [ErrorMessage])
-              (prd  :: Prod)
-              (rule :: Type) -- TODO : doc this
-              (a    :: [(Prod, Type)]) where
-  OpComRA' :: Proxy cmp
-           -> CRule ctx prd sc ip ic sp ic' sp'
-           -> Aspect a
-           -> OpComRA' cmp ctx prd (CRule ctx prd sc ip ic sp ic' sp') a
+{-
 
-cRuleToTagField :: (CRule ctx prd sc ip ic sp ic' sp')
-                -> TagField PrdReco prd (CRule ctx prd sc ip ic sp ic' sp')
-cRuleToTagField =
-  TagField Label Label
-
-instance
-  Require (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') '[]) ctx where
-  type ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') '[]) =
-    Aspect '[ '(prd, CRule ctx prd sc ip ic sp ic' sp')]
-  req ctx (OpComRA rule EmptyRec) =
-    ConsRec (cRuleToTagField rule) EmptyRec
-
-instance
-  Require (OpComRA' (Cmp prd prd') ctx prd rule ( '(prd', rule') ': asp )) ctx
-  =>
-  Require (OpComRA ctx prd rule ( '(prd', rule') ': asp )) ctx where
-  type ReqR (OpComRA ctx prd rule ( '(prd', rule') ': asp )) =
-    ReqR (OpComRA' (Cmp prd prd') ctx prd rule ( '(prd', rule') ': asp ))
-  req ctx (OpComRA rule asp) =
-    req ctx (OpComRA' (Proxy @ (Cmp prd prd')) rule asp)
-
-instance
-  ( Require (OpUpdate PrdReco prd (CRule ctx prd sc ip ic sp ic'' sp'') a) ctx
-  , Require (OpLookup PrdReco prd a) ctx
-  , ReqR (OpLookup PrdReco prd a) ~ CRule ctx prd sc ip ic sp ic' sp'
-  , (IC (ReqR (OpLookup PrdReco prd a))) ~ ic
-  , (SP (ReqR (OpLookup PrdReco prd a))) ~ sp
-  ) =>
-  Require
-   (OpComRA' 'EQ ctx prd (CRule ctx prd sc ip ic' sp' ic'' sp'') a) ctx where
-  type ReqR (OpComRA' 'EQ ctx prd (CRule ctx prd sc ip ic' sp' ic'' sp'') a) =
-    ReqR (OpUpdate PrdReco prd
-            (CRule ctx prd sc ip
-             (IC (ReqR (OpLookup PrdReco prd a)))
-             (SP (ReqR (OpLookup PrdReco prd a)))
-            ic'' sp'') a)
-  req ctx (OpComRA' _ crule asp) =
-    let prd     = Label @ prd
-        oldRule = req ctx (OpLookup prd asp)
-        newRule = crule `ext` oldRule
-    in  req ctx (OpUpdate prd newRule asp)
-
-instance
-  ( Require (OpComRA ctx prd rule asp) ctx
-  -- , ReqR (OpComRA ctx prd rule asp) ~ Rec
-  --                           PrdReco
-  --                           (UnWrap
-  --                              (ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') asp)))
-  , ReqR (OpComRA ctx prd rule asp) ~ Aspect a0
-  )
-  =>
-  Require (OpComRA' 'GT ctx prd rule ( '(prd' , rule') ': asp)) ctx where
-  type ReqR (OpComRA' 'GT ctx prd rule ( '(prd' , rule') ': asp)) =
-    Aspect ( '(prd' , rule') ': UnWrap (ReqR (OpComRA ctx prd rule asp)))
-  req ctx (OpComRA' _ crule (ConsRec crule' asp)) =
-    ConsRec crule' $ req ctx (OpComRA crule asp)
-
-instance 
-  Require (OpComRA' 'LT ctx prd rule ( '(prd' , rule') ': asp)) ctx where
-  type ReqR (OpComRA' 'LT ctx prd rule ( '(prd' , rule') ': asp)) =
-    Aspect ( '(prd, rule) ': '(prd' , rule') ': asp)
-  req ctx (OpComRA' _ crule asp) =
-    ConsRec (TagField Label Label crule) asp
-
-
-
-
-data OpComAsp  (al :: [(Prod, Type)])
-               (ar :: [(Prod, Type)]) where
-  OpComAsp :: Aspect al -> Aspect ar -> OpComAsp al ar
-
-instance
-  Require (OpComAsp '[] ar) ctx where
-  type ReqR (OpComAsp '[] ar) = Aspect ar
-  req ctx (OpComAsp _ ar) = ar
-
-instance
- ( (ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') ar))
-   ~ (Rec PrdReco
-    (UnWrap
-      (ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') ar))))
- , ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') ar)
-   ~ Rec PrdReco ar0
- , (Require (OpComAsp al ar0) ctx)
- , (Require
-     (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') ar) ctx)
- ) =>
-  Require (OpComAsp
-           ('(prd, CRule ctx prd sc ip ic sp ic' sp') ': al) ar) ctx where
-  type ReqR (OpComAsp ('(prd, CRule ctx prd sc ip ic sp ic' sp') ': al) ar) =
-    ReqR (OpComAsp al
-      (UnWrap (ReqR
-                (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') ar))))
-  req ctx (OpComAsp (ConsRec (TagField _ _ rul) al) ar)
-    = req ctx (OpComAsp al (req ctx (OpComRA rul ar)))
-
-type family IC (rule :: Type) where
-  IC (Rule prd sc ip ic sp ic' sp') = ic
-  IC (CRule ctx prd sc ip ic sp ic' sp') = ic
-type family SP (rule :: Type) where
-  SP (Rule prd sc ip ic sp ic' sp') = sp
-  SP (CRule ctx prd sc ip ic sp ic' sp') = sp
 
 
 type family Syndef t t' ctx ctx' att sp sp' prd :: Constraint where

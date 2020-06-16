@@ -96,12 +96,13 @@ library
 
   -- Other library packages from which modules are imported.
   build-depends:       base >=4.11,
-                       tagged >=0.8,
                        containers >= 0.5,
-                       template-haskell >= 2.13,
                        mtl >= 2.0,
-                       require >=0.6 && <0.7,
-                       poly-rec >=0.6 && <0.7
+                       poly-rec >=0.7,
+                       require >= 0.6.0.0,
+                       singletons >= 2.5.1,
+                       tagged >=0.8,
+                       template-haskell >= 2.13
  
 
   -- Directories containing source files.
