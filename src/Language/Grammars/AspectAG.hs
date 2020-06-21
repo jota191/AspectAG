@@ -86,9 +86,9 @@ module Language.Grammars.AspectAG
 import Language.Grammars.AspectAG.HList
 import Language.Grammars.AspectAG.RecordInstances
 
-import Data.Type.Require hiding (emptyCtx)
+import Data.Type.Require hiding (emptyCtx, ShowTE)
 
-import Data.GenRec
+import Data.GenRec hiding (Label)
 import Data.GenRec.Label
 
 import Data.Kind
@@ -104,6 +104,7 @@ import Data.Singletons.TH
 import Data.Singletons.TypeLits
 import Data.Singletons.Prelude.Ord
 import Data.Singletons.Prelude.Eq
+import Data.Singletons.Prelude.Either
 import Data.Singletons.CustomStar
 import Data.Singletons.Decide
 
@@ -111,9 +112,11 @@ class SemLit a where
   sem_Lit :: a -> Attribution ('[] :: [(Att,Type)])
                -> Attribution '[ '( 'Att "term" a , a)]
   lit     :: Sing ('Att "term" a)
-instance SemLit a where
-  sem_Lit a _ = (SAtt (SSym :: Sing "term") undefined =. a) *. emptyAtt
-  lit         = SAtt (SSym @ "term") undefined
+instance (SingI a) => SemLit a where
+  sem_Lit a _ = (SAtt (SSym :: Sing "term") sing =. a) *. emptyAtt
+  lit         = SAtt (SSym @ "term") sing
+
+instance SingI a where {}
 
 type instance  WrapField PrdReco (CRule p a b c d e f :: Type)
   = CRule p a b c d e f
@@ -143,7 +146,8 @@ prd :: Fam prd c p -> Sing prd
 prd (Fam l _ _) = l
 
 -- | Rules are a function from the input family to the output family,
--- with an extra arity to make them composable.  They are indexed by a production.
+-- with an extra arity to make them composable.
+-- They are indexed by a production.
 type Rule
   (prd  :: Prod)
   (sc   :: [(Child, [(Att, Type)])])
@@ -159,8 +163,10 @@ data CRule prd sc ip ic sp ic' sp'
   = CRule { prod :: Sing prd,
             mkRule :: Rule prd sc ip ic sp ic' sp'}
 
+emptyRule :: SingI prd => CRule prd ic sp '[] '[] '[] '[]
 emptyRule =
   CRule sing (\fam inp -> inp)
+
 
 emptyRuleAtPrd :: Sing prd -> CRule prd sc ip ic' sp' ic' sp'
 emptyRuleAtPrd prd = CRule prd (\fam inp -> inp)
@@ -200,10 +206,12 @@ ext' ::  CRule prd sc ip ic sp ic' sp'
 -- | Given two rules for a given (the same) production, it combines
 -- them. Note that the production equality is visible in the context,
 -- not sintactically. This is a use of the 'Require' pattern.
-ext ::  RequireEq prd prd' (Text "ext":ctx) 
-     => CRule prd sc ip ic sp ic' sp'
-     -> CRule prd' sc ip a b ic sp
-     -> CRule prd sc ip a b ic' sp'
+ext ::
+    ( RequireEq prd prd' '[]
+    , sc ~ sce , ip ~ ipe, ic ~ ice, sp ~ spe)
+    => CRule prd sc ip ic sp ic' sp'
+    -> CRule prd' sce ipe a b ice spe
+    -> CRule prd sc ip a b ic' sp'
 ext = ext'
 
 type family (r :: Type) :+. (r' :: Type) :: Type
@@ -213,28 +221,34 @@ type instance
   CRule prd sc ip a  b  ic' sp'
 
 type family
- ComRA  (rule :: Type) (r :: [(Prod, Type)]) :: [(Prod, Type)]
+ ComRA (rule :: Type) (r :: [(Prod, Type)]) :: [(Prod, Type)]
  where
   ComRA (CRule prd sc ip ic sp ic' sp') '[] =
     '[ '(prd, CRule prd sc ip ic sp ic' sp')]
   ComRA (CRule prd sc ip ic sp ic' sp')
-         ( '(prd', CRule prd' sc ip a  b  ic  sp ) ': r) =
+        ( '(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': r) =
     FoldOrdering (Compare prd prd')
      {-LT-} (  '(prd, CRule prd sc ip ic sp ic' sp')
-            ': '(prd', CRule prd' sc ip a  b  ic  sp )
+            ': '(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1')
             ': r)
     
      {-EQ-} ( '(prd, (CRule prd sc ip ic sp ic' sp')
-                 :+. (CRule prd' sc ip a  b  ic  sp))
+                 :+. CRule prd' sc1 ip1 ic1 sp1 ic1' sp1')
             ': r)
 
-     {-GT-} ('(prd', CRule prd' sc ip a  b  ic  sp)
+     {-GT-} ('(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1')
             ':  ComRA (CRule prd sc ip ic sp ic' sp') r)
-
+  ComRA anything asp = TypeError (Text "cannot combine rule with aspect")
 
 class ExtAspect r a where
   extAspect
    :: r
+   -> Aspect (a :: [(Prod, Type)])
+   -> Aspect (ComRA r a)
+class ExtAspect' (ord :: Ordering) r a where
+  extAspect'
+   :: Sing ord
+   -> r
    -> Aspect (a :: [(Prod, Type)])
    -> Aspect (ComRA r a)
 
@@ -248,19 +262,47 @@ decideEquality a b =
     Proved Refl -> Just Refl
     Disproved _ -> Nothing
 
-instance 
-         (ExtAspect (CRule prd sc ip ic sp ic' sp') a)
-         -- solo llamo en un caso
+instance (ExtAspect' (Compare prd prd') (CRule prd sc ip ic sp ic' sp')
+            ('(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': a))
   =>
   ExtAspect (CRule prd sc ip ic sp ic' sp')
-            ('(prd', CRule prd' sc ip a1 b  ic  sp ) ': a) where
+            ('(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': a) where
   extAspect cr@((CRule p r) :: CRule prd sc ip ic sp ic' sp')
             re@(ConsRec lv@(TagField _ p' r') rs) =
-    case sCompare p p' of
+    let cmp = sCompare p p'
+    in extAspect' cmp cr re
+
+instance (Compare prd prd' ~ 'LT)
+  =>
+  ExtAspect' 'LT (CRule prd sc ip ic sp ic' sp')
+             ('(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': a) where
+  extAspect' prf cr@((CRule p r) :: CRule prd sc ip ic sp ic' sp')
+                 re@(ConsRec lv@(TagField _ p' r') rs) =
+    case prf of
       SLT -> ConsRec (TagField Proxy p cr) re
+instance
+  (Compare prd prd' ~ 'GT
+  , ExtAspect (CRule prd sc ip ic sp ic' sp') a
+  )
+  =>
+  ExtAspect' 'GT (CRule prd sc ip ic sp ic' sp')
+             ('(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': a) where
+  extAspect' prf cr@((CRule p r) :: CRule prd sc ip ic sp ic' sp')
+                 re@(ConsRec lv@(TagField _ p' r') rs) =
+    case prf of
+      SGT -> ConsRec lv $ extAspect cr rs
+instance
+  ( Compare prd prd' ~ EQ
+  , sc ~ sce , ip ~ ipe, ic ~ ice, sp ~ spe)
+  =>
+  ExtAspect' 'EQ (CRule prd sc ip ic sp ic' sp')
+             ('(prd', CRule prd' sce ipe ic1 sp1 ice spe) ': a) where
+  extAspect' prf cr@((CRule p r) :: CRule prd sc ip ic sp ic' sp')
+                 re@(ConsRec lv@(TagField _ p' r') rs) =
+    case prf of
       SEQ -> case decideEquality p p' of
                Just Refl -> ConsRec (TagField Proxy p (cr `ext` r')) rs
-      SGT -> ConsRec lv (extAspect cr rs)
+
 
 -- | An operator, alias for 'extAspect'. It combines a rule with an
 -- aspect, to build a bigger one.
@@ -337,9 +379,11 @@ instance
 instance
   ( Compare prd1 prd2 ~ EQ
   , prd1 ~ prd2
-  , ComAspect r1 r2)
+  , ComAspect r1 r2
+  , sc ~ sc1 , ip ~ ip1, ic ~ ic1, sp ~ sp1
+  )
   => ComAspect' EQ
-            ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) 
+            ('(prd1, CRule prd1 sc ip ic sp ic1' sp1') ': r1) 
             ('(prd2, CRule prd2 sc1 ip1 ic2 sp2 ic1  sp1) ': r2) where
   comAspect' _ r1@(ConsRec cr1@(TagField p prd1 crule1) asp1) 
                r2@(ConsRec cr2@(TagField _ prd2 crule2) asp2) =
@@ -366,7 +410,7 @@ infixr 4 ⋈
 
 -- | Singleton Aspect. Wraps a rule to build an Aspect from it.
 singAsp r
-  = r .+: emptyAspect
+  = r  .+: emptyAspect
 
 infixr 6 .+.
 (.+.) = ext
@@ -374,21 +418,279 @@ infixr 6 .+.
 
 syndef att prd f
   = CRule prd $ \inp (Fam prd' ic sp)
-   ->  Fam prd ic $ att =. (f inp) *. sp
+   ->  Fam prd ic $ att .=. (f inp) .*. sp
 
 
 syndefM att prd = syndef att prd . runReader
 syn = syndefM
 
-type Nt_List = 'NT "List"
-list = SNT (SSym @ "List")
---cons = Sing @ P_Cons
--- type P_Nil = 'Prd "Nil" Nt_List
--- nil = Sing @ P_Nil
--- asp_cata (Proxy :: Proxy a) f e
---   =   (syndefM (scata @ a) cons $ f <$> ter head <*> at tail (scata @ a))
---   .+: (syndefM (scata @ a) nil $ pure e)
---   .+: emptyAspect
+-- inhdef
+--   ::  RequireEq ntch ('Left n) '[]
+--   => Sing ('Att att t)
+--   -> Sing ('Prd prd nt)
+--   -> Sing ('Chi chi ('Prd prd nt) ntch)
+--   -> (Fam ('Prd prd nt) sc ip -> t)
+--   -> CRule ('Prd prd nt) sc ip r sp'
+--      (Update (ChiReco ('Prd prd nt))
+--       ('Chi chi ('Prd prd nt) ntch)
+--       (Extend AttReco ('Att att t) t
+--          (Lookup (ChiReco ('Prd prd nt))
+--           ('Chi chi ('Prd prd nt) ntch) r)) r) sp'
+inhdef
+  :: (Update (ChiReco prd) l
+             (Extend AttReco att val (Lookup (ChiReco prd) l r))
+             r ~ chis
+     , att ~ ('Att attsym val)
+     , prd ~ ('Prd prdsym nt)
+     , l ~ 'Chi chisym ('Prd prdsym nt) ntch -- ('Left n)
+     )
+  => Sing att
+  -> Sing prd
+  -> Sing l
+  -> (Fam prd sc ip -> val)
+  -> CRule prd sc ip r sp'
+          chis
+          sp'
+inhdef att prd chi f
+  = CRule prd $ \inp (Fam prd ic sp)
+       -> let ic'   = update chi Proxy catts' ic
+              catts = ic .# chi
+              catts'= att =. f inp *. catts
+          in  Fam prd ic' sp
+inhdefM att prd chi =
+  inhdef att prd chi . runReader
+
+-----------------------------------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+type Nt_Expr = 'NT "Expr"
+expr = SNT SSym:: Sing Nt_Expr
+
+type P_Add = 'Prd "p_Add" Nt_Expr
+add = SPrd SSym expr :: Sing P_Add
+
+type P_Val = 'Prd "p_Val" Nt_Expr
+val = SPrd SSym expr :: Sing P_Val
+
+type P_Var = 'Prd "p_Var" Nt_Expr
+var = SPrd SSym expr :: Sing P_Var
+
+leftAdd :: Sing ('Chi "leftAdd"   P_Add ('Left Nt_Expr))
+leftAdd = SChi SSym add (SLeft $ SNT SSym)
+
+rightAdd :: Sing ('Chi "rightAdd"   P_Add ('Left Nt_Expr))
+rightAdd = SChi SSym add (SLeft $ SNT SSym)
+
+ival :: Sing ('Chi "ival"      P_Val ('Right ('T Integer)))
+ival = SChi SSym val (SRight $ ST sing)
+
+vname :: Sing ('Chi "vname"     P_Var ('Right ('T String)))
+vname = SChi SSym var (SRight $ ST undefined) -- TODO
+
+eval :: Sing ('Att "eval" Integer)
+eval = SAtt SSym sing
+env  :: Sing ('Att "env"  [(String, Integer)])
+env  = SAtt SSym sing
+data Expr = Val Integer
+          | Var String
+          | Add Expr Expr
+       deriving Show
+
+
+
+sem_Expr asp (Add l r) = knitAspect add asp
+                           $  leftAdd  .=. sem_Expr asp l
+                          .*. rightAdd .=. sem_Expr asp r
+                          .*.  EmptyRec
+sem_Expr asp (Val i)   = knitAspect val asp$
+                          ival  .=. sem_Lit i .*. EmptyRec
+sem_Expr asp (Var v)   = knitAspect var asp$
+                          vname .=. sem_Lit v .*. EmptyRec
+
+
+add_eval  =  syndefM eval add  $ (+) <$> at leftAdd eval <*> at rightAdd eval
+val_eval  =  syndefM eval val  $ ter ival
+
+
+-- asp' =
+--  (syndefM eval var (fst <$> ((,) <$> pure (0::Integer) <*> ter vname))) .+:
+--       singAsp add_eval .:+: singAsp val_eval
+
+-- asp =
+--  singAsp (syndefM eval var (
+--              do env <- at lhs env
+--                 return env))
+--  .:+:
+--       singAsp add_eval .:+: singAsp val_eval
+
+
+aspAll =
+  singAsp (inhasp leftAdd)
+  .:+:
+  singAsp (inhasp rightAdd)
+  .:+:
+  singAsp (syndefM eval var(
+              do env <- at lhs env
+                 x <- ter vname
+                 case lookup x env of
+                   Just e -> return e
+              )
+          )
+  .:+: singAsp add_eval
+  .:+: singAsp val_eval .:+: emptyAspect
+
+inhasp chi = inhdefM env add chi (at lhs env)
+
+
+evalExpr e = sem_Expr aspAll e (env =. [("x",(4 :: Integer)), ("y",99)]
+                                *. emptyAtt) #. eval
+
+
+exampleExpr =  Add (Add (Val (-9)) (Add (Val 7) (Val 2)))
+                   (Add (Var "x")(Var "y"))
+--exampleEval =  evalExpr exampleExpr
+
+
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+
+class At pos att m where
+ type ResAt pos att m
+ at :: Sing pos -> Sing att -> m (ResAt pos att m)
+
+
+
+instance
+  ( Lookup (ChiReco prd) ('Chi ch prd nt) chi ~ r
+  , Lookup AttReco ('Att att t) r ~ t
+  , prd ~ prd'
+  , ('Chi ch prd nt) ~ ('Chi ch prd ('Left ('NT n)))
+  )
+  => At ('Chi ch prd nt) ('Att att t)
+        (Reader (Fam prd' chi par))  where
+  type ResAt ('Chi ch prd nt) ('Att att t) (Reader (Fam prd' chi par))
+    = t 
+  at ch att
+    = liftM (\(Fam _ chi _)  -> let atts = chi # ch
+                                in  atts # att)
+      ask
+
+instance
+  ( RequireEq t t' ctx
+  , Lookup AttReco ('Att att t) par ~ t
+  )
+  => At 'Lhs ('Att att t) (Reader (Fam prd chi par))  where
+  type ResAt 'Lhs ('Att att t) (Reader (Fam prd chi par))
+    = Lookup AttReco ('Att att t) par
+  at lhs att
+    = liftM (\(Fam _ _ par) -> par #. att) ask
+
+ter :: ( Lookup (ChiReco prd) pos chi ~ r
+       , Lookup AttReco ('Att "term" t) r ~ t'
+       , prd ~ prd'
+       , t ~ t'
+       , pos ~ ('Chi ch prd (Right ('T t)))
+       , m ~ Reader (Fam prd' chi par)
+       , SingI t' )
+    =>  Sing pos -> m (ResAt pos ('Att "term" t) m) 
+ter (ch :: Sing ('Chi ch prd (Right ('T t))))
+  = liftM (\(Fam _ chi _)  -> let atts = chi # ch
+                              in  atts # (lit @ t))
+          ask
+
+class Kn (fcr :: [(Child, Type)]) (prd :: Prod) where
+  type ICh fcr :: [(Child, [(Att, Type)])]
+  type SCh fcr :: [(Child, [(Att, Type)])]
+  kn :: Record fcr -> ChAttsRec prd (ICh fcr) -> ChAttsRec prd (SCh fcr)
+
+instance Kn '[] prod where
+  type ICh '[] = '[]
+  type SCh '[] = '[] 
+  kn _ _ = emptyCh
+
+instance ( lch ~ 'Chi l prd nt
+         , Kn fc prd
+         ) =>
+  Kn ( '(lch , Attribution ich -> Attribution sch) ': fc) prd where
+  type ICh ( '(lch , Attribution ich -> Attribution sch) ': fc)
+    = '(lch , ich) ': ICh fc
+  type SCh ( '(lch , Attribution ich -> Attribution sch) ': fc)
+    = '(lch , sch) ': SCh fc
+  kn ((ConsRec (TagField _ lch fch) (fcr :: Record fc)))
+   = \((ConsRec pich icr) :: ChAttsRec prd ( '(lch, ich) ': ICh fc))
+   -> let scr = kn fcr icr
+          ich = unTaggedChAttr pich
+      in ConsRec (TaggedChAttr lch
+               (fch ich)) scr
+class Empties (fc :: [(Child,Type)]) (prd :: Prod) where
+  type EmptiesR fc :: [(Child, [(Att, Type)])] 
+  empties :: Record fc -> ChAttsRec prd (EmptiesR fc)
+
+instance Empties '[] prd where
+  type EmptiesR '[] = '[]
+  empties _ = emptyCh
+
+instance
+  ( Empties fcr prd
+  , chi ~ 'Chi ch prd nt
+  )
+  =>
+  Empties ( '(chi, Attribution e -> Attribution a) ': fcr) prd where
+  type EmptiesR ( '(chi, Attribution e -> Attribution a) ': fcr) =
+    '(chi, '[]) ': EmptiesR fcr
+  empties (ConsRec (TagField labelc
+                   (labelch :: Sing chi) fch) r) =
+    ConsRec (TagField (Proxy @(ChiReco prd)) labelch emptyAtt) $ empties r
+
+
+knit (rule :: CRule prd (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp)
+     (fc   :: Record fc)
+     (ip   :: Attribution ip)
+  = let (Fam p ic sp) = mkRule rule
+                        (Fam p sc ip) (Fam p ec emptyAtt)
+        sc            = kn fc ic
+        ec            = empties fc
+    in  sp
+
+
+knitAspect (prd :: Sing prd) (asp :: Aspect asp) fc ip
+  = knit (asp # prd) fc ip
+
+
+
+{-
+
+
+eval = Label @ ('Att "eval" Int)
+env  = Label @ ('Att "env"  (Map String Int))
+
+add_eval  =  syndefM eval add  $ (+) <$> at leftAdd eval <*> at rightAdd eval
+--add_eval'' = uses eval (add .:. KNil) (expr .:. eL) ((+) @ Int) 0
+--add_eval' = useadd add
+--        .:+: use eval mul (expr .:. eL) ((*) @ Int) 1
+
+-- useadd prd = use eval prd (expr .:. eL) ((+) @ Int) 0
+
+val_eval  =  syndefM eval val  $ ter ival
+var_eval  =  syndefM eval var  $ slookup <$> ter vname <*> at lhs env
+-}
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+
+
 
 --inh = inhdefM
 
@@ -496,16 +798,6 @@ instance ( RequireR (OpLookup (ChiReco prd) ('Chi ch prd nt) chi) ctx
 
 
 
-instance
-         ( RequireR (OpLookup AttReco ('Att att t) par) ctx t'
-         , RequireEq t t' ctx
-         )
- => At Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))  where
- type ResAt Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))
-    = t
- at lhs att
-  = liftM (\(ctx, Fam _ par) -> req ctx (OpLookup att par)) ask
-
 def :: Reader (Proxy ctx, Fam prd chi par) a
     -> (Proxy ctx -> (Fam prd chi par) -> a)
 def = curry . runReader
@@ -526,32 +818,6 @@ ter (ch :: Label ('Chi ch prd (Right ('T t))))
 
 
 
-class Kn (fcr :: [(Child, Type)]) (prd :: Prod) where
-  type ICh fcr :: [(Child, [(Att, Type)])]
-  type SCh fcr :: [(Child, [(Att, Type)])]
-  kn :: Record fcr -> ChAttsRec prd (ICh fcr) -> ChAttsRec prd (SCh fcr)
-
-instance Kn '[] prod where
-  type ICh '[] = '[]
-  type SCh '[] = '[] 
-  kn _ _ = emptyCh
-
-instance ( lch ~ 'Chi l prd nt
-         , Kn fc prd
-         -- , LabelSet ('(lch, sch) : SCh fc)
-         -- , LabelSet ('(lch, ich) : ICh fc)
-         ) =>
-  Kn ( '(lch , Attribution ich -> Attribution sch) ': fc) prd where
-  type ICh ( '(lch , Attribution ich -> Attribution sch) ': fc)
-    = '(lch , ich) ': ICh fc
-  type SCh ( '(lch , Attribution ich -> Attribution sch) ': fc)
-    = '(lch , sch) ': SCh fc
-  kn ((ConsRec (TagField _ lch fch) (fcr :: Record fc)))
-   = \((ConsRec pich icr) :: ChAttsRec prd ( '(lch, ich) ': ICh fc))
-   -> let scr = kn fcr icr
-          ich = unTaggedChAttr pich
-      in ConsRec (TaggedChAttr lch
-               (fch ich)) scr
 
 
 
@@ -767,3 +1033,4 @@ instance CopyAtChiList att '[] '[] ctx where
 --     = copyAtChi att chi
 --     .+: copyAtChiList @('Att att t) @chs att chs (Proxy @polys)
 -}
+

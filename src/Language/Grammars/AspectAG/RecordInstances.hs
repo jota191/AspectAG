@@ -29,7 +29,7 @@
 module Language.Grammars.AspectAG.RecordInstances where
 
 import Data.GenRec
-import Data.Type.Require
+import Data.Type.Require hiding (ShowTE)
 import GHC.TypeLits
 import Data.Kind
 import Data.Proxy
@@ -64,12 +64,31 @@ data instance Sing (nt :: NT) where
 data instance Sing (nt :: T) where
   ST :: Sing t -> Sing ('T t)
 
+data Lhs = Lhs
+data instance Sing (lhs :: Lhs) where
+  SLhs :: Sing 'Lhs
 
-$(singletonStar [''Bool, ''Maybe, ''Either, ''Char, ''Int])
+lhs = SLhs
+
+instance (KnownSymbol s) => SingI ('Prd s nt) where
+  sing = SPrd SSym undefined
+
+  -- $(singletonStar [''Bool, ''Maybe, ''Either, ''Char,
+     --           ''Int, ''Integer, ''String])
+
+instance PEq Type where
+  type instance a == b = 'True
+instance POrd Type where
+  type Compare (a:: Type) (b :: Type) = 'EQ
+instance SEq Type where
+  _ %== _ = sing :: Sing 'True 
+instance SOrd Type where
+  sCompare (_ :: Sing t1) (_ :: Sing t2) =
+    sing :: Sing (Apply (Apply CompareSym0 t1) t2)
+  
 $(singEqInstances [''Att, ''Prod, ''Child, ''NT, ''T])
 $(singOrdInstances [''Att, ''Prod, ''Child, ''NT, ''T])
 $(singDecideInstances [''Prod, ''NT])
-
 
 type instance  ShowTE ('Att l t)   = Text  "Attribute " :<>: Text l
                                                         :<>: Text ":"
