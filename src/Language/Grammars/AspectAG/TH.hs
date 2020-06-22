@@ -31,6 +31,8 @@ module Language.Grammars.AspectAG.TH where
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax (showName)
+import Data.Singletons.TypeLits
+import Data.Singletons.Prelude.Either
 import Data.Proxy
 import Data.Either
 import GHC.TypeLits
@@ -40,7 +42,7 @@ import qualified Data.Set as S
 
 import Control.Monad
 
-import Data.GenRec.Label
+-- import Data.GenRec.Label
 import Data.GenRec
 import Language.Grammars.AspectAG
 import Language.Grammars.AspectAG.RecordInstances
@@ -57,16 +59,16 @@ str2Sym s = litT$ strTyLit s -- th provides nametoSymbol, btw
 -- and a quoted type
 attLabel :: String -> Name -> DecsQ
 attLabel s t
-  = [d| $(varP (mkName s)) = Label :: Label ( 'Att $(str2Sym s)
+  = [d| $(varP (mkName s)) = SAtt SSym sing :: Sing ( 'Att $(str2Sym s)
                                             $(conT t)) |]
 
 -- | for completness, to have a name as the next one
 attMono = attLabel
 
 -- | TH function to define a polymorphic attribute
-attPoly :: String -> DecsQ
-attPoly s
-    = [d| $(varP (mkName s)) = Label :: forall a . Label ( 'Att $(str2Sym s) a) |]
+--attPoly :: String -> DecsQ
+--attPoly s
+--    = [d| $(varP (mkName s)) = Label :: forall a . Label ( 'Att $(str2Sym s) a) |]
 
 -- | multiple monomorphic attributes at once
 attLabels :: [(String,Name)] -> Q [Dec]
@@ -81,7 +83,7 @@ addNont s
 
 addNTLabel :: String -> Q [Dec]
 addNTLabel s
-  = [d| $(varP (mkName ("nt_" ++ s))) = Label :: Label ('NT $(str2Sym s)) |]
+  = [d| $(varP (mkName ("nt_" ++ s))) = SNT SSym :: Sing ('NT $(str2Sym s)) |]
 
 addNTType :: String -> Q [Dec]
 addNTType s
@@ -106,19 +108,21 @@ addChi  :: String -- chi name
         -> Q [Dec]
 addChi chi prd (Ter typ)
   = [d| $(varP (mkName ("ch_" ++chi)))
-           = Label :: Label ( 'Chi $(str2Sym chi)
-                                   $(conT prd)
-                                    (Terminal $(conT typ)))|]
+           = SChi SSym $(varE (mkName ("p_" ++ drop 2 (nameBase prd)))) (SRight $ ST sing )
+             :: Sing ( 'Chi $(str2Sym chi)
+                       $(conT prd)
+                       (Terminal $(conT typ)))|]
 addChi chi prd (NonTer typ)
   = [d| $(varP (mkName ("ch_" ++chi)))
-           = Label :: Label ( 'Chi $(str2Sym chi)
-                                   $(conT prd)
-                                    (NonTerminal $(conT typ)))|]
-addChi chi prd poly
-  = [d| $(varP (mkName ("ch_" ++chi)))
-           = Label :: forall a . Label ( 'Chi $(str2Sym chi)
-                                   $(conT prd)
-                                    ('Right ('T a)))|]
+           = SChi SSym $(varE (mkName ("p_" ++ drop 2 (nameBase prd)))) (SLeft $ SNT SSym )
+             :: Sing ( 'Chi $(str2Sym chi)
+                       $(conT prd)
+                       (NonTerminal $(conT typ)))|]
+-- addChi chi prd poly
+--   = [d| $(varP (mkName ("ch_" ++chi)))
+--            = Label :: forall a . Label ( 'Chi $(str2Sym chi)
+--                                    $(conT prd)
+--                                     ('Right ('T a)))|]
 
 -- | only prod symbol
 addPrd :: String  --name
@@ -129,7 +133,7 @@ addPrd prd nt = liftM concat . sequence
 
 addPrdLabel prd nt
   = [d| $(varP (mkName ("p_" ++ prd)))
-         = Label :: Label ('Prd $(str2Sym prd) $(conT nt))|]
+         = SPrd SSym undefined :: Sing ('Prd $(str2Sym prd) $(conT nt))|]
 
 addPrdType prd nt
   = return [TySynD (mkName ("P_"++ prd)) []
