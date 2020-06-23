@@ -167,7 +167,7 @@ data CRule prd sc ip ic sp ic' sp'
   = CRule { prod :: Sing prd,
             mkRule :: Rule prd sc ip ic sp ic' sp'}
 
-emptyRule :: SingI prd => CRule prd ic sp '[] '[] '[] '[]
+--emptyRule :: SingI prd => CRule prd ic sp '[] '[] '[] '[]
 emptyRule =
   CRule sing (\fam inp -> inp)
 

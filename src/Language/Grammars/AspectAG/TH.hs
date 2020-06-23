@@ -133,7 +133,8 @@ addPrd prd nt = liftM concat . sequence
 
 addPrdLabel prd nt
   = [d| $(varP (mkName ("p_" ++ prd)))
-         = SPrd SSym undefined :: Sing ('Prd $(str2Sym prd) $(conT nt))|]
+         = SPrd SSym $(varE (mkName ("nt_" ++ drop 3 (nameBase nt))))
+           :: Sing ('Prd $(str2Sym prd) $(conT nt))|]
 
 addPrdType prd nt
   = return [TySynD (mkName ("P_"++ prd)) []
