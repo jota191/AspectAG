@@ -108,6 +108,10 @@ import Data.Singletons.Prelude.Either
 import Data.Singletons.CustomStar
 import Data.Singletons.Decide
 
+import Unsafe.Coerce (unsafeCoerce)
+import Data.Type.Equality
+
+
 class SemLit a where
   sem_Lit :: a -> Attribution ('[] :: [(Att,Type)])
                -> Attribution '[ '( 'Att "term" a , a)]
@@ -206,13 +210,10 @@ ext' ::  CRule prd sc ip ic sp ic' sp'
 -- | Given two rules for a given (the same) production, it combines
 -- them. Note that the production equality is visible in the context,
 -- not sintactically. This is a use of the 'Require' pattern.
-ext ::
-    ( RequireEq prd prd' '[]
-    , sc ~ sce , ip ~ ipe, ic ~ ice, sp ~ spe)
-    => CRule prd sc ip ic sp ic' sp'
-    -> CRule prd' sce ipe a b ice spe
+ext :: CRule prd sc ip ic sp ic' sp'
+    -> CRule prd sce ipe a b ice spe
     -> CRule prd sc ip a b ic' sp'
-ext = ext'
+ext = unsafeCoerce ext'
 
 type family (r :: Type) :+. (r' :: Type) :: Type
 type instance
@@ -255,12 +256,12 @@ class ExtAspect' (ord :: Ordering) r a where
 instance ExtAspect (CRule prd sc ip ic sp ic' sp') '[] where
   extAspect cr@(CRule p r) EmptyRec = ConsRec (TagField Proxy p cr) EmptyRec
 
-decideEquality :: forall k (a :: k) (b :: k). SDecide k
-               => Sing a -> Sing b -> Maybe (a :~: b)
-decideEquality a b =
-  case a %~ b of
-    Proved Refl -> Just Refl
-    Disproved _ -> Nothing
+-- decideEquality :: forall k (a :: k) (b :: k). SDecide k
+--                => Sing a -> Sing b -> Maybe (a :~: b)
+-- decideEquality a b =
+--   case a %~ b of
+--     Proved Refl -> Just Refl
+--     Disproved _ -> Nothing
 
 instance (ExtAspect' (Compare prd prd') (CRule prd sc ip ic sp ic' sp')
             ('(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': a))
@@ -293,7 +294,8 @@ instance
       SGT -> ConsRec lv $ extAspect cr rs
 instance
   ( Compare prd prd' ~ EQ
-  , sc ~ sce , ip ~ ipe, ic ~ ice, sp ~ spe)
+  , sc ~ sce , ip ~ ipe, ic ~ ice, sp ~ spe
+  )
   =>
   ExtAspect' 'EQ (CRule prd sc ip ic sp ic' sp')
              ('(prd', CRule prd' sce ipe ic1 sp1 ice spe) ': a) where
@@ -301,8 +303,8 @@ instance
                  re@(ConsRec lv@(TagField _ p' r') rs) =
     case prf of
       SEQ -> case decideEquality p p' of
-               Just Refl -> ConsRec (TagField Proxy p (cr `ext` r')) rs
-
+        Just Refl
+          -> ConsRec (TagField Proxy p (cr `ext` r')) rs
 
 -- | An operator, alias for 'extAspect'. It combines a rule with an
 -- aspect, to build a bigger one.
@@ -380,14 +382,14 @@ instance
   ( Compare prd1 prd2 ~ EQ
   , prd1 ~ prd2
   , ComAspect r1 r2
-  , sc ~ sc1 , ip ~ ip1, ic ~ ic1, sp ~ sp1
+  , sc ~ sc1, ip ~ ip1, ic ~ ic1, sp ~ sp1
   )
   => ComAspect' EQ
-            ('(prd1, CRule prd1 sc ip ic sp ic1' sp1') ': r1) 
+            ('(prd1, CRule prd1 sc  ip  ic  sp  ic1' sp1') ': r1) 
             ('(prd2, CRule prd2 sc1 ip1 ic2 sp2 ic1  sp1) ': r2) where
   comAspect' _ r1@(ConsRec cr1@(TagField p prd1 crule1) asp1) 
                r2@(ConsRec cr2@(TagField _ prd2 crule2) asp2) =
-    ConsRec (TagField p prd1 (crule1 `ext` crule2))$ comAspect asp1 asp2
+       ConsRec (TagField p prd1 (crule1 `ext` crule2))$ comAspect asp1 asp2
 instance
   ( Compare prd1 prd2 ~ GT
   , ComAspect ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) r2)
@@ -424,21 +426,21 @@ syndef att prd f
 syndefM att prd = syndef att prd . runReader
 syn = syndefM
 
-inhdef
-  :: (Update (ChiReco prd) l
-             (Extend AttReco att val (Lookup (ChiReco prd) l r))
-             r ~ chis
-     , att ~ ('Att attsym val)
-     , prd ~ ('Prd prdsym nt)
-     , l ~ 'Chi chisym ('Prd prdsym nt) ntch -- ('Left n)
-     )
-  => Sing att
-  -> Sing prd
-  -> Sing l
-  -> (Fam prd sc ip -> val)
-  -> CRule prd sc ip r sp'
-          chis
-          sp'
+-- inhdef
+--   :: (Update (ChiReco prd) l
+--              (Extend AttReco att val (Lookup (ChiReco prd) l r))
+--              r ~ chis
+--      , att ~ ('Att attsym val)
+--      , prd ~ ('Prd prdsym nt)
+--      , l ~ 'Chi chisym ('Prd prdsym nt) ntch -- ('Left n)
+--      )
+--   => Sing att
+--   -> Sing prd
+--   -> Sing l
+--   -> (Fam prd sc ip -> val)
+--   -> CRule prd sc ip r sp'
+--           chis
+--           sp'
 inhdef att prd chi f
   = CRule prd $ \inp (Fam prd ic sp)
        -> let ic'   = update chi Proxy catts' ic
@@ -457,38 +459,26 @@ class At pos att m where
 
 
 instance
-  ( Lookup (ChiReco prd) ('Chi ch prd nt) chi ~ r
-  , Lookup AttReco ('Att att t) r ~ t
-  , prd ~ prd'
-  , ('Chi ch prd nt) ~ ('Chi ch prd ('Left ('NT n)))
-  )
-  => At ('Chi ch prd nt) ('Att att t)
-        (Reader (Fam prd' chi par))  where
-  type ResAt ('Chi ch prd nt) ('Att att t) (Reader (Fam prd' chi par))
-    = t 
+  At ('Chi ch prd nt) ('Att att t)
+        (Reader (Fam prd chi par))  where
+  type ResAt ('Chi ch prd nt) ('Att att t) (Reader (Fam prd chi par))
+    = Lookup AttReco ('Att att t) (Lookup (ChiReco prd) ('Chi ch prd nt) chi)
   at ch att
     = liftM (\(Fam _ chi _)  -> let atts = chi # ch
                                 in  atts # att)
       ask
 
 instance
-  ( RequireEq t t' ctx
-  , Lookup AttReco ('Att att t) par ~ t
-  )
-  => At 'Lhs ('Att att t) (Reader (Fam prd chi par))  where
+  At 'Lhs ('Att att t) (Reader (Fam prd chi par))  where
   type ResAt 'Lhs ('Att att t) (Reader (Fam prd chi par))
     = Lookup AttReco ('Att att t) par
   at lhs att
     = liftM (\(Fam _ _ par) -> par #. att) ask
 
-ter :: ( Lookup (ChiReco prd) pos chi ~ r
-       , Lookup AttReco ('Att "term" t) r ~ t'
-       , prd ~ prd'
-       , t ~ t'
-       , pos ~ ('Chi ch prd (Right ('T t)))
-       , m ~ Reader (Fam prd' chi par)
-       , SingI t' )
-    =>  Sing pos -> m (ResAt pos ('Att "term" t) m) 
+ter :: Sing ('Chi ch prd (Right ('T t)))
+    -> Reader (Fam prd chi par)
+       (ResAt ('Chi ch prd (Right ('T t))) ('Att "term" t)
+         (Reader (Fam prd chi par))) 
 ter (ch :: Sing ('Chi ch prd (Right ('T t))))
   = liftM (\(Fam _ chi _)  -> let atts = chi # ch
                               in  atts # (lit @ t))
@@ -504,8 +494,8 @@ instance Kn '[] prod where
   type SCh '[] = '[] 
   kn _ _ = emptyCh
 
-instance ( lch ~ 'Chi l prd nt
-         , Kn fc prd
+instance (-- lch ~ 'Chi l prd nt
+          Kn fc prd
          ) =>
   Kn ( '(lch , Attribution ich -> Attribution sch) ': fc) prd where
   type ICh ( '(lch , Attribution ich -> Attribution sch) ': fc)
@@ -528,7 +518,7 @@ instance Empties '[] prd where
 
 instance
   ( Empties fcr prd
-  , chi ~ 'Chi ch prd nt
+ --  , chi ~ 'Chi ch prd nt
   )
   =>
   Empties ( '(chi, Attribution e -> Attribution a) ': fcr) prd where

@@ -23,14 +23,15 @@
              PartialTypeSignatures,
              TemplateHaskell,
              InstanceSigs,
-             EmptyCase
+             EmptyCase,
+             StandaloneKindSignatures
 #-}
 
 module Language.Grammars.AspectAG.RecordInstances where
 
 import Data.GenRec
 import Data.Type.Require hiding (ShowTE)
-import GHC.TypeLits
+--import GHC.TypeLits
 import Data.Kind
 import Data.Proxy
 import GHC.TypeLits
@@ -42,39 +43,48 @@ import Data.Singletons.TypeLits
 import Data.Singletons.Prelude.Ord
 import Data.Singletons.Prelude.Eq
 import Data.Singletons.CustomStar
+import Data.Singletons.TypeLits
 
-data Att   = Att Symbol Type                -- deriving Eq
+
+
+data Att   = Att Symbol Type                   -- deriving Eq
 data Prod  = Prd Symbol NT                  -- deriving Eq
 data Child = Chi Symbol Prod (Either NT T)  -- deriving Eq
 data NT    = NT Symbol                      -- deriving Eq
-data T     = T Type                         -- deriving Eq
-
+data T     = T Type 
+ 
 prdFromChi :: Sing (Chi nam prd tnt) -> Sing prd
 prdFromChi _ = undefined -- Label
 
-data instance Sing (att :: Att) where
-  SAtt :: Sing s -> Sing t ->  Sing ('Att s t)
-data instance Sing (prod :: Prod) where
-  SPrd :: Sing s -> Sing nt -> Sing ('Prd s nt)
-data instance Sing (child :: Child) where
+data SAtt (att :: Att) where
+  SAtt :: Sing s -> Sing t ->  SAtt ('Att s t)
+data SProd (prod :: Prod) where
+  SPrd :: Sing s -> Sing nt -> SProd ('Prd s nt)
+data SChild (child :: Child) where
   SChi :: Sing s -> Sing prd -> Sing (tnt :: Either NT T)
-       -> Sing ('Chi s prd tnt)
-data instance Sing (nt :: NT) where
-  SNT :: Sing s -> Sing ('NT s)
-data instance Sing (nt :: T) where
-  ST :: Sing t -> Sing ('T t)
-
+       -> SChild ('Chi s prd tnt)
+data SNT (nt :: NT) where
+  SNT :: Sing s -> SNT ('NT s)
+data ST (nt :: T) where
+  ST :: Sing t -> ST ('T t )
 data Lhs = Lhs
-data instance Sing (lhs :: Lhs) where
-  SLhs :: Sing 'Lhs
+data SLhs (lhs :: Lhs) where
+  SLhs :: SLhs 'Lhs
+
+type instance Sing @Att = SAtt
+type instance Sing @Prod = SProd
+type instance Sing @Child = SChild
+type instance Sing @NT = SNT
+type instance Sing @T = ST
+type instance Sing @Lhs = SLhs
+
 
 lhs = SLhs
 
-instance (KnownSymbol s) => SingI ('Prd s nt) where
-  sing = SPrd SSym undefined
-
-  -- $(singletonStar [''Bool, ''Maybe, ''Either, ''Char,
-     --           ''Int, ''Integer, ''String])
+--instance (KnownSymbol s) => SingI ('Prd s nt) where
+--  sing = SPrd SSym undefined
+-- $(singletonStar [''Bool, ''Maybe, ''Either, ''Char,
+--                  ''Int, ''Integer, ''String])
 
 instance PEq Type where
   type instance a == b = 'True
@@ -101,6 +111,7 @@ type instance  ShowTE ('Left l)    = ShowTE l
 type instance  ShowTE ('Right r)   = ShowTE r
 type instance  ShowTE ('NT l)      = Text "Non-Terminal " :<>: Text l
 type instance  ShowTE ('T  l)      = Text "Terminal " :<>: ShowTE l
+
 
 
 
