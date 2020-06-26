@@ -42,7 +42,6 @@ import qualified Data.Set as S
 
 import Control.Monad
 
--- import Data.GenRec.Label
 import Data.GenRec
 import Language.Grammars.AspectAG
 import Language.Grammars.AspectAG.RecordInstances
@@ -90,13 +89,6 @@ addNTType s
   = return [TySynD (mkName ("Nt_"++ s)) [] (AppT (PromotedT 'NT) (LitT (StrTyLit s)))]
 
 
--- * Productions
---data Symbol = N String | Te Name
-type family Terminal s :: Either NT T where
-  Terminal s = 'Right ('T s)
-
-type family NonTerminal s where
-  NonTerminal s = 'Left s
 
 
 data SymTH = Ter Name | NonTer Name | Poly
