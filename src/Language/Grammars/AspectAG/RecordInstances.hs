@@ -30,7 +30,7 @@
 module Language.Grammars.AspectAG.RecordInstances where
 
 import Data.GenRec
-import Data.Type.Require hiding (ShowTE)
+import Data.Type.Require
 --import GHC.TypeLits
 import Data.Kind
 import Data.Proxy
@@ -78,13 +78,7 @@ type instance Sing @NT = SNT
 type instance Sing @T = ST
 type instance Sing @Lhs = SLhs
 
-
 lhs = SLhs
-
---instance (KnownSymbol s) => SingI ('Prd s nt) where
---  sing = SPrd SSym undefined
--- $(singletonStar [''Bool, ''Maybe, ''Either, ''Char,
---                  ''Int, ''Integer, ''String])
 
 instance PEq Type where
   type instance a == b = 'True
@@ -294,3 +288,21 @@ data PrdReco
 type Aspect (asp :: [(Prod, Type)]) = Rec PrdReco asp
 type instance ShowRec PrdReco       = "Aspect"
 type instance ShowField PrdReco     = "production named "
+
+
+-- * Productions
+type family Terminal s :: Either NT T where
+  Terminal s = 'Right ('T s)
+
+type family NonTerminal s where
+  NonTerminal s = 'Left s
+
+prodFromChi :: (KnownSymbol prd, SingI nt) => 
+  Sing (Chi ch ('Prd prd nt) (NonTerminal nt')) -> Sing ('Prd prd nt)
+prodFromChi _ = sing
+
+instance (KnownSymbol s, SingI nt) => SingI (Prd s nt :: Prod) where
+  sing = SPrd sing sing
+
+instance (KnownSymbol s) => SingI ('NT s :: NT) where
+  sing = SNT sing
