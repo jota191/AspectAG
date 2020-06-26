@@ -32,68 +32,72 @@ Portability : POSIX
 {-# LANGUAGE UnicodeSyntax             #-}
 
 module Language.Grammars.AspectAG
-  --(
+  (
 
-    -- -- * Rules
-    -- Rule, CRule(..),
+    -- * Rules
+    Rule, CRule(..),
     
-    -- -- ** Defining Rules
-    -- syndef, syndefM, syn,
+    -- ** Defining Rules
+    syndef, syndefM, syn,
     
-    -- synmod, synmodM,
+    --synmod, synmodM,
 
 
-    -- inh, inhdef, inhdefM,
+    inh, inhdef, inhdefM,
 
-    -- inhmod, inhmodM, 
+    --inhmod, inhmodM, 
 
-    -- emptyRule,
-    -- emptyRuleAtPrd,
-    -- ext,
+    emptyRule,
+    emptyRuleAtPrd,
+    ext,
     
-    -- -- * Aspects 
-    -- -- ** Building Aspects.
+    -- * Aspects 
+    -- ** Building Aspects.
     
-    -- emptyAspect,
-    -- singAsp,
-    -- extAspect,
-    -- comAspect,
-    -- (.+:),(◃),
-    -- (.:+.),(▹),
-    -- (.:+:),(⋈),
+    emptyAspect,
+    singAsp,
+    extAspect,
+    comAspect,
+    (.+:),(◃),
+    (.:+.),(▹),
+    (.:+:),(⋈),
+    (.+.), (⋄),
     
-    
-    -- CAspect(..),
-    -- Label(Label), Prod(..), T(..), NT(..), Child(..), Att(..),
-    -- (.#), (#.), (=.), (.=), (.*), (*.),
-    -- emptyAtt,
-    -- ter,
-    -- at, lhs,
-    -- sem_Lit,
-    -- knitAspect,
+    Terminal, NonTerminal,
+    Label, Prod(..), T(..), NT(..), Child(..), Att(..),
+    (.#), (#.), (=.), (.=), (.*), (*.),
+    emptyAtt,
+    ter,
+    at, lhs,
+    sem_Lit,
+    knitAspect,
     -- traceAspect,
     -- traceRule,
-    -- copyAtChi,
+    copyAtChi,
+    copyAtChis,
     -- use,
     -- emptyAspectC,
     -- emptyAspectForProds,
     -- module Data.GenRec,
-    -- module Language.Grammars.AspectAG.HList
- -- )
+    -- module Language.Grammars.AspectAG.RecordInstances,
+    module Language.Grammars.AspectAG.HList
+    
+ )
   where
 
 
 import Language.Grammars.AspectAG.HList
 import Language.Grammars.AspectAG.RecordInstances
 
-import Data.Type.Require hiding (emptyCtx, ShowTE)
+import Data.Type.Require hiding (emptyCtx)
 
-import Data.GenRec hiding (Label)
+import Data.GenRec
 import Data.GenRec.Label
 
 import Data.Kind
 import Data.Proxy
 import GHC.TypeLits
+import Data.Functor.Identity
 
 import Data.Maybe
 import Data.Type.Equality
@@ -108,19 +112,22 @@ import Data.Singletons.Prelude.Either
 import Data.Singletons.CustomStar
 import Data.Singletons.Decide
 
-import Unsafe.Coerce (unsafeCoerce)
-import Data.Type.Equality
+import Data.Singletons.Prelude.List (SList(SNil,SCons))
 
+import GHC.Types
+import Unsafe.Coerce
+
+instance SingI (a :: Type) where {}
 
 class SemLit a where
   sem_Lit :: a -> Attribution ('[] :: [(Att,Type)])
                -> Attribution '[ '( 'Att "term" a , a)]
   lit     :: Sing ('Att "term" a)
-instance (SingI a) => SemLit a where
+instance SemLit a where
   sem_Lit a _ = (SAtt (SSym :: Sing "term") sing =. a) *. emptyAtt
   lit         = SAtt (SSym @ "term") sing
 
-instance SingI a where {}
+
 
 type instance  WrapField PrdReco (CRule p a b c d e f :: Type)
   = CRule p a b c d e f
@@ -200,20 +207,41 @@ emptyAspect  = EmptyRec
 
 
 
-ext' ::  CRule prd sc ip ic sp ic' sp'
-     ->  CRule prd sc ip a b ic sp
-     ->  CRule prd sc ip a b ic' sp'
-(CRule p f) `ext'` (CRule _ g)
- = CRule p $ \input -> f input . g input
-
-
 -- | Given two rules for a given (the same) production, it combines
 -- them. Note that the production equality is visible in the context,
 -- not sintactically. This is a use of the 'Require' pattern.
-ext :: CRule prd sc ip ic sp ic' sp'
-    -> CRule prd sce ipe a b ice spe
-    -> CRule prd sc ip a b ic' sp'
-ext = unsafeCoerce ext'
+-- ext :: CRule prd sc ip ic sp ic' sp'
+--     -> CRule prd sce ipe a b ice spe
+--     -> CRule prd sc ip a b ic' sp'
+ext :: RequireEq prd prd' '[]
+     => CRule prd sc ip ic sp ic' sp'
+     -> CRule prd' sc ip a r ic sp
+     -> CRule prd sc ip a r ic' sp'
+(CRule p f) `ext` (CRule _ g)
+ = CRule p $ \input -> f input . g input
+
+------------------------------------------
+--f :: RequireEq a b '[] => a -> b -> a
+--f x y = x
+--
+--g = f
+
+-- g True "" does NOT give the nice error, that's why we annotate all..
+------------------------------------------
+infixr 6 ⋄
+(⋄) :: RequireEq prd prd' '[]
+    => CRule prd sc ip ic sp ic' sp'
+    -> CRule prd' sc ip a r ic sp
+    -> CRule prd sc ip a r ic' sp'
+(⋄) = ext
+
+infixr 6 .+.
+(.+.) :: RequireEq prd prd' '[]
+      => CRule prd sc ip ic sp ic' sp'
+      -> CRule prd' sc ip a r ic sp
+      -> CRule prd sc ip a r ic' sp'
+(.+.) = ext
+
 
 type family (r :: Type) :+. (r' :: Type) :: Type
 type instance
@@ -255,13 +283,6 @@ class ExtAspect' (ord :: Ordering) r a where
 
 instance ExtAspect (CRule prd sc ip ic sp ic' sp') '[] where
   extAspect cr@(CRule p r) EmptyRec = ConsRec (TagField Proxy p cr) EmptyRec
-
--- decideEquality :: forall k (a :: k) (b :: k). SDecide k
---                => Sing a -> Sing b -> Maybe (a :~: b)
--- decideEquality a b =
---   case a %~ b of
---     Proved Refl -> Just Refl
---     Disproved _ -> Nothing
 
 instance (ExtAspect' (Compare prd prd') (CRule prd sc ip ic sp ic' sp')
             ('(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': a))
@@ -414,9 +435,6 @@ infixr 4 ⋈
 singAsp r
   = r  .+: emptyAspect
 
-infixr 6 .+.
-(.+.) = ext
-
 
 syndef att prd f
   = CRule prd $ \inp (Fam prd' ic sp)
@@ -541,3 +559,78 @@ knit (rule :: CRule prd (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp)
 
 knitAspect (prd :: Sing prd) (asp :: Aspect asp) fc ip
   = knit (asp # prd) fc ip
+
+-- * common patterns
+
+copyAtChi
+  :: (KnownSymbol prd, SingI nt)
+  => Sing ('Att att t)
+  -> Sing ('Chi ch ('Prd prd nt) ('Left nt'))
+  -> CopyAtChi ('Att att t) ('Chi ch ('Prd prd nt) ('Left nt')) sc ip ic sp'
+copyAtChi att chi = inh att (prodFromChi chi) chi (at lhs att) 
+
+type family CopyAtChi att chi sc ip ic sp' where
+  CopyAtChi ('Att att t) ('Chi ch ('Prd prd nt) ('Left nt')) sc ip ic sp' =
+    CRule ('Prd prd nt) sc ip ic sp'
+            (Update
+              (ChiReco ('Prd prd nt))
+              ('Chi ch ('Prd prd nt) ('Left nt'))
+              (Extend AttReco ('Att att t)
+                (ResAt 'Lhs ('Att att t)
+                 (ReaderT (Fam ('Prd prd nt) sc ip) Identity))
+                (Lookup
+                   (ChiReco ('Prd prd nt))
+                   ('Chi ch ('Prd prd nt) ('Left nt')) ic))
+             ic) sp'
+
+-- ** copy at chis
+
+class
+  SameShape4 chis polyArgs
+  => 
+  CopyAtChis (att  :: Att)
+             (chis :: [Child])
+             (polyArgs :: [([(Child, [(Att, Type)])], [(Att, Type)],
+                             [(Child, [(Att, Type)])], [(Att, Type)])])
+                      where
+  type CopyAtChisR att chis polyArgs :: [(Prod, Type)]
+  copyAtChis :: Sing att -> SList chis -> Proxy polyArgs
+             -> Aspect (CopyAtChisR att chis polyArgs)
+
+instance CopyAtChis att '[] '[] where
+  type CopyAtChisR att '[] '[] = '[]
+  copyAtChis _ _ _ = emptyAspect
+
+instance
+  ( CopyAtChis ('Att att t) chis polys
+  , SingI nt
+  , ExtAspect (CopyAtChi ('Att att t) ('Chi ch ('Prd prd nt) tnt) sc ip ic sp')
+    (CopyAtChisR ('Att att t) chis polys)
+  )
+  =>
+  CopyAtChis ('Att att t)
+             (Chi ch ('Prd prd nt) tnt ': chis)
+             ('(sc, ip, ic, sp') ': polys) where
+  type CopyAtChisR ('Att att t)
+                   (Chi ch ('Prd prd nt) tnt ': chis)
+                   ('(sc, ip, ic, sp') ': polys) =
+    ComRA (CopyAtChi ('Att att t) ('Chi ch ('Prd prd nt) tnt) sc ip ic sp')
+    (CopyAtChisR ('Att att t) chis polys)
+  copyAtChis att@(SAtt syatt st)
+            (SCons chi@(SChi SSym (SPrd SSym (nt :: Sing nt)) (SLeft t)) chis)
+            (proxy :: Proxy ( '(sc, ip, ic, sp') ': polys)) =
+    copyAtChi @_ @_ @_ @_ @_ @_ @sc @ip @ic @sp' (SAtt syatt st) chi
+    .+: copyAtChis att chis (Proxy @ polys)
+
+-- | SameShape forces its second arg to have the same shape of first arg 
+class SameShape (es1 :: [k]) (es2 :: [m])
+instance (es2 ~ '[]) => SameShape '[] es2
+instance (SameShape xs ys, es2 ~ ( y ': ys))
+  => SameShape (x ': xs) es2
+
+-- | SameShape4 forces its second arg to have the same length of fitrst arg,
+-- plus being a list of 4-tuples
+class SameShape4 (es1 :: [k]) (es2 :: [m])
+instance (es2 ~ '[]) => SameShape4 '[] es2
+instance (SameShape4 xs ys, es2 ~ ( '(y1, y2, y3, y4) ': ys))
+  => SameShape4 (x ': xs) es2
