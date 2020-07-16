@@ -100,12 +100,11 @@ library
                        ghc-prim >= 0.6.1,
                        mtl >= 2.0,
                        poly-rec >=0.7,
-                       require >= 0.6.0.0,
-                       singletons >= 2.5.1,
+                       requirements >= 0.6.0.0,
+                       singletons >= 2.7,
                        tagged >=0.8,
-                       template-haskell >= 2.13,
-                       type-errors >= 0.2
- 
+                       template-haskell >= 2.13
+                        
 
   -- Directories containing source files.
   hs-source-dirs:      src, examples

@@ -110,11 +110,12 @@ addChi chi prd (NonTer typ)
              :: Sing ( 'Chi $(str2Sym chi)
                        $(conT prd)
                        (NonTerminal $(conT typ)))|]
--- addChi chi prd poly
---   = [d| $(varP (mkName ("ch_" ++chi)))
---            = Label :: forall a . Label ( 'Chi $(str2Sym chi)
---                                    $(conT prd)
---                                     ('Right ('T a)))|]
+addChi chi prd poly
+  = [d| $(varP (mkName ("ch_" ++chi)))
+           = SChi SSym $(varE (mkName ("p_" ++ drop 2 (nameBase prd)))) (SRight $ ST sing )
+             :: forall a . Sing ( 'Chi $(str2Sym chi)
+                                   $(conT prd)
+                                    ('Right ('T a)))|]
 
 -- | only prod symbol
 addPrd :: String  --name

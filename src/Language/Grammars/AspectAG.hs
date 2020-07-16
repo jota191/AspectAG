@@ -406,7 +406,7 @@ instance
   , sc ~ sc1, ip ~ ip1, ic ~ ic1, sp ~ sp1
   )
   => ComAspect' EQ
-            ('(prd1, CRule prd1 sc  ip  ic  sp  ic1' sp1') ': r1) 
+            ('(prd1, CRule prd1 sc  ip  ic  sp  ic1' sp1') ': r1)
             ('(prd2, CRule prd2 sc1 ip1 ic2 sp2 ic1  sp1) ': r2) where
   comAspect' _ r1@(ConsRec cr1@(TagField p prd1 crule1) asp1) 
                r2@(ConsRec cr2@(TagField _ prd2 crule2) asp2) =
