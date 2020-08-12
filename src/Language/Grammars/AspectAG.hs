@@ -213,9 +213,9 @@ emptyAspect  = EmptyRec
 -- ext :: CRule prd sc ip ic sp ic' sp'
 --     -> CRule prd sce ipe a b ice spe
 --     -> CRule prd sc ip a b ic' sp'
-ext :: RequireEq prd prd' '[]
+ext :: () --RequireEq prd prd' '[]
      => CRule prd sc ip ic sp ic' sp'
-     -> CRule prd' sc ip a r ic sp
+     -> CRule prd sc ip a r ic sp
      -> CRule prd sc ip a r ic' sp'
 (CRule p f) `ext` (CRule _ g)
  = CRule p $ \input -> f input . g input
@@ -231,14 +231,14 @@ ext :: RequireEq prd prd' '[]
 infixr 6 ⋄
 (⋄) :: RequireEq prd prd' '[]
     => CRule prd sc ip ic sp ic' sp'
-    -> CRule prd' sc ip a r ic sp
+    -> CRule prd sc ip a r ic sp
     -> CRule prd sc ip a r ic' sp'
 (⋄) = ext
 
 infixr 6 .+.
 (.+.) :: RequireEq prd prd' '[]
       => CRule prd sc ip ic sp ic' sp'
-      -> CRule prd' sc ip a r ic sp
+      -> CRule prd sc ip a r ic sp
       -> CRule prd sc ip a r ic' sp'
 (.+.) = ext
 
@@ -248,6 +248,10 @@ type instance
  (CRule prd sc ip ic sp ic' sp') :+.
  (CRule prd sc ip a  b  ic  sp ) =
   CRule prd sc ip a  b  ic' sp'
+-- type instance
+--  (CRule prd  sc ip ic sp ic' sp') :+.
+--  (CRule prd' sc ip a  b  ic  sp ) =
+--   CRule prd  sc ip a  b  ic' sp'
 
 type family
  ComRA (rule :: Type) (r :: [(Prod, Type)]) :: [(Prod, Type)]
@@ -262,13 +266,17 @@ type family
             ': r)
     
      {-EQ-} ( '(prd, (CRule prd sc ip ic sp ic' sp')
-                 :+. CRule prd' sc1 ip1 ic1 sp1 ic1' sp1')
+                 :+. CRule prd sc1 ip1 ic1 sp1 ic1' sp1')
             ': r)
 
      {-GT-} ('(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1')
             ':  ComRA (CRule prd sc ip ic sp ic' sp') r)
   ComRA anything asp = TypeError (Text "cannot combine rule with aspect")
 
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 class ExtAspect r a where
   extAspect
    :: r
@@ -313,19 +321,25 @@ instance
                  re@(ConsRec lv@(TagField _ p' r') rs) =
     case prf of
       SGT -> ConsRec lv $ extAspect cr rs
+
 instance
   ( Compare prd prd' ~ EQ
-  , sc ~ sce , ip ~ ipe, ic ~ ice, sp ~ spe
+  , ip ~ ipe
+  , ic ~ ice, sp ~ spe , sc ~ sce
   )
   =>
   ExtAspect' 'EQ (CRule prd sc ip ic sp ic' sp')
-             ('(prd', CRule prd' sce ipe ic1 sp1 ice spe) ': a) where
+             ('(prd', CRule prd sc ip ic1 sp1 ice spe) ': a) where
   extAspect' prf cr@((CRule p r) :: CRule prd sc ip ic sp ic' sp')
                  re@(ConsRec lv@(TagField _ p' r') rs) =
     case prf of
       SEQ -> case decideEquality p p' of
         Just Refl
           -> ConsRec (TagField Proxy p (cr `ext` r')) rs
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
 
 -- | An operator, alias for 'extAspect'. It combines a rule with an
 -- aspect, to build a bigger one.
@@ -357,8 +371,12 @@ type family
     {-LT-} ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1')
            ': ComAsp r1 ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2)
            ) 
+    -- {-EQ-} ( '(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1'
+    --                  :+. CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2')
+    --        ': ComAsp r1 r2
+    --        )
     {-EQ-} ( '(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1'
-                     :+. CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2')
+                     :+. CRule prd1 sc1 ip1 ic2 sp2 ic2' sp2')
            ': ComAsp r1 r2
            )
     {-GT-} ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2')

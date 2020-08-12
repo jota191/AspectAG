@@ -15,8 +15,20 @@
 > module Expr where
 
 > import Language.Grammars.AspectAG
+> import Language.Grammars.AspectAG.RecordInstances
 > import Language.Grammars.AspectAG.TH
 > import Data.Maybe
+> import Data.Singletons
+> import Data.Singletons.TypeLits
+
+> import Data.Singletons.TH
+> import Data.Singletons.Prelude.Ord
+> import Data.Singletons.Prelude.Eq
+> import Data.Singletons.Prelude.Either
+> import Data.Singletons.CustomStar
+> import Data.Singletons.Decide
+> import Data.GenRec
+
 
 > $(addNont "Expr")
 

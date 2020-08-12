@@ -13,9 +13,18 @@ main = do
     ["dist"] -> dist
     _ -> putStrLn "argument not recognised."
 
-dist = return ()
-     -- locally edited, for privacy reasons (it could be parametrised
-     -- by the environment, but i'll kis)
+dist = do
+  env <- getEnvironment
+  let pwd = fromJust $ lookup "PWD" env
+  alert "DIST AAG" Red  
+  callCommand $"scp -r ./dist/doc/html/AspectAG/*" ++
+    " jpgarcia@salmon.fing.edu.uy:/ime/home02/jpgarcia/.WWW/AspectAG/AspectAG"
+  alert "DIST POLYREC" Red  
+  callCommand $ "scp -r ./lib/poly-rec/dist/doc/html/poly-rec/*" ++
+    " jpgarcia@salmon.fing.edu.uy:/ime/home02/jpgarcia/.WWW/AspectAG/polyrec"
+  alert "DIST REQUIRE" Red  
+  callCommand $ "scp -r ./lib/require/dist/doc/html/require/*" ++
+    " jpgarcia@salmon.fing.edu.uy:/ime/home02/jpgarcia/.WWW/AspectAG/require"
 
 line = take 80 $ repeat '%'
 
