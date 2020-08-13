@@ -32,57 +32,57 @@ Portability : POSIX
 {-# LANGUAGE UnicodeSyntax             #-}
 
 module Language.Grammars.AspectAG
-  (
+ --  (
 
-    -- * Rules
-    Rule, CRule(..),
+ --    -- * Rules
+ --    Rule, CRule(..),
     
-    -- ** Defining Rules
-    syndef, syndefM, syn,
+ --    -- ** Defining Rules
+ --    syndef, syndefM, syn,
     
-    --synmod, synmodM,
+ --    --synmod, synmodM,
 
 
-    inh, inhdef, inhdefM,
+ --    inh, inhdef, inhdefM,
 
-    --inhmod, inhmodM, 
+ --    --inhmod, inhmodM, 
 
-    emptyRule,
-    emptyRuleAtPrd,
-    ext,
+ --    emptyRule,
+ --    emptyRuleAtPrd,
+ --    ext,
     
-    -- * Aspects 
-    -- ** Building Aspects.
+ --    -- * Aspects 
+ --    -- ** Building Aspects.
     
-    emptyAspect,
-    singAsp,
-    extAspect,
-    comAspect,
-    (.+:),(◃),
-    (.:+.),(▹),
-    (.:+:),(⋈),
-    (.+.), (⋄),
+ --    emptyAspect,
+ --    singAsp,
+ --    extAspect,
+ --    comAspect,
+ --    (.+:),(◃),
+ --    (.:+.),(▹),
+ --    (.:+:),(⋈),
+ --    (.+.), (⋄),
     
-    Terminal, NonTerminal,
-    Label, Prod(..), T(..), NT(..), Child(..), Att(..),
-    (.#), (#.), (=.), (.=), (.*), (*.),
-    emptyAtt,
-    ter,
-    at, lhs,
-    sem_Lit,
-    knitAspect,
-    -- traceAspect,
-    -- traceRule,
-    copyAtChi,
-    copyAtChis,
-    -- use,
-    -- emptyAspectC,
-    -- emptyAspectForProds,
-    -- module Data.GenRec,
-    -- module Language.Grammars.AspectAG.RecordInstances,
-    module Language.Grammars.AspectAG.HList
+ --    Terminal, NonTerminal,
+ --    Label, Prod(..), T(..), NT(..), Child(..), Att(..),
+ --    (.#), (#.), (=.), (.=), (.*), (*.),
+ --    emptyAtt,
+ --    ter,
+ --    at, lhs,
+ --    sem_Lit,
+ --    knitAspect,
+ --    -- traceAspect,
+ --    -- traceRule,
+ --    copyAtChi,
+ --    copyAtChis,
+ --    -- use,
+ --    -- emptyAspectC,
+ --    -- emptyAspectForProds,
+ --    -- module Data.GenRec,
+ --    -- module Language.Grammars.AspectAG.RecordInstances,
+ --    module Language.Grammars.AspectAG.HList
     
- )
+ -- )
   where
 
 
@@ -132,17 +132,27 @@ instance SemLit a where
 type instance  WrapField PrdReco (CRule p a b c d e f :: Type)
   = CRule p a b c d e f
 
+
+data Extensibility = Extensible | NonExtensible
+
 -- * Families and Rules
 
 -- | In each node of the grammar, the "Fam" contains a single attribution
 -- for the parent, and a collection (Record) of attributions for
 -- the children:
-data Fam (prd :: Prod)
-         (c :: [(Child, [(Att, Type)])])
-         (p :: [(Att, Type)]) :: Type
- where
+data family GFam (prd :: Prod)
+                 (ext :: Extensibility)
+                 (c :: k1) -- [(Child, [(Att, Type)])])
+                 (p :: k2) -- [(Att, Type)])
+     :: Type
+
+data instance GFam prd Extensible
+  (c :: [(Child, [(Att, Type)])])
+  (p ::[(Att, Type)]) where
   Fam :: Sing prd -> ChAttsRec prd c -> Attribution p -> Fam prd c p
 
+type Fam prd (c :: [(Child, [(Att, Type)])]) (p ::[(Att, Type)])
+  = GFam prd Extensible c p
 
 -- | getter
 chi :: Fam prd c p -> ChAttsRec prd c
@@ -156,6 +166,20 @@ par (Fam _ _  p) = p
 prd :: Fam prd c p -> Sing prd
 prd (Fam l _ _) = l
 
+
+type family GRule (prd  :: Prod) (e :: Extensibility)
+  (sc :: ksc) (ip :: kip)  (ic :: kic)
+  (sp :: ksp) (ic' :: kic')(sp' :: ks')
+
+type instance GRule prd e
+  (sc   :: k1 ) -- [(Child, [(Att, Type)])])
+  (ip   :: k2 ) -- [(Att,       Type)])
+  (ic   :: k3 ) -- [(Child, [(Att, Type)])])
+  (sp   :: k4 ) -- [(Att,       Type)])
+  (ic'  :: k5 ) --[(Child, [(Att, Type)])])
+  (sp'  :: k6 ) -- [(Att,       Type)])
+  = GFam prd e sc ip -> GFam prd e ic sp -> GFam prd e ic' sp'
+
 -- | Rules are a function from the input family to the output family,
 -- with an extra arity to make them composable.
 -- They are indexed by a production.
@@ -167,7 +191,7 @@ type Rule
   (sp   :: [(Att,       Type)])
   (ic'  :: [(Child, [(Att, Type)])])
   (sp'  :: [(Att,       Type)])
-  = Fam prd sc ip -> Fam prd ic sp -> Fam prd ic' sp'
+  = GRule prd Extensible sc ip ic sp ic' sp'
 
 -- | Rules with context (used to print domain specific type errors).
 data CRule prd sc ip ic sp ic' sp'
@@ -218,7 +242,13 @@ ext :: () --RequireEq prd prd' '[]
      -> CRule prd sc ip a r ic sp
      -> CRule prd sc ip a r ic' sp'
 (CRule p f) `ext` (CRule _ g)
- = CRule p $ \input -> f input . g input
+ = CRule p $ f `rext` g 
+
+rext :: GRule prd e sc ip ic sp ic' sp'
+     -> GRule prd e sc ip a r ic sp
+     -> GRule prd e sc ip a r ic' sp'
+f `rext` g = \inp -> f inp . g inp
+
 
 ------------------------------------------
 --f :: RequireEq a b '[] => a -> b -> a
