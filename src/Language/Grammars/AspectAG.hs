@@ -154,6 +154,7 @@ data instance GFam prd Extensible
 type Fam prd (c :: [(Child, [(Att, Type)])]) (p ::[(Att, Type)])
   = GFam prd Extensible c p
 
+
 -- | getter
 chi :: Fam prd c p -> ChAttsRec prd c
 chi (Fam _ c _) = c
@@ -194,9 +195,14 @@ type Rule
   = GRule prd Extensible sc ip ic sp ic' sp'
 
 -- | Rules with context (used to print domain specific type errors).
+-- data family CRule prd (e :: Extensibility) sc ip ic sp ic' sp'
 data CRule prd sc ip ic sp ic' sp'
   = CRule { prod :: Sing prd,
             mkRule :: Rule prd sc ip ic sp ic' sp'}
+
+data CGRule prd sc ip ic sp ic' sp'
+  = CGRule { gprod :: Sing prd,
+             mkGRule :: GRule prd 'NonExtensible sc ip ic sp ic' sp'}
 
 --emptyRule :: SingI prd => CRule prd ic sp '[] '[] '[] '[]
 emptyRule =
@@ -285,10 +291,10 @@ type instance
 
 type family
  ComRA (rule :: Type) (r :: [(Prod, Type)]) :: [(Prod, Type)]
- where
-  ComRA (CRule prd sc ip ic sp ic' sp') '[] =
+
+type instance  ComRA (CRule prd sc ip ic sp ic' sp') '[] =
     '[ '(prd, CRule prd sc ip ic sp ic' sp')]
-  ComRA (CRule prd sc ip ic sp ic' sp')
+type instance  ComRA (CRule prd sc ip ic sp ic' sp')
         ( '(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': r) =
     FoldOrdering (Compare prd prd')
      {-LT-} (  '(prd, CRule prd sc ip ic sp ic' sp')
@@ -301,7 +307,6 @@ type family
 
      {-GT-} ('(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1')
             ':  ComRA (CRule prd sc ip ic sp ic' sp') r)
-  ComRA anything asp = TypeError (Text "cannot combine rule with aspect")
 
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------

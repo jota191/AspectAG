@@ -31,7 +31,7 @@ import Language.Grammars.AspectAG.RecordInstances
 
 import Data.GenRec hiding (Label)
 import Data.GenRec.Label
-
+import Data.Kind
 
 type Nt_Expr = 'NT "Expr"
 expr = SNT SSym:: Sing Nt_Expr
@@ -488,10 +488,75 @@ asp_Exp35 =
   (flip (^) 5 <$> at ch_Exp35 seval)
 ----------------------------------------------------------------------
 
-l :: GFam P_Add NonExtensible Bool Bool
-l = undefined
-
-
-
-
 -----------------------aca termina el ejemplo original------------------
+
+type Fam_Add c p = GFam P_Add 'NonExtensible c p
+type Fam_Val c p = GFam P_Val 'NonExtensible c p
+
+
+data instance GFam P_Add 'NonExtensible
+  ('(l,r) :: ([(Att, Type)], [(Att, Type)]))
+  (p :: [(Att, Type)]) where
+  Fam_Add
+    :: (Attribution l, Attribution r)
+    -> Attribution p
+    -> Fam_Add '(l, r) p 
+
+data instance GFam P_Val 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Val
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Val c p
+
+-- homebrew rules
+-- add_rule :: Fam_Add P_Add 'NonExtensible sc ip
+--          -> Fam_Add P_Add 'NonExtensible ic sp
+--          -> Fam_Add P_Add 'NonExtensible ic (Extend AttReco)
+add_rule (Fam_Add (lsc,rsc) ip) (Fam_Add ic@(lic,ric) sp) =
+  Fam_Add ic (seval .=. lsc #. seval + rsc #. seval .*.  sp)
+
+val_rule (Fam_Val k ip) (Fam_Val n sp) =
+  Fam_Val n (seval .=. n #. lit .*. sp)
+
+knit_Add rule
+         fc
+         (ip   :: Attribution ip) =
+  let ec = (emptyAtt, emptyAtt)
+      (Fam_Add (lic,ric) sp) = rule (Fam_Add sc ip)(Fam_Add ec emptyAtt)
+      sc = ((fst fc) lic, (snd fc) ric) 
+  in sp
+
+knit_Val rule
+         fc
+         ip =
+  let ec = emptyAtt
+      (Fam_Val ic sp) = rule (Fam_Val sc ip)(Fam_Val ec emptyAtt)
+      sc = ic
+  in sp  
+
+sem asp (Add l r) = knit_Add (asp # p_Add)
+                           (sem asp l,sem asp r)
+sem asp (Val i)   = knit_Val (asp # p_Val) (sem_Lit i)
+
+-- eval' e = sem aspall emptyAtt
+
+-- aspall = singAsp add_rule .:+: singAsp val_rule .:+: emptyAspect
+
+
+-- type instance  ComRA (CRule prd sc ip ic sp ic' sp') '[] =
+--     '[ '(prd, CRule prd sc ip ic sp ic' sp')]
+-- type instance  ComRA (CRule prd sc ip ic sp ic' sp')
+--         ( '(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': r) =
+--     FoldOrdering (Compare prd prd')
+--      {-LT-} (  '(prd, CRule prd sc ip ic sp ic' sp')
+--             ': '(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1')
+--             ': r)
+    
+--      {-EQ-} ( '(prd, (CRule prd sc ip ic sp ic' sp')
+--                  :+. CRule prd sc1 ip1 ic1 sp1 ic1' sp1')
+--             ': r)
+
+--      {-GT-} ('(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1')
+--             ':  ComRA (CRule prd sc ip ic sp ic' sp') r)
