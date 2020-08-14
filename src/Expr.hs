@@ -29,6 +29,9 @@ import Data.Singletons.TypeLits
 import Data.Singletons.Prelude.Either
 import Language.Grammars.AspectAG.RecordInstances
 
+import Data.Singletons.Prelude.Ord
+
+
 import Data.GenRec hiding (Label)
 import Data.GenRec.Label
 import Data.Kind
@@ -223,7 +226,9 @@ sem_Expr asp (Exp1 v)   = knitAspect p_Exp1 asp
                          
 asp_Add =
   singAsp $ syn seval p_Add
-  ( (+) <$> at ch_LeftAdd seval <*> at ch_RightAdd seval)
+  ( do l <- at ch_LeftAdd seval
+       r <- at ch_RightAdd seval
+       return (l+r))
 
 asp_Val =
   singAsp $ syn seval p_Val $ ter ch_Val
@@ -255,7 +260,7 @@ asp_All = asp_Val .:+: asp_Add
   -- .:+: asp_Exp34
   -- .:+: asp_Exp35
 
-exampleT = Exp1 ((Val 2) `Add` (Val 3))
+exampleT = Exp1 $ (Val 2) `Add` (Val 3)
 
 eval e = sem_Expr asp_All e emptyAtt #. seval
 
@@ -514,13 +519,21 @@ data instance GFam P_Val 'NonExtensible
 -- add_rule :: Fam_Add P_Add 'NonExtensible sc ip
 --          -> Fam_Add P_Add 'NonExtensible ic sp
 --          -> Fam_Add P_Add 'NonExtensible ic (Extend AttReco)
-add_rule (Fam_Add (lsc,rsc) ip) (Fam_Add ic@(lic,ric) sp) =
-  Fam_Add ic (seval .=. lsc #. seval + rsc #. seval .*.  sp)
+add_rule = singAsp $ CGRule p_Add $
+           \(Fam_Add (lsc,rsc) ip) (Fam_Add ic@(lic,ric) sp) ->
+             Fam_Add ic (seval .=. (lsc #. seval) + (rsc #. seval) .*.  sp)
 
-val_rule (Fam_Val k ip) (Fam_Val n sp) =
-  Fam_Val n (seval .=. n #. lit .*. sp)
+val_rule = singAsp $ CGRule p_Val
+  $ \(Fam_Val sc ip)
+     (Fam_Val ic sp) ->
+      Fam_Val ic (seval .=. (sc #. (lit @ Integer)) .*. sp)
 
-knit_Add rule
+rule_Exp1 = singAsp $ CGRule p_Exp1
+  $ \(Fam_Exp1 sc ip)
+     (Fam_Exp1 ic sp) ->
+      Fam_Exp1 ic (seval .=. (sc #. seval ) .*. sp)
+
+knit_Add (CGRule p rule)
          fc
          (ip   :: Attribution ip) =
   let ec = (emptyAtt, emptyAtt)
@@ -528,35 +541,592 @@ knit_Add rule
       sc = ((fst fc) lic, (snd fc) ric) 
   in sp
 
-knit_Val rule
+knit_Exp1 (CGRule p rule)
          fc
-         ip =
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp1 ic sp) = rule (Fam_Exp1 sc ip)(Fam_Exp1 ec emptyAtt)
+      sc = fc ic 
+  in sp
+
+knit_Val (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
   let ec = emptyAtt
       (Fam_Val ic sp) = rule (Fam_Val sc ip)(Fam_Val ec emptyAtt)
-      sc = ic
-  in sp  
+      sc = fc ic
+  in sp
 
-sem asp (Add l r) = knit_Add (asp # p_Add)
-                           (sem asp l,sem asp r)
-sem asp (Val i)   = knit_Val (asp # p_Val) (sem_Lit i)
+sem (asp ::Aspect a) (Add l r) = knit_Add (asp # p_Add)
+                                 (sem asp l,sem asp r)
+sem (asp ::Aspect a) (Val i)   = knit_Val (asp # p_Val) (sem_Lit i)
+sem (asp ::Aspect a) (Exp1 e)  = knit_Exp1 (asp # p_Exp1) (sem asp e)
+sem (asp ::Aspect a) (Exp2 e)  = knit_Exp2 (asp # p_Exp2) (sem asp e)
+sem (asp ::Aspect a) (Exp3 e)  = knit_Exp3 (asp # p_Exp3) (sem asp e)
+sem (asp ::Aspect a) (Exp4 e)  = knit_Exp4 (asp # p_Exp4) (sem asp e)
+sem (asp ::Aspect a) (Exp5 e)  = knit_Exp5 (asp # p_Exp5) (sem asp e)
+sem (asp ::Aspect a) (Exp01 e)  = knit_Exp01 (asp # p_Exp01) (sem asp e)
+sem (asp ::Aspect a) (Exp02 e)  = knit_Exp02 (asp # p_Exp02) (sem asp e)
+sem (asp ::Aspect a) (Exp03 e)  = knit_Exp03 (asp # p_Exp03) (sem asp e)
+sem (asp ::Aspect a) (Exp04 e)  = knit_Exp04 (asp # p_Exp04) (sem asp e)
+sem (asp ::Aspect a) (Exp05 e)  = knit_Exp05 (asp # p_Exp05) (sem asp e)
+sem (asp ::Aspect a) (Exp11 e)  = knit_Exp11 (asp # p_Exp11) (sem asp e)
+sem (asp ::Aspect a) (Exp12 e)  = knit_Exp12 (asp # p_Exp12) (sem asp e)
+sem (asp ::Aspect a) (Exp13 e)  = knit_Exp13 (asp # p_Exp13) (sem asp e)
+sem (asp ::Aspect a) (Exp14 e)  = knit_Exp14 (asp # p_Exp14) (sem asp e)
+sem (asp ::Aspect a) (Exp15 e)  = knit_Exp15 (asp # p_Exp15) (sem asp e)
+sem (asp ::Aspect a) (Exp21 e)  = knit_Exp21 (asp # p_Exp21) (sem asp e)
+sem (asp ::Aspect a) (Exp22 e)  = knit_Exp22 (asp # p_Exp22) (sem asp e)
+sem (asp ::Aspect a) (Exp23 e)  = knit_Exp23 (asp # p_Exp23) (sem asp e)
+sem (asp ::Aspect a) (Exp24 e)  = knit_Exp24 (asp # p_Exp24) (sem asp e)
+sem (asp ::Aspect a) (Exp25 e)  = knit_Exp25 (asp # p_Exp25) (sem asp e)
+sem (asp ::Aspect a) (Exp31 e)  = knit_Exp31 (asp # p_Exp31) (sem asp e)
+sem (asp ::Aspect a) (Exp32 e)  = knit_Exp32 (asp # p_Exp32) (sem asp e)
+sem (asp ::Aspect a) (Exp33 e)  = knit_Exp33 (asp # p_Exp33) (sem asp e)
+sem (asp ::Aspect a) (Exp34 e)  = knit_Exp34 (asp # p_Exp34) (sem asp e)
+sem (asp ::Aspect a) (Exp35 e)  = knit_Exp35 (asp # p_Exp35) (sem asp e)
 
--- eval' e = sem aspall emptyAtt
+eval' e = sem aspall e emptyAtt #. seval
 
--- aspall = singAsp add_rule .:+: singAsp val_rule .:+: emptyAspect
+aspall = add_rule .:+: val_rule .:+:
+  rule_Exp1 .:+: rule_Exp2 .:+: rule_Exp3 .:+: rule_Exp4 .:+: rule_Exp5 .:+:
+  rule_Exp01 .:+: rule_Exp02 .:+: rule_Exp03 .:+: rule_Exp04 .:+: rule_Exp05 .:+:
+  rule_Exp11 .:+: rule_Exp12 .:+: rule_Exp13 .:+: rule_Exp14 .:+: rule_Exp15 .:+:
+  rule_Exp21 .:+: rule_Exp22 .:+: rule_Exp23 .:+: rule_Exp24 .:+: rule_Exp25 .:+:
+  rule_Exp31 .:+: rule_Exp32 .:+: rule_Exp33 .:+: rule_Exp34 .:+: rule_Exp35 .:+:
+  emptyAspect
 
 
--- type instance  ComRA (CRule prd sc ip ic sp ic' sp') '[] =
---     '[ '(prd, CRule prd sc ip ic sp ic' sp')]
--- type instance  ComRA (CRule prd sc ip ic sp ic' sp')
---         ( '(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': r) =
---     FoldOrdering (Compare prd prd')
---      {-LT-} (  '(prd, CRule prd sc ip ic sp ic' sp')
---             ': '(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1')
---             ': r)
+
+type instance GRule P_Val NonExtensible
+  (sc   :: [(Att, Type)])
+  (ip   :: [(Att, Type)])
+  (ic   :: [(Att, Type)])
+  (sp   :: [(Att, Type)])
+  (ic'   :: [(Att, Type)])
+  (sp'   :: [(Att, Type)])
+  = GFam P_Val NonExtensible sc ip
+  -> GFam P_Val NonExtensible ic sp
+  -> GFam P_Val NonExtensible ic' sp'
+
+type instance GRule P_Val NonExtensible
+  (sc   :: ([(Att, Type)], [(Att, Type)]))
+  (ip   :: [(Att, Type)])
+  (ic   :: ([(Att, Type)], [(Att, Type)]))
+  (sp   :: [(Att, Type)])
+  (ic'  :: ([(Att, Type)], [(Att, Type)]))
+  (sp'  :: [(Att, Type)])
+  = GFam P_Val NonExtensible sc ip
+  -> GFam P_Val NonExtensible ic sp
+  -> GFam P_Val NonExtensible ic' sp'
+
+
+type Fam_Exp1 c p = GFam P_Exp1 'NonExtensible c p
+data instance GFam P_Exp1 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp1
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp1 c p
     
---      {-EQ-} ( '(prd, (CRule prd sc ip ic sp ic' sp')
---                  :+. CRule prd sc1 ip1 ic1 sp1 ic1' sp1')
---             ': r)
+type Fam_Exp2 c p = GFam P_Exp2 'NonExtensible c p
+data instance GFam P_Exp2 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp2
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp2 c p 
 
---      {-GT-} ('(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1')
---             ':  ComRA (CRule prd sc ip ic sp ic' sp') r)
+type Fam_Exp3 c p = GFam P_Exp3 'NonExtensible c p
+data instance GFam P_Exp3 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp3
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp3 c p 
+
+type Fam_Exp4 c p = GFam P_Exp4 'NonExtensible c p
+data instance GFam P_Exp4 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp4
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp4 c p 
+
+type Fam_Exp5 c p = GFam P_Exp5 'NonExtensible c p
+data instance GFam P_Exp5 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp5
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp5 c p 
+
+
+type Fam_Exp01 c p = GFam P_Exp01 'NonExtensible c p
+data instance GFam P_Exp01 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp01
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp01 c p
+    
+type Fam_Exp02 c p = GFam P_Exp02 'NonExtensible c p
+data instance GFam P_Exp02 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp02
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp02 c p 
+
+type Fam_Exp03 c p = GFam P_Exp03 'NonExtensible c p
+data instance GFam P_Exp03 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp03
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp03 c p 
+
+type Fam_Exp04 c p = GFam P_Exp04 'NonExtensible c p
+data instance GFam P_Exp04 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp04
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp04 c p 
+
+type Fam_Exp05 c p = GFam P_Exp05 'NonExtensible c p
+data instance GFam P_Exp05 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp05
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp05 c p 
+
+
+type Fam_Exp11 c p = GFam P_Exp11 'NonExtensible c p
+data instance GFam P_Exp11 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp11
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp11 c p
+    
+type Fam_Exp12 c p = GFam P_Exp12 'NonExtensible c p
+data instance GFam P_Exp12 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp12
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp12 c p 
+
+type Fam_Exp13 c p = GFam P_Exp13 'NonExtensible c p
+data instance GFam P_Exp13 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp13
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp13 c p 
+
+type Fam_Exp14 c p = GFam P_Exp14 'NonExtensible c p
+data instance GFam P_Exp14 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp14
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp14 c p 
+
+type Fam_Exp15 c p = GFam P_Exp15 'NonExtensible c p
+data instance GFam P_Exp15 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp15
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp15 c p 
+
+type Fam_Exp21 c p = GFam P_Exp21 'NonExtensible c p
+data instance GFam P_Exp21 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp21
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp21 c p
+    
+type Fam_Exp22 c p = GFam P_Exp22 'NonExtensible c p
+data instance GFam P_Exp22 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp22
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp22 c p 
+
+type Fam_Exp23 c p = GFam P_Exp23 'NonExtensible c p
+data instance GFam P_Exp23 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp23
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp23 c p 
+
+type Fam_Exp24 c p = GFam P_Exp24 'NonExtensible c p
+data instance GFam P_Exp24 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp24
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp24 c p 
+
+type Fam_Exp25 c p = GFam P_Exp25 'NonExtensible c p
+data instance GFam P_Exp25 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp25
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp25 c p 
+
+type Fam_Exp31 c p = GFam P_Exp31 'NonExtensible c p
+data instance GFam P_Exp31 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp31
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp31 c p
+    
+type Fam_Exp32 c p = GFam P_Exp32 'NonExtensible c p
+data instance GFam P_Exp32 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp32
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp32 c p 
+
+type Fam_Exp33 c p = GFam P_Exp33 'NonExtensible c p
+data instance GFam P_Exp33 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp33
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp33 c p 
+
+type Fam_Exp34 c p = GFam P_Exp34 'NonExtensible c p
+data instance GFam P_Exp34 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp34
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp34 c p 
+
+type Fam_Exp35 c p = GFam P_Exp35 'NonExtensible c p
+data instance GFam P_Exp35 'NonExtensible
+  (c :: [(Att, Type)])
+  (p :: [(Att, Type)]) where
+  Fam_Exp35
+    :: Attribution c
+    -> Attribution p
+    -> Fam_Exp35 c p 
+
+
+knit_Exp2 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp2 ic sp) = rule (Fam_Exp2 sc ip)(Fam_Exp2 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp3 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp3 ic sp) = rule (Fam_Exp3 sc ip)(Fam_Exp3 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp4 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp4 ic sp) = rule (Fam_Exp4 sc ip)(Fam_Exp4 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp5 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp5 ic sp) = rule (Fam_Exp5 sc ip)(Fam_Exp5 ec emptyAtt)
+      sc = fc ic 
+  in sp
+
+knit_Exp01 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp01 ic sp) = rule (Fam_Exp01 sc ip)(Fam_Exp01 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp02 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp02 ic sp) = rule (Fam_Exp02 sc ip)(Fam_Exp02 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp03 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp03 ic sp) = rule (Fam_Exp03 sc ip)(Fam_Exp03 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp04 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp04 ic sp) = rule (Fam_Exp04 sc ip)(Fam_Exp04 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp05 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp05 ic sp) = rule (Fam_Exp05 sc ip)(Fam_Exp05 ec emptyAtt)
+      sc = fc ic 
+  in sp
+
+
+
+knit_Exp11 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp11 ic sp) = rule (Fam_Exp11 sc ip)(Fam_Exp11 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp12 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp12 ic sp) = rule (Fam_Exp12 sc ip)(Fam_Exp12 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp13 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp13 ic sp) = rule (Fam_Exp13 sc ip)(Fam_Exp13 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp14 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp14 ic sp) = rule (Fam_Exp14 sc ip)(Fam_Exp14 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp15 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp15 ic sp) = rule (Fam_Exp15 sc ip)(Fam_Exp15 ec emptyAtt)
+      sc = fc ic 
+  in sp
+
+
+
+knit_Exp21 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp21 ic sp) = rule (Fam_Exp21 sc ip)(Fam_Exp21 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp22 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp22 ic sp) = rule (Fam_Exp22 sc ip)(Fam_Exp22 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp23 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp23 ic sp) = rule (Fam_Exp23 sc ip)(Fam_Exp23 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp24 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp24 ic sp) = rule (Fam_Exp24 sc ip)(Fam_Exp24 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp25 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp25 ic sp) = rule (Fam_Exp25 sc ip)(Fam_Exp25 ec emptyAtt)
+      sc = fc ic 
+  in sp
+
+
+
+knit_Exp31 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp31 ic sp) = rule (Fam_Exp31 sc ip)(Fam_Exp31 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp32 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp32 ic sp) = rule (Fam_Exp32 sc ip)(Fam_Exp32 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp33 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp33 ic sp) = rule (Fam_Exp33 sc ip)(Fam_Exp33 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp34 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp34 ic sp) = rule (Fam_Exp34 sc ip)(Fam_Exp34 ec emptyAtt)
+      sc = fc ic 
+  in sp
+knit_Exp35 (CGRule p rule)
+         fc
+         (ip   :: Attribution ip) =
+  let ec = emptyAtt
+      (Fam_Exp35 ic sp) = rule (Fam_Exp35 sc ip)(Fam_Exp35 ec emptyAtt)
+      sc = fc ic 
+  in sp
+
+
+rule_Exp2 = singAsp $ CGRule p_Exp2
+  $ \(Fam_Exp2 sc ip)
+     (Fam_Exp2 ic sp) ->
+      Fam_Exp2 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp3 = singAsp $ CGRule p_Exp3
+  $ \(Fam_Exp3 sc ip)
+     (Fam_Exp3 ic sp) ->
+      Fam_Exp3 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp4 = singAsp $ CGRule p_Exp4
+  $ \(Fam_Exp4 sc ip)
+     (Fam_Exp4 ic sp) ->
+      Fam_Exp4 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp5 = singAsp $ CGRule p_Exp5
+  $ \(Fam_Exp5 sc ip)
+     (Fam_Exp5 ic sp) ->
+      Fam_Exp5 ic (seval .=. (sc #. seval ) .*. sp)
+
+rule_Exp01 = singAsp $ CGRule p_Exp01
+  $ \(Fam_Exp01 sc ip)
+     (Fam_Exp01 ic sp) ->
+      Fam_Exp01 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp02 = singAsp $ CGRule p_Exp02
+  $ \(Fam_Exp02 sc ip)
+     (Fam_Exp02 ic sp) ->
+      Fam_Exp02 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp03 = singAsp $ CGRule p_Exp03
+  $ \(Fam_Exp03 sc ip)
+     (Fam_Exp03 ic sp) ->
+      Fam_Exp03 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp04 = singAsp $ CGRule p_Exp04
+  $ \(Fam_Exp04 sc ip)
+     (Fam_Exp04 ic sp) ->
+      Fam_Exp04 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp05 = singAsp $ CGRule p_Exp05
+  $ \(Fam_Exp05 sc ip)
+     (Fam_Exp05 ic sp) ->
+      Fam_Exp05 ic (seval .=. (sc #. seval ) .*. sp)
+
+rule_Exp11 = singAsp $ CGRule p_Exp11
+  $ \(Fam_Exp11 sc ip)
+     (Fam_Exp11 ic sp) ->
+      Fam_Exp11 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp12 = singAsp $ CGRule p_Exp12
+  $ \(Fam_Exp12 sc ip)
+     (Fam_Exp12 ic sp) ->
+      Fam_Exp12 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp13 = singAsp $ CGRule p_Exp13
+  $ \(Fam_Exp13 sc ip)
+     (Fam_Exp13 ic sp) ->
+      Fam_Exp13 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp14 = singAsp $ CGRule p_Exp14
+  $ \(Fam_Exp14 sc ip)
+     (Fam_Exp14 ic sp) ->
+      Fam_Exp14 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp15 = singAsp $ CGRule p_Exp15
+  $ \(Fam_Exp15 sc ip)
+     (Fam_Exp15 ic sp) ->
+      Fam_Exp15 ic (seval .=. (sc #. seval ) .*. sp)
+
+rule_Exp21 = singAsp $ CGRule p_Exp21
+  $ \(Fam_Exp21 sc ip)
+     (Fam_Exp21 ic sp) ->
+      Fam_Exp21 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp22 = singAsp $ CGRule p_Exp22
+  $ \(Fam_Exp22 sc ip)
+     (Fam_Exp22 ic sp) ->
+      Fam_Exp22 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp23 = singAsp $ CGRule p_Exp23
+  $ \(Fam_Exp23 sc ip)
+     (Fam_Exp23 ic sp) ->
+      Fam_Exp23 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp24 = singAsp $ CGRule p_Exp24
+  $ \(Fam_Exp24 sc ip)
+     (Fam_Exp24 ic sp) ->
+      Fam_Exp24 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp25 = singAsp $ CGRule p_Exp25
+  $ \(Fam_Exp25 sc ip)
+     (Fam_Exp25 ic sp) ->
+      Fam_Exp25 ic (seval .=. (sc #. seval ) .*. sp)
+
+
+rule_Exp31 = singAsp $ CGRule p_Exp31
+  $ \(Fam_Exp31 sc ip)
+     (Fam_Exp31 ic sp) ->
+      Fam_Exp31 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp32 = singAsp $ CGRule p_Exp32
+  $ \(Fam_Exp32 sc ip)
+     (Fam_Exp32 ic sp) ->
+      Fam_Exp32 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp33 = singAsp $ CGRule p_Exp33
+  $ \(Fam_Exp33 sc ip)
+     (Fam_Exp33 ic sp) ->
+      Fam_Exp33 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp34 = singAsp $ CGRule p_Exp34
+  $ \(Fam_Exp34 sc ip)
+     (Fam_Exp34 ic sp) ->
+      Fam_Exp34 ic (seval .=. (sc #. seval ) .*. sp)
+rule_Exp35 = singAsp $ CGRule p_Exp35
+  $ \(Fam_Exp35 sc ip)
+     (Fam_Exp35 ic sp) ->
+      Fam_Exp35 ic (seval .=. (sc #. seval ) .*. sp)

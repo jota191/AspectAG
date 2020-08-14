@@ -147,9 +147,9 @@ type instance ShowField AttReco       = "attribute named "
 -- | Pattern Synonyms
 -- pattern EmptyAtt :: Attribution '[]
 -- pattern EmptyAtt = EmptyRec
--- pattern ConsAtt :: LabelSet ( '(att, val) ': atts) =>
---     Attribute att val -> Attribution atts -> Attribution ( '(att,val) ': atts)
--- pattern ConsAtt att atts = ConsRec att atts
+pattern ConsAtt :: -- LabelSet ( '(att, val) ': atts) =>
+    Attribute att val -> Attribution atts -> Attribution ( '(att,val) ': atts)
+pattern ConsAtt att atts = ConsRec att atts
 
 -- | Attribute
 

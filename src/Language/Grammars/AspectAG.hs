@@ -131,6 +131,8 @@ instance SemLit a where
 
 type instance  WrapField PrdReco (CRule p a b c d e f :: Type)
   = CRule p a b c d e f
+type instance  WrapField PrdReco (CGRule p a b c d e f :: Type)
+  = CGRule p a b c d e f
 
 
 data Extensibility = Extensible | NonExtensible
@@ -255,6 +257,12 @@ rext :: GRule prd e sc ip ic sp ic' sp'
      -> GRule prd e sc ip a r ic' sp'
 f `rext` g = \inp -> f inp . g inp
 
+gext :: () --RequireEq prd prd' '[]
+     => CGRule prd sc ip ic sp ic' sp'
+     -> CGRule prd sc ip a r ic sp
+     -> CGRule prd sc ip a r ic' sp'
+(CGRule p f) `gext` (CGRule _ g)
+ = CGRule p $ f `rext` g 
 
 ------------------------------------------
 --f :: RequireEq a b '[] => a -> b -> a
@@ -373,6 +381,33 @@ instance
           -> ConsRec (TagField Proxy p (cr `ext` r')) rs
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
+
+instance ExtAspect (CGRule prd sc ip ic sp ic' sp') '[] where
+  extAspect cr@(CGRule p r) EmptyRec = ConsRec (TagField Proxy p cr) EmptyRec
+
+---
+
+type instance  ComRA (CGRule prd sc ip ic sp ic' sp') '[] =
+    '[ '(prd, CGRule prd sc ip ic sp ic' sp')]
+type instance  ComRA (CGRule prd sc ip ic sp ic' sp')
+        ( '(prd', CGRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': r) =
+    FoldOrdering (Compare prd prd')
+     {-LT-} (  '(prd, CGRule prd sc ip ic sp ic' sp')
+            ': '(prd', CGRule prd' sc1 ip1 ic1 sp1 ic1' sp1')
+            ': r)
+    
+     {-EQ-} ( '(prd, (CGRule prd sc ip ic sp ic' sp')
+                 :+. CGRule prd sc1 ip1 ic1 sp1 ic1' sp1')
+            ': r)
+
+     {-GT-} ('(prd', CGRule prd' sc1 ip1 ic1 sp1 ic1' sp1')
+            ':  ComRA (CGRule prd sc ip ic sp ic' sp') r)
+
+type instance
+ (CGRule prd sc ip ic sp ic' sp') :+.
+ (CGRule prd sc ip a  b  ic  sp ) =
+  CGRule prd sc ip a  b  ic' sp'
+
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
@@ -417,7 +452,24 @@ type family
     {-GT-} ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2')
            ': ComAsp ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) r2
            )
-
+  ComAsp ('(prd1, CGRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1)
+         ('(prd2, CGRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2) =
+    FoldOrdering (Compare prd1 prd2)
+    {-LT-} ('(prd1, CGRule prd1 sc1 ip1 ic1 sp1 ic1' sp1')
+           ': ComAsp r1 ('(prd2, CGRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2)
+           ) 
+    -- {-EQ-} ( '(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1'
+    --                  :+. CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2')
+    --        ': ComAsp r1 r2
+    --        )
+    {-EQ-} ( '(prd1, CGRule prd1 sc1 ip1 ic1 sp1 ic1' sp1'
+                     :+. CGRule prd1 sc1 ip1 ic2 sp2 ic2' sp2')
+           ': ComAsp r1 r2
+           )
+    {-GT-} ('(prd2, CGRule prd2 sc2 ip2 ic2 sp2 ic2' sp2')
+           ': ComAsp ('(prd1, CGRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) r2
+           )
+    
 class ComAspect (r1 :: [(Prod, Type)])(r2 :: [(Prod, Type)]) where
   comAspect :: Aspect r1 -> Aspect r2 -> Aspect (ComAsp r1 r2)
 instance ComAspect '[] r2 where
@@ -552,7 +604,7 @@ ter :: Sing ('Chi ch prd (Right ('T t)))
          (Reader (Fam prd chi par))) 
 ter (ch :: Sing ('Chi ch prd (Right ('T t))))
   = liftM (\(Fam _ chi _)  -> let atts = chi # ch
-                              in  atts # (lit @ t))
+                             in  atts # (lit @ t))
           ask
 
 class Kn (fcr :: [(Child, Type)]) (prd :: Prod) where
@@ -687,3 +739,96 @@ class SameShape4 (es1 :: [k]) (es2 :: [m])
 instance (es2 ~ '[]) => SameShape4 '[] es2
 instance (SameShape4 xs ys, es2 ~ ( '(y1, y2, y3, y4) ': ys))
   => SameShape4 (x ': xs) es2
+
+
+
+
+
+
+
+instance (ExtAspect' (Compare prd prd') (CGRule prd sc ip ic sp ic' sp')
+            ('(prd', CGRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': a))
+  =>
+  ExtAspect (CGRule prd sc ip ic sp ic' sp')
+            ('(prd', CGRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': a) where
+  extAspect cr@((CGRule p r) :: CGRule prd sc ip ic sp ic' sp')
+            re@(ConsRec lv@(TagField _ p' r') rs) =
+    let cmp = sCompare p p'
+    in extAspect' cmp cr re
+
+instance (Compare prd prd' ~ 'LT)
+  =>
+  ExtAspect' 'LT (CGRule prd sc ip ic sp ic' sp')
+             ('(prd', CGRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': a) where
+  extAspect' prf cr@((CGRule p r) :: CGRule prd sc ip ic sp ic' sp')
+                 re@(ConsRec lv@(TagField _ p' r') rs) =
+    case prf of
+      SLT -> ConsRec (TagField Proxy p cr) re
+instance
+  (Compare prd prd' ~ 'GT
+  , ExtAspect (CGRule prd sc ip ic sp ic' sp') a
+  )
+  =>
+  ExtAspect' 'GT (CGRule prd sc ip ic sp ic' sp')
+             ('(prd', CGRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': a) where
+  extAspect' prf cr@((CGRule p r) :: CGRule prd sc ip ic sp ic' sp')
+                 re@(ConsRec lv@(TagField _ p' r') rs) =
+    case prf of
+      SGT -> ConsRec lv $ extAspect cr rs
+
+instance
+  ( Compare prd prd' ~ EQ
+  , ip ~ ipe
+  , ic ~ ice, sp ~ spe , sc ~ sce
+  )
+  =>
+  ExtAspect' 'EQ (CGRule prd sc ip ic sp ic' sp')
+             ('(prd', CGRule prd sc ip ic1 sp1 ice spe) ': a) where
+  extAspect' prf cr@((CGRule p r) :: CGRule prd sc ip ic sp ic' sp')
+                 re@(ConsRec lv@(TagField _ p' r') rs) =
+    case prf of
+      SEQ -> case decideEquality p p' of
+        Just Refl
+          -> ConsRec (TagField Proxy p (cr `gext` r')) rs
+
+
+instance
+  ( Compare prd1 prd2 ~ LT
+  , ComAspect r1 ('(prd2, CGRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2))
+  => ComAspect' LT
+            ('(prd1, CGRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) 
+            ('(prd2, CGRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2) where
+  comAspect' _ r1@(ConsRec cr1@(TagField _ prd1 crule1) asp1) 
+               r2@(ConsRec cr2@(TagField _ prd2 crule2) asp2) =
+    ConsRec cr1 $ comAspect asp1 r2
+instance
+  ( Compare prd1 prd2 ~ EQ
+  , prd1 ~ prd2
+  , ComAspect r1 r2
+  , sc ~ sc1, ip ~ ip1, ic ~ ic1, sp ~ sp1
+  )
+  => ComAspect' EQ
+            ('(prd1, CGRule prd1 sc  ip  ic  sp  ic1' sp1') ': r1)
+            ('(prd2, CGRule prd2 sc1 ip1 ic2 sp2 ic1  sp1) ': r2) where
+  comAspect' _ r1@(ConsRec cr1@(TagField p prd1 crule1) asp1) 
+               r2@(ConsRec cr2@(TagField _ prd2 crule2) asp2) =
+       ConsRec (TagField p prd1 (crule1 `gext` crule2))$ comAspect asp1 asp2
+instance
+  ( Compare prd1 prd2 ~ GT
+  , ComAspect ('(prd1, CGRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) r2)
+  => ComAspect' GT
+            ('(prd1, CGRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) 
+            ('(prd2, CGRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2) where
+  comAspect' _ r1@(ConsRec cr1@(TagField _ prd1 crule1) asp1) 
+               r2@(ConsRec cr2@(TagField _ prd2 crule2) asp2) =
+    ConsRec cr2 $ comAspect r1 asp2
+instance
+  (ComAspect' (Compare prd1 prd2)
+       ('(prd1, CGRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1)
+       ('(prd2, CGRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2) )
+  => ComAspect
+       ('(prd1, CGRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1)
+       ('(prd2, CGRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2) where
+  comAspect r1@(ConsRec (TagField _ prd1 crule1) asp1) 
+            r2@(ConsRec (TagField _ prd2 crule2) asp2) =
+    comAspect' (sCompare prd1 prd2) r1 r2
