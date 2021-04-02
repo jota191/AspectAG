@@ -129,14 +129,14 @@ All this information is given in the following lines of code:
 > type Env = M.Map String Integer
 
 > add_eval  =
->   syndefM env p_Add
+>   syndefM eval p_Add
 >     $    (+) @Integer
 >     <$>  at ch_Add_l eval
 >     <*>  at ch_Add_r eval
 
 
 > val_eval  =
->   syndefM eval p_Val (ter ch_Val_val)
+>   syndefM env p_Val (ter ch_Val_val)
 
 
 > var_eval  =

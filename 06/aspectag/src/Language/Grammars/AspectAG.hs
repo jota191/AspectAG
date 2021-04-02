@@ -40,16 +40,17 @@ module Language.Grammars.AspectAG
     -- ** Defining Rules
     syndef, syndefM, syn,
     
-    synmod, synmodM, synP,
+    synmod, synmodM, -- synP,
 
-    inh, inhdef, inhdefM,
+    -- inh,
+    inhdef, inhdefM,
 
     inhmod, inhmodM, 
 
     emptyRule,
     emptyRuleAtPrd,
     emptyRuleInst,
-    ext, (.+.), extP,
+    ext, (.+.), -- extP,
     
     -- * Aspects 
     -- ** Building Aspects.
@@ -75,7 +76,7 @@ module Language.Grammars.AspectAG
     traceAspect,
     traceRule,
     copyAtChi,
-    use,
+    -- use,
     emptyAspectC,
     emptyAspectForProds,
     module Data.GenRec,
@@ -278,7 +279,8 @@ infixr 4 .:+:
 (⋈) = comAspect
 infixr 4 ⋈
 
-ext' ::  CRule ctx prd sc ip ic sp ic' sp'
+ext' :: -- RequireEq prd prd' (Text "ext":ctx) =>
+         CRule ctx prd sc ip ic sp ic' sp'
      ->  CRule ctx prd sc ip a b ic sp
      ->  CRule ctx prd sc ip a b ic' sp'
 (CRule f) `ext'` (CRule g)
@@ -288,15 +290,15 @@ type PCRule p ctx prd sc ip ic sp ic' sp'
   = Reader p (CRule ctx prd sc ip ic sp ic' sp') 
 
 -- | extension of polymorphic rules
-extP l r = do p <- ask; l; r;
-              return $ l p `ext` r p
+------extP l r = do p <- ask; l; r;
+------              return $ l p `ext` r p
 
 -- | Given two rules for a given (the same) production, it combines
 -- them. Note that the production equality is visible in the context,
 -- not sintactically. This is a use of the 'Require' pattern.
-ext ::  RequireEq prd prd' (Text "ext":ctx) 
+ext ::  () -- RequireEq prd prd' (Text "ext":ctx) 
      => CRule ctx prd sc ip ic sp ic' sp'
-     -> CRule ctx prd' sc ip a b ic sp
+     -> CRule ctx prd sc ip a b ic sp
      -> CRule ctx prd sc ip a b ic' sp'
 ext = ext'
 
@@ -474,7 +476,7 @@ type family SP (rule :: Type) where
 type family Syndef t t' ctx ctx' att sp sp' prd :: Constraint where
   Syndef t t' ctx ctx' att sp sp' prd =
      ( RequireEq t t' ctx'
-     , RequireR (OpExtend AttReco ('Att att t) t sp) ctx (Attribution sp')
+     , RequireR (OpExtend AttReco ('Att att t) t' sp) ctx (Attribution sp')
      , ctx'
          ~ ((Text "syndef("
              :<>: ShowTE ('Att att t) :<>: Text ", "
@@ -524,17 +526,23 @@ syndefM att prd = syndef att prd . def
 
 
 -- | This is simply an alias for 'syndefM'
-syn = syndefM
+syn
+  :: Syndef t t' ctx ctx' att sp sp' prd
+  => Label ('Att att t)
+  -> Label prd
+  -> Reader (Proxy ctx', Fam prd sc ip) t'
+  -> CRule ctx prd sc ip ic sp ic sp'
+syn att prd = syndef att prd . def
 
 -- |synthesized poly rule
-synP (att :: forall v. Label ('Att k v)) prd rul
-  = \(p :: Proxy p) -> syn (att @ p) prd rul
+--synP (att :: forall v. Label ('Att k v)) prd rul
+--  = \(p :: Proxy p) -> syndefM (att @ p) prd rul
 
 -- | This is simply an alias for 'inhdefM'
-inh = inhdefM
+--inh = inhdefM
 
-inhP (att :: forall v. Label ('Att k v)) prd chi rul
-  = \(p :: Proxy p) -> inh (att @ p) prd chi rul
+--inhP (att :: forall v. Label ('Att k v)) prd chi rul
+--  = \(p :: Proxy p) -> inhdefM (att @ p) prd chi rul
 
 synmod
   :: RequireR (OpUpdate AttReco ('Att att t) t r) ctx (Attribution sp')
@@ -567,14 +575,14 @@ synmodM att prd = synmod att prd . def
 type family Inhdef t t' ctx ctx' att r v2 prd nt chi ntch ic ic' n where
   Inhdef t t' ctx ctx' att r v2 prd nt chi ntch ic ic' n =
     ( RequireEq t t' ctx'
-    , RequireR  (OpExtend AttReco ('Att att t) t r) ctx (Attribution v2)
+    , RequireR  (OpExtend AttReco ('Att att t) t' r) ctx (Attribution v2)
     , RequireR (OpUpdate (ChiReco ('Prd prd nt))
                  ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
                  (ChAttsRec ('Prd prd nt) ic')
     , RequireR (OpLookup (ChiReco ('Prd prd nt))
                  ('Chi chi ('Prd prd nt) ntch) ic) ctx
                  (Attribution r)
-    , RequireEq ntch ('Left n) ctx'
+    , ntch ~ ('Left n)
     , ctx' ~ ((Text "inhdef("
                 :<>: ShowTE ('Att att t)  :<>: Text ", "
                 :<>: ShowTE ('Prd prd nt) :<>: Text ", "
@@ -615,7 +623,7 @@ inhdefM att prd chi = inhdef att prd chi . def
 
 inhmod
   :: ( RequireEq t t' ctx'
-     , RequireR (OpUpdate AttReco ('Att att t) t r) ctx
+     , RequireR (OpUpdate AttReco ('Att att t) t' r) ctx
                 (Attribution v2)
      , RequireR (OpUpdate (ChiReco ('Prd prd nt))
                 ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
@@ -623,7 +631,7 @@ inhmod
      , RequireR (OpLookup (ChiReco ('Prd prd nt))
                 ('Chi chi ('Prd prd nt) ntch) ic) ctx
                 (Attribution r)
-     , RequireEq ntch ('Left n) ctx'
+     , ntch ~ ('Left n)
      , ctx' ~ ((Text "inhmod("
                 :<>: ShowTE ('Att att t)  :<>: Text ", "
                 :<>: ShowTE ('Prd prd nt) :<>: Text ", "
@@ -645,7 +653,7 @@ inhmod att prd chi f
 
 inhmodM
   :: ( RequireEq t t' ctx'
-     , RequireR (OpUpdate AttReco ('Att att t) t r) ctx
+     , RequireR (OpUpdate AttReco ('Att att t) t' r) ctx
                 (Attribution v2)
      , RequireR (OpUpdate (ChiReco ('Prd prd nt))
                 ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
@@ -653,7 +661,7 @@ inhmodM
      , RequireR (OpLookup (ChiReco ('Prd prd nt))
                 ('Chi chi ('Prd prd nt) ntch) ic) ctx
                 (Attribution r)
-     , RequireEq ntch ('Left n) ctx'
+     , ntch ~ ('Left n)
      , ctx' ~ ((Text "inhmod("
                 :<>: ShowTE ('Att att t)  :<>: Text ", "
                 :<>: ShowTE ('Prd prd nt) :<>: Text ", "
@@ -676,17 +684,19 @@ class At pos att m  where
  at :: Label pos -> Label att -> m (ResAt pos att m)
 
 
-instance ( RequireR (OpLookup (ChiReco prd) ('Chi ch prd nt) chi) ctx
-                    (Attribution r)
-         , RequireR (OpLookup AttReco ('Att att t) r) ctx t'
+instance ( RequireR (OpLookup (ChiReco prd') ('Chi ch prd nt) chi) ctx
+                    (Rec AttReco r)
+         , RequireR (OpLookup AttReco ('Att att t) r) ctx t
          , RequireEq prd prd' ctx
          , RequireEq t t' ctx
          , RequireEq ('Chi ch prd nt) ('Chi ch prd ('Left ('NT n)))  ctx
+        -- , ReqR (OpLookup (ChiReco prd') ('Chi ch1 prd1 nt) chi)
+          --              ~ Rec c1 r1
          )
       => At ('Chi ch prd nt) ('Att att t)
             (Reader (Proxy ctx, Fam prd' chi par))  where
  type ResAt ('Chi ch prd nt) ('Att att t) (Reader (Proxy ctx, Fam prd' chi par))
-         = t 
+         = t
  at ch att
   = liftM (\(ctx, Fam chi _)  -> let atts = req ctx (OpLookup ch chi)
                                  in  req ctx (OpLookup att atts))
@@ -695,7 +705,7 @@ instance ( RequireR (OpLookup (ChiReco prd) ('Chi ch prd nt) chi) ctx
 
 
 instance
-         ( RequireR (OpLookup AttReco ('Att att t) par) ctx t'
+         ( RequireR (OpLookup AttReco ('Att att t) par) ctx t
          , RequireEq t t' ctx
          )
  => At Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))  where
@@ -709,12 +719,13 @@ def :: Reader (Proxy ctx, Fam prd chi par) a
 def = curry . runReader
 
 ter :: ( RequireR (OpLookup (ChiReco prd) pos chi) ctx
-                  (Attribution r)
-       , RequireR (OpLookup AttReco ('Att "term" t) r) ctx t'
+                  (Rec AttReco r)
+       , RequireR (OpLookup AttReco ('Att "term" t) r) ctx t
        , RequireEq prd prd' ctx
        , RequireEq t t' ctx
        , RequireEq pos ('Chi ch prd (Right ('T t))) ctx
-       , m ~ Reader (Proxy ctx, Fam prd' chi par) )
+       , pos ~ 'Chi ch prd ('Right ('T t))
+       , m ~ Reader (Proxy ctx, Fam prd chi par) )
     =>  Label pos -> m (ResAt pos ('Att "term" t) m) 
  -- ter (ch :: Label ('Chi ch prd (Right ('T a))))  = at ch (lit @ a)
 ter (ch :: Label ('Chi ch prd (Right ('T t))))
@@ -865,17 +876,17 @@ instance
 -- 'prd', by applying an operator to the values of 'att' in each non
 -- terminal in the list 'nts'.
 
-use
-  :: UseC att prd nts t' sp sc sp' ctx
-  => Label ('Att att t')
-  -> Label prd
-  -> KList nts
-  -> (t' -> t' -> t')
-  -> t'
-  -> forall ip ic' . CRule ctx prd sc ip ic' sp ic' sp'
-use att prd nts op unit
-  = syndef att prd
-  $ \_ fam -> maybe unit id (usechi att prd nts op $ chi fam)
+-- use
+--   :: UseC att prd nts t' sp sc sp' ctx
+--   => Label ('Att att t')
+--   -> Label prd
+--   -> KList nts
+--   -> (t' -> t' -> t')
+--   -> t'
+--   -> forall ip ic' . CRule ctx prd sc ip ic' sp ic' sp'
+-- use att prd nts op unit
+--   = syndef att prd
+--   $ \_ fam -> maybe unit id (usechi att prd nts op $ chi fam)
 
 
 type UseC att prd nts t' sp sc sp' ctx =
@@ -931,7 +942,7 @@ emptyAspectForProds prdList = emptyAspectC prdList Proxy
 -- | a rule to copy one attribute `att` from the parent to the children `chi`
 
 copyAtChi att chi
-  = inh att (prdFromChi chi) chi (at lhs att)
+  = inhdef att (prdFromChi chi) chi (at lhs att)
 
 --copyAtChiP (att :: forall t. Label ('Att "" t)) chi
 --  = \(p :: Proxy val) -> inhP (att @val) (prdFromChi chi) chi (at lhs att)
