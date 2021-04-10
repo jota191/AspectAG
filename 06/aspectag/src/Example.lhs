@@ -49,8 +49,8 @@ All this information is given in the following lines of code:
 
 
 > syndefM att prd def =
->   (traceAspect (mkMsg att prd) $
->    (AAG.syndefM att prd def) .+: emptyAspect) .#.. prd
+>   traceRule (mkMsg att prd) $
+>    AAG.syndefM att prd def
 
 > mkMsg :: Label ('Att att v) -> Label ('Prd prd nt)
 >   -> Proxy (Text att :<>: Text " definition in production ":<>:Text prd)
@@ -128,11 +128,20 @@ All this information is given in the following lines of code:
 
 > type Env = M.Map String Integer
 
-> add_eval  =
->   syndefM eval p_Add
+> add_eval'  =
+>   syndefM env p_Add
 >     $    (+) @Integer
 >     <$>  at ch_Add_l eval
 >     <*>  at ch_Add_r eval
+
+> add_eval = syndef eval p_Add (
+>   \proxy fam ->
+>     let sc = chi fam
+>         l  = (sc .# ch_Add_l) #. eval
+>         r  = (sc .# ch_Add_r) #. eval
+>     in  (l + r :: Integer)
+>    )
+>   
 
 
 > val_eval  =
@@ -152,7 +161,7 @@ All this information is given in the following lines of code:
 
 > asp_eval_num =
 >     traceAspect (Proxy @ ('Text "definition of eval for numbers")) $
->     val_eval {- .+:  var_eval -} .+: emptyAspect
+>     val_eval {- .+: var_eval -} .+: emptyAspect
 
 > asp_eval_nonum =
 >     traceAspect (Proxy @ ('Text "definition of eval for non numbers")) $
