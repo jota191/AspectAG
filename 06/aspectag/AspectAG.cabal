@@ -36,7 +36,7 @@ author:              Juan García Garland, Marcos Viera
 -- patches.
 maintainer:          jpgarcia@fing.edu.uy
 
-category:            Language
+category:            Language, Aspect Oriented Programming, 
 
 build-type:          Simple
 
@@ -89,10 +89,11 @@ library
   -- Other library packages from which modules are imported.
   build-depends:       base >=4.11 && <4.15,
                        containers >= 0.5,
-                       template-haskell >= 2.13,
+                       ghc-prim >= 0.6.1,
                        mtl >= 2.0,
+                       poly-rec >=0.6 && <0.7,
                        requirements >=0.6 && <0.7,
-                       poly-rec >=0.6 && <0.7
+                       template-haskell >= 2.13
  
 
   -- Directories containing source files.

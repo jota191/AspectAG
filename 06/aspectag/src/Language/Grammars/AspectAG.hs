@@ -375,10 +375,6 @@ instance
 
 instance
   ( Require (OpComRA ctx prd rule asp) ctx
-  -- , ReqR (OpComRA ctx prd rule asp) ~ Rec
-  --                           PrdReco
-  --                           (UnWrap
-  --                              (ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') asp)))
   , ReqR (OpComRA ctx prd rule asp) ~ Aspect a0
   )
   =>
@@ -475,6 +471,9 @@ type family SP (rule :: Type) where
   SP (CRule ctx prd sc ip ic sp ic' sp') = sp
 
 
+data OpSyndef (t :: Type) (t' :: Type) (att :: Symbol) sp where
+  
+
 type family Syndef t t' ctx att sp sp' prd :: Constraint where
   Syndef t t' ctx att sp sp' prd =
      ( RequireEq t t' ctx
@@ -532,8 +531,9 @@ instance
   syndefC' Proxy = syndef
 
 instance
+  RequireEqRes t t' ctx => 
   SyndefC' 'False t t' ctx att sp sp' prd where
-  type SyndefCT' 'False t t' ctx att sp sp' prd = TypeError (Text "YEAAA!")
+  type SyndefCT' 'False t t' ctx att sp sp' prd = ()
 -- | As 'syndef', the function 'syndefM' adds the definition of a
 --   synthesized attribute.  It takes an attribute label 'att'
 --   representing the name of the new attribute; a production label
@@ -563,10 +563,10 @@ syndefM att prd = syndefC att prd . def
 
 -- | This is simply an alias for 'syndefM'
 syn
-  :: Syndef t t' ctx ctx' att sp sp' prd
+  :: Syndef t t' ctx att sp sp' prd
   => Label ('Att att t)
   -> Label prd
-  -> Reader (Proxy ctx', Fam prd sc ip) t'
+  -> Reader (Proxy ctx, Fam prd sc ip) t'
   -> CRule ctx prd sc ip ic sp ic sp'
 syn att prd = syndef att prd . def
 
