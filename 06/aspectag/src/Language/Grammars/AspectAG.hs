@@ -109,6 +109,11 @@ import Control.Monad.Reader
 import Data.Functor.Identity
 import GHC.Types
 
+infixr 3 &&
+type family (a :: Bool) && (b :: Bool) where
+  True && True = True
+  _ && _ = False
+
 class SemLit a where
   sem_Lit :: a -> Attribution ('[] :: [(Att,Type)])
                -> Attribution '[ '( 'Att "term" a , a)]
@@ -471,12 +476,18 @@ type family SP (rule :: Type) where
   SP (CRule ctx prd sc ip ic sp ic' sp') = sp
 
 
-data OpSyndef (t :: Type) (t' :: Type) (att :: Symbol) sp where
-  
+-- data OpSyndef att (prd :: Symbol) (prd) sp ctx where
+--   OpSyndef :: Label att -> Label prd -> (Proxy ctx -> Fam prd sc ip -> t')
+--     -> OpSyndef att prd sp ctx
 
-type family Syndef t t' ctx att sp sp' prd :: Constraint where
-  Syndef t t' ctx att sp sp' prd =
+-- instance (Require (OpSyndef (att :: Att attn t) (prd :: Prd prdn tnt) sp ctx))
+--  where
+   
+
+type family Syndef t t' ctx att sp sp' prd prd' :: Constraint where
+  Syndef t t' ctx att sp sp' prd prd' =
      ( RequireEq t t' ctx
+     , RequireEq prd prd' ctx
      , RequireR (OpExtend AttReco ('Att att t) t' sp) ctx (Attribution sp')
      )
 
@@ -487,10 +498,10 @@ type family Syndef t t' ctx att sp sp' prd :: Constraint where
 --   assigned to this attribute, given a context and an input
 --   family. It updates the output constructed thus far.
 syndef
-  :: Syndef t t' ctx att sp sp' prd
+  :: Syndef t t' ctx att sp sp' prd prd' 
   => forall sc ip ic . Label ('Att att t)
   -> Label prd
-  -> (Proxy ctx -> Fam prd sc ip -> t')
+  -> (Proxy ctx -> Fam prd' sc ip -> t')
   -> CRule ctx prd sc ip ic sp ic sp'
 syndef att prd f
   = CRule $ \ctx inp (Fam ic sp)
@@ -498,42 +509,42 @@ syndef att prd f
 
 
 class SyndefC t t' (ctx :: [ErrorMessage])
-  (att :: Symbol) sp sp' prd where
-  type SyndefCT t t' ctx att sp sp' prd :: Constraint
-  syndefC :: SyndefCT t t' ctx att sp sp' prd =>
+  (att :: Symbol) sp sp' prd prd' where
+  type SyndefCT t t' ctx att sp sp' prd prd' :: Constraint
+  syndefC :: SyndefCT t t' ctx att sp sp' prd prd' =>
              forall sc ip ic .
              Label ('Att att t)
           -> Label prd
-          -> (Proxy ctx -> Fam prd sc ip -> t')
+          -> (Proxy ctx -> Fam prd' sc ip -> t')
           -> CRule ctx prd sc ip ic sp ic sp'
 
-class SyndefC' (b :: Bool) t t' ctx att sp sp' prd where
-  type SyndefCT' b t t' ctx att sp sp' prd :: Constraint
+class SyndefC' (b :: Bool) t t' ctx att sp sp' prd prd' where
+  type SyndefCT' b t t' ctx att sp sp' prd prd' :: Constraint
   syndefC' :: forall sc ip ic .
              Proxy b
           -> Label ('Att att t)
           -> Label prd
-          -> (Proxy ctx -> Fam prd sc ip -> t')
+          -> (Proxy ctx -> Fam prd' sc ip -> t')
           -> CRule ctx prd sc ip ic sp ic sp'
 
-instance SyndefC' (t == t') t t' ctx att sp sp' prd
-  => SyndefC t t' ctx att sp sp' prd where
-  type SyndefCT t t' ctx att sp sp' prd =
-    SyndefCT' (t == t') t t' ctx att sp sp' prd
-  syndefC = syndefC' (Proxy @ (t == t'))
+instance SyndefC' ((t == t') && (prd == prd')) t t' ctx att sp sp' prd prd'
+  => SyndefC t t' ctx att sp sp' prd prd' where
+  type SyndefCT t t' ctx att sp sp' prd prd' =
+    SyndefCT' ((t == t') && (prd == prd')) t t' ctx att sp sp' prd prd'
+  syndefC = syndefC' (Proxy @ ((t == t') && (prd == prd')))
 
 instance
   ( Require (OpExtend AttReco ('Att att t) t sp) ctx
   , ReqR (OpExtend AttReco ('Att att t) t sp) ~ Attribution sp') =>
-  SyndefC' True t t ctx att sp sp' prd where
-  type SyndefCT' True t t ctx att sp sp' prd =
-    Syndef t t ctx att sp sp' prd
+  SyndefC' True t t ctx att sp sp' prd prd where
+  type SyndefCT' True t t ctx att sp sp' prd prd =
+    Syndef t t ctx att sp sp' prd prd
   syndefC' Proxy = syndef
 
 instance
-  RequireEqRes t t' ctx => 
-  SyndefC' 'False t t' ctx att sp sp' prd where
-  type SyndefCT' 'False t t' ctx att sp sp' prd = ()
+  (RequireEqRes t t' ctx, RequireEqRes prd prd' ctx) => 
+  SyndefC' 'False t t' ctx att sp sp' prd prd' where
+  type SyndefCT' 'False t t' ctx att sp sp' prd prd' = ()
 -- | As 'syndef', the function 'syndefM' adds the definition of a
 --   synthesized attribute.  It takes an attribute label 'att'
 --   representing the name of the new attribute; a production label
@@ -551,22 +562,22 @@ instance
 -- foo = syndefM att_size p_cons $ do sizeatchi <- at ch_tail att_size
 --                                    return (sizeatchi + 1)
 -- @
-syndefM
-  :: (SyndefCT' (t == t') t t' ctx att sp sp' prd --SyndefC t t' ctx att sp sp' prd
-     , SyndefC' (t == t') t t' ctx att sp sp' prd)
+syndefM ::
+  (SyndefCT' (t == t' && prd == prd') t t' ctx att sp sp' prd prd'
+      , SyndefC' (t == t' && prd == prd') t t' ctx att sp sp' prd prd')
   => Label ('Att att t)
   -> Label prd
-  -> Reader (Proxy ctx, Fam prd sc ip) t'
+  -> Reader (Proxy ctx, Fam prd' sc ip) t'
   -> CRule ctx prd sc ip ic sp ic sp'
 syndefM att prd = syndefC att prd . def
 
 
--- | This is simply an alias for 'syndefM'
+-- | This is simply an alias for 'syndef'
 syn
-  :: Syndef t t' ctx att sp sp' prd
+  :: Syndef t t' ctx att sp sp' prd prd'
   => Label ('Att att t)
   -> Label prd
-  -> Reader (Proxy ctx, Fam prd sc ip) t'
+  -> Reader (Proxy ctx, Fam prd' sc ip) t'
   -> CRule ctx prd sc ip ic sp ic sp'
 syn att prd = syndef att prd . def
 
@@ -729,14 +740,6 @@ instance ( RequireR (OpLookup (ChiReco prd') ('Chi ch prd nt) chi) ctx
          , ReqR (OpLookup @Att @(Any @Type) AttReco ('Att att t') (UnWrap (Attribution r)))
                         ~ t'
          , r ~ UnWrap (Attribution r)
-         -- , Reader
-         --               (Proxy ctx, Fam prd' chi par)
-         --               (ResAt
-         --                  ('Chi ch prd nt)
-         --                  ('Att att t)
-         --                  (Reader (Proxy ctx, Fam prd' chi par)))
-         -- ~ ReaderT
-         --               (Proxy ctx, Fam prd' chi par) Data.Functor.Identity.Identity t'
          )
       => At ('Chi ch prd nt) ('Att att t)
             (Reader (Proxy ctx, Fam prd' chi par))  where
@@ -1037,4 +1040,5 @@ type family Terminal s :: Either NT T where
 
 type family NonTerminal s where
   NonTerminal s = 'Left s
+
 
