@@ -49,8 +49,8 @@ All this information is given in the following lines of code:
 
 
 > syndefM att prd def =
->   (traceAspect (mkMsg att prd) $
->    (AAG.syndefM att prd def) .+: emptyAspect) .#.. prd
+>   traceRule (mkMsg att prd) $
+>    AAG.syndefM att prd def
 
 > mkMsg :: Label ('Att att v) -> Label ('Prd prd nt)
 >   -> Proxy (Text att :<>: Text " definition in production ":<>:Text prd)
@@ -128,20 +128,29 @@ All this information is given in the following lines of code:
 
 > type Env = M.Map String Integer
 
-> add_eval  =
->   syndefM eval p_Add
+> add_eval'  = traceRule (Proxy @ ('Text "lala")) $
+>   syn eval p_Add
 >     $    (+) @Integer
 >     <$>  at ch_Add_l eval
 >     <*>  at ch_Add_r eval
 
+> add_eval = syndef eval p_Add (
+>   \proxy fam ->
+>     let sc = chi fam
+>         l  = (sc .# ch_Add_l) #. eval
+>         r  = (sc .# ch_Add_r) #. eval
+>     in  (l + r :: Integer)
+>    )
+>   
+
 
 > val_eval  =
->   syndefM env p_Val (ter ch_Val_val)
+>   syndefM eval p_Val (ter ch_Val_val)
 
 
 > var_eval  =
->   syndefM eval p_Var ( -- undefined
->   do -- M.lookup <$> ter ch_Var_var <*> at lhs env
+>   syn eval p_Var (do  -- undefined
+>   -- M.lookup <$> ter ch_Var_var <*> at lhs env
 >      env  <- at lhs env
 >      x    <- ter ch_Var_var
 >      case M.lookup x env of

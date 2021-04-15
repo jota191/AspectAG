@@ -40,7 +40,7 @@ module Language.Grammars.AspectAG
     chi, par,
     
     -- ** Defining Rules
-    syndef, syndefM, syn, syndefC,
+    syndef, syndefM, syn, -- syndefC,
     
     synmod, synmodM, -- synP,
 
@@ -429,7 +429,7 @@ instance
 
 
 -- (.#..)
---   :: (Require (OpLookup PrdReco prd r) ctx,
+--   :: (Require (OpLookup PrdReco prd r) (('ShowType r : ctx0)),
 --       ReqR (OpLookup PrdReco prd r) ~ CRule ctx prd sc ip ic sp ic' sp') =>
 --      CAspect ctx r -> Label prd -> CRule ctx prd sc ip ic sp ic' sp'
 ca .#.. prd
@@ -508,43 +508,43 @@ syndef att prd f
    ->  Fam ic $ req ctx (OpExtend att (f Proxy inp) sp)
 
 
-class SyndefC t t' (ctx :: [ErrorMessage])
-  (att :: Symbol) sp sp' prd prd' where
-  type SyndefCT t t' ctx att sp sp' prd prd' :: Constraint
-  syndefC :: SyndefCT t t' ctx att sp sp' prd prd' =>
-             forall sc ip ic .
-             Label ('Att att t)
-          -> Label prd
-          -> (Proxy ctx -> Fam prd' sc ip -> t')
-          -> CRule ctx prd sc ip ic sp ic sp'
+-- class SyndefC t t' (ctx :: [ErrorMessage])
+--   (att :: Symbol) sp sp' prd prd' where
+--   type SyndefCT t t' ctx att sp sp' prd prd' :: Constraint
+--   syndefC :: SyndefCT t t' ctx att sp sp' prd prd' =>
+--              forall sc ip ic .
+--              Label ('Att att t)
+--           -> Label prd
+--           -> (Proxy ctx -> Fam prd' sc ip -> t')
+--           -> CRule ctx prd sc ip ic sp ic sp'
 
-class SyndefC' (b :: Bool) t t' ctx att sp sp' prd prd' where
-  type SyndefCT' b t t' ctx att sp sp' prd prd' :: Constraint
-  syndefC' :: forall sc ip ic .
-             Proxy b
-          -> Label ('Att att t)
-          -> Label prd
-          -> (Proxy ctx -> Fam prd' sc ip -> t')
-          -> CRule ctx prd sc ip ic sp ic sp'
+-- class SyndefC' (b :: Bool) t t' ctx att sp sp' prd prd' where
+--   type SyndefCT' b t t' ctx att sp sp' prd prd' :: Constraint
+--   syndefC' :: forall sc ip ic .
+--              Proxy b
+--           -> Label ('Att att t)
+--           -> Label prd
+--           -> (Proxy ctx -> Fam prd' sc ip -> t')
+--           -> CRule ctx prd sc ip ic sp ic sp'
 
-instance SyndefC' ((t == t') && (prd == prd')) t t' ctx att sp sp' prd prd'
-  => SyndefC t t' ctx att sp sp' prd prd' where
-  type SyndefCT t t' ctx att sp sp' prd prd' =
-    SyndefCT' ((t == t') && (prd == prd')) t t' ctx att sp sp' prd prd'
-  syndefC = syndefC' (Proxy @ ((t == t') && (prd == prd')))
+-- instance SyndefC' ((t == t') && (prd == prd')) t t' ctx att sp sp' prd prd'
+--   => SyndefC t t' ctx att sp sp' prd prd' where
+--   type SyndefCT t t' ctx att sp sp' prd prd' =
+--     SyndefCT' ((t == t') && (prd == prd')) t t' ctx att sp sp' prd prd'
+--   syndefC = syndefC' (Proxy @ ((t == t') && (prd == prd')))
 
-instance
-  ( Require (OpExtend AttReco ('Att att t) t sp) ctx
-  , ReqR (OpExtend AttReco ('Att att t) t sp) ~ Attribution sp') =>
-  SyndefC' True t t ctx att sp sp' prd prd where
-  type SyndefCT' True t t ctx att sp sp' prd prd =
-    Syndef t t ctx att sp sp' prd prd
-  syndefC' Proxy = syndef
+-- instance
+--   ( Require (OpExtend AttReco ('Att att t) t sp) ctx
+--   , ReqR (OpExtend AttReco ('Att att t) t sp) ~ Attribution sp') =>
+--   SyndefC' True t t ctx att sp sp' prd prd where
+--   type SyndefCT' True t t ctx att sp sp' prd prd =
+--     Syndef t t ctx att sp sp' prd prd
+--   syndefC' Proxy = syndef
 
-instance
-  (RequireEqRes t t' ctx, RequireEqRes prd prd' ctx) => 
-  SyndefC' 'False t t' ctx att sp sp' prd prd' where
-  type SyndefCT' 'False t t' ctx att sp sp' prd prd' = ()
+-- instance
+--   (RequireEqRes t t' ctx, RequireEqRes prd prd' ctx) => 
+--   SyndefC' 'False t t' ctx att sp sp' prd prd' where
+--   type SyndefCT' 'False t t' ctx att sp sp' prd prd' = ()
 -- | As 'syndef', the function 'syndefM' adds the definition of a
 --   synthesized attribute.  It takes an attribute label 'att'
 --   representing the name of the new attribute; a production label
@@ -562,24 +562,41 @@ instance
 -- foo = syndefM att_size p_cons $ do sizeatchi <- at ch_tail att_size
 --                                    return (sizeatchi + 1)
 -- @
-syndefM ::
-  (SyndefCT' (t == t' && prd == prd') t t' ctx att sp sp' prd prd'
-      , SyndefC' (t == t' && prd == prd') t t' ctx att sp sp' prd prd')
-  => Label ('Att att t)
-  -> Label prd
-  -> Reader (Proxy ctx, Fam prd' sc ip) t'
-  -> CRule ctx prd sc ip ic sp ic sp'
-syndefM att prd = syndefC att prd . def
+
+
+-- syndefM ::
+--   (SyndefCT' (t == t' && prd == prd') t t' ctx att sp sp' prd prd'
+--       , SyndefC' (t == t' && prd == prd') t t' ctx att sp sp' prd prd')
+--   => Label ('Att att t)
+--   -> Label prd
+--   -> Reader (Proxy ctx, Fam prd' sc ip) t'
+--   -> CRule ctx prd sc ip ic sp ic sp'
+-- syndefM att prd = syndefC att prd . def
+
+syndefM att prd def =
+  traceRule (mkMsg att prd) $
+   syn att prd def
+
+mkMsg :: Label ('Att att v) -> Label ('Prd prd nt)
+  -> Proxy (Text att :<>: Text " definition in production ":<>:Text prd)
+mkMsg Label Label = Proxy
 
 
 -- | This is simply an alias for 'syndef'
 syn
-  :: Syndef t t' ctx att sp sp' prd prd'
+  :: Syndef t t' ((('Text "rule "
+                             ':<>: (('Text att ':<>: 'Text " definition in production ")
+                                    ':<>: 'Text prd'))
+                              : ctx)) att sp sp' prd prd'
   => Label ('Att att t)
-  -> Label prd
-  -> Reader (Proxy ctx, Fam prd' sc ip) t'
-  -> CRule ctx prd sc ip ic sp ic sp'
-syn att prd = syndef att prd . def
+  -> Label ('Prd prd nt)
+  -> Reader (Proxy ((('Text "rule "
+                             ':<>: (('Text att ':<>: 'Text " definition in production ")
+                                    ':<>: 'Text prd'))
+                              : ctx)),
+             Fam ('Prd prd' nt) sc ip) t'
+  -> CRule (ctx) ('Prd prd nt) sc ip ic sp ic sp'
+syn att prd f = traceRule (mkMsg att prd) $ (syndef att prd . def) f
 
 -- |synthesized poly rule
 --synP (att :: forall v. Label ('Att k v)) prd rul
@@ -732,20 +749,21 @@ class At pos att m  where
 
 
 instance ( RequireR (OpLookup (ChiReco prd') ('Chi ch prd nt) chi) ctx
-                    (Rec AttReco r)
-         , RequireR (OpLookup AttReco ('Att att t) r) ctx t
+                    (Attribution r)
+         , RequireR (OpLookup AttReco ('Att att t) r) ctx t'
          , RequireEq prd prd' ctx
          , RequireEq t t' ctx
          , RequireEq ('Chi ch prd nt) ('Chi ch prd ('Left ('NT n)))  ctx
-         , ReqR (OpLookup @Att @(Any @Type) AttReco ('Att att t') (UnWrap (Attribution r)))
+         , ReqR (OpLookup @Att @Type AttReco ('Att att t') (UnWrap @Att @Type (Rec AttReco r)))
                         ~ t'
+         
          , r ~ UnWrap (Attribution r)
          )
       => At ('Chi ch prd nt) ('Att att t)
             (Reader (Proxy ctx, Fam prd' chi par))  where
  type ResAt ('Chi ch prd nt) ('Att att t) (Reader (Proxy ctx, Fam prd' chi par))
          = ReqR (OpLookup AttReco ('Att att t)
-                 (UnWrap (ReqR (OpLookup (ChiReco prd) ('Chi ch prd nt) chi))))
+                 (UnWrap @Att @Type (ReqR (OpLookup (ChiReco prd) ('Chi ch prd nt) chi))))
  at ch att
   = liftM (\(ctx, Fam chi _)  -> let atts = req ctx (OpLookup ch chi)
                                  in  req ctx (OpLookup att atts))
@@ -754,12 +772,12 @@ instance ( RequireR (OpLookup (ChiReco prd') ('Chi ch prd nt) chi) ctx
 
 
 instance
-         ( RequireR (OpLookup AttReco ('Att att t) par) ctx t
+         ( RequireR (OpLookup @Att @Type AttReco ('Att att t) par) ctx t
          , RequireEq t t' ctx
          )
  => At Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))  where
  type ResAt Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))
-    = t
+    = ReqR (OpLookup @Att @Type AttReco ('Att att t) (UnWrap @Att @Type (Rec AttReco par)))
  at lhs att
   = liftM (\(ctx, Fam _ par) -> req ctx (OpLookup att par)) ask
 
@@ -782,7 +800,10 @@ ter (ch :: Label ('Chi ch prd (Right ('T t))))
                                  in  req ctx (OpLookup (lit @ t) atts))
           ask
 
--- type instance (UnWrap (Attribution r)) = r
+type instance (UnWrap (Attribution r)) = r
+type instance (UnWrap @Att @Type (Rec c r)) = r
+--type instance (UnWrap @Att @(GHC.Types.Any @Type)
+--               (Attribution (r :: [(Att, Type )]))) = (r :: [(Att,Type)])
 
 
 class Kn (fcr :: [(Child, Type)]) (prd :: Prod) where
