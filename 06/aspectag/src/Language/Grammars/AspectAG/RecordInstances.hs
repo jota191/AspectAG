@@ -51,13 +51,15 @@ type instance Cmp ('Chi a _ _) ('Chi b _ _) =
   CmpSymbol a b
 
 
-type instance  ShowTE ('Att l t)   = Text  "Attribute " :<>: Text l
-                                                        :<>: Text ":"
-                                                        :<>: ShowTE t 
-type instance  ShowTE ('Prd l nt)  = ShowTE nt :<>: Text "::Production "
-                                              :<>: Text l
-type instance  ShowTE ('Chi l p s) = ShowTE p :<>:  Text "::Child " :<>: Text l 
-                                            :<>:  Text ":" :<>: ShowTE s
+type instance  ShowTE ('Att l t)   = Text  "Attribute (" :<>: Text l
+                                                         :<>: Text ":"
+                                                         :<>: ShowTE t
+                                                         :<>: Text ")"
+type instance  ShowTE ('Prd l nt)  = Text "Production "
+                                  :<>: Text l :<>: Text " of "
+                                  :<>: ShowTE nt
+type instance  ShowTE ('Chi l p s) = Text "Child " :<>: Text l 
+                                    :<>: Text " of producion " :<>: ShowTE p
 type instance  ShowTE ('Left l)    = ShowTE l
 type instance  ShowTE ('Right r)   = ShowTE r
 type instance  ShowTE ('NT l)      = Text "Non-Terminal " :<>: Text l

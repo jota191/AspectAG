@@ -84,15 +84,16 @@ module Language.Grammars.AspectAG
     module Data.GenRec,
     module Language.Grammars.AspectAG.HList,
     Terminal,
-    NonTerminal
+    NonTerminal,
 
-    
+    (+++)
   )
   where
 
 
 import Language.Grammars.AspectAG.HList
 import Language.Grammars.AspectAG.RecordInstances
+
 
 import Data.Type.Require hiding (emptyCtx)
 
@@ -108,6 +109,8 @@ import Data.Type.Equality
 import Control.Monad.Reader
 import Data.Functor.Identity
 import GHC.Types
+
+import Debug.Trace.LocationTH
 
 infixr 3 &&
 type family (a :: Bool) && (b :: Bool) where
@@ -203,10 +206,12 @@ comAspect al ar
 
 -- | |traceAspect| adds context to an aspect.
 traceAspect (_ :: Proxy (e::ErrorMessage))
-  = mapCAspect $ \(_ :: Proxy ctx) -> Proxy @ ((Text "aspect ":<>: e) : ctx)
+  = mapCAspect $ \(_ :: Proxy ctx) ->
+                   Proxy @ ((Text "- traceAspect: " :<>: e) : ctx)
 
 traceRule (_ :: Proxy (e::ErrorMessage))
-  = mapCRule $ \(_ :: Proxy ctx) -> Proxy @ ((Text "rule ":<>: e) : ctx)
+  = mapCRule $ \(_ :: Proxy ctx) ->
+                 Proxy @ (Text "- traceAspect: " :<>: e : ctx)
 
 
 mapCRule :: (Proxy ctx -> Proxy ctx')
@@ -474,14 +479,6 @@ type family IC (rule :: Type) where
 type family SP (rule :: Type) where
   SP (Rule prd sc ip ic sp ic' sp') = sp
   SP (CRule ctx prd sc ip ic sp ic' sp') = sp
-
-
--- data OpSyndef att (prd :: Symbol) (prd) sp ctx where
---   OpSyndef :: Label att -> Label prd -> (Proxy ctx -> Fam prd sc ip -> t')
---     -> OpSyndef att prd sp ctx
-
--- instance (Require (OpSyndef (att :: Att attn t) (prd :: Prd prdn tnt) sp ctx))
---  where
    
 
 type family Syndef t t' ctx att sp sp' prd prd' :: Constraint where
@@ -499,7 +496,8 @@ type family Syndef t t' ctx att sp sp' prd prd' :: Constraint where
 --   family. It updates the output constructed thus far.
 syndef
   :: Syndef t t' ctx att sp sp' prd prd' 
-  => forall sc ip ic . Label ('Att att t)
+  => forall sc ip ic .
+     Label ('Att att t)
   -> Label prd
   -> (Proxy ctx -> Fam prd' sc ip -> t')
   -> CRule ctx prd sc ip ic sp ic sp'
@@ -507,44 +505,6 @@ syndef att prd f
   = CRule $ \ctx inp (Fam ic sp)
    ->  Fam ic $ req ctx (OpExtend att (f Proxy inp) sp)
 
-
--- class SyndefC t t' (ctx :: [ErrorMessage])
---   (att :: Symbol) sp sp' prd prd' where
---   type SyndefCT t t' ctx att sp sp' prd prd' :: Constraint
---   syndefC :: SyndefCT t t' ctx att sp sp' prd prd' =>
---              forall sc ip ic .
---              Label ('Att att t)
---           -> Label prd
---           -> (Proxy ctx -> Fam prd' sc ip -> t')
---           -> CRule ctx prd sc ip ic sp ic sp'
-
--- class SyndefC' (b :: Bool) t t' ctx att sp sp' prd prd' where
---   type SyndefCT' b t t' ctx att sp sp' prd prd' :: Constraint
---   syndefC' :: forall sc ip ic .
---              Proxy b
---           -> Label ('Att att t)
---           -> Label prd
---           -> (Proxy ctx -> Fam prd' sc ip -> t')
---           -> CRule ctx prd sc ip ic sp ic sp'
-
--- instance SyndefC' ((t == t') && (prd == prd')) t t' ctx att sp sp' prd prd'
---   => SyndefC t t' ctx att sp sp' prd prd' where
---   type SyndefCT t t' ctx att sp sp' prd prd' =
---     SyndefCT' ((t == t') && (prd == prd')) t t' ctx att sp sp' prd prd'
---   syndefC = syndefC' (Proxy @ ((t == t') && (prd == prd')))
-
--- instance
---   ( Require (OpExtend AttReco ('Att att t) t sp) ctx
---   , ReqR (OpExtend AttReco ('Att att t) t sp) ~ Attribution sp') =>
---   SyndefC' True t t ctx att sp sp' prd prd where
---   type SyndefCT' True t t ctx att sp sp' prd prd =
---     Syndef t t ctx att sp sp' prd prd
---   syndefC' Proxy = syndef
-
--- instance
---   (RequireEqRes t t' ctx, RequireEqRes prd prd' ctx) => 
---   SyndefC' 'False t t' ctx att sp sp' prd prd' where
---   type SyndefCT' 'False t t' ctx att sp sp' prd prd' = ()
 -- | As 'syndef', the function 'syndefM' adds the definition of a
 --   synthesized attribute.  It takes an attribute label 'att'
 --   representing the name of the new attribute; a production label
@@ -563,40 +523,32 @@ syndef att prd f
 --                                    return (sizeatchi + 1)
 -- @
 
-
--- syndefM ::
---   (SyndefCT' (t == t' && prd == prd') t t' ctx att sp sp' prd prd'
---       , SyndefC' (t == t' && prd == prd') t t' ctx att sp sp' prd prd')
---   => Label ('Att att t)
---   -> Label prd
---   -> Reader (Proxy ctx, Fam prd' sc ip) t'
---   -> CRule ctx prd sc ip ic sp ic sp'
--- syndefM att prd = syndefC att prd . def
-
 syndefM att prd def =
   traceRule (mkMsg att prd) $
    syn att prd def
 
-mkMsg :: Label ('Att att v) -> Label ('Prd prd nt)
-  -> Proxy (Text att :<>: Text " definition in production ":<>:Text prd)
+
+mkMsg :: Label ('Att att t) -> Label ('Prd prd nt)
+  -> Proxy (AttDef att t prd nt)
 mkMsg Label Label = Proxy
 
+type family AttDef att t prd nt where
+  AttDef att t prd nt =
+         Text "- syndef: definition of "
+    :<>: ShowTE ('Att att t) :$$: Text "   in "
+    :<>: ShowTE ('Prd prd nt)
 
 -- | This is simply an alias for 'syndef'
 syn
-  :: Syndef t t' ((('Text "rule "
-                             ':<>: (('Text att ':<>: 'Text " definition in production ")
-                                    ':<>: 'Text prd'))
-                              : ctx)) att sp sp' prd prd'
+  :: Syndef t t' (AttDef att t prd nt : ctx) att sp sp' prd prd'
   => Label ('Att att t)
   -> Label ('Prd prd nt)
-  -> Reader (Proxy ((('Text "rule "
-                             ':<>: (('Text att ':<>: 'Text " definition in production ")
-                                    ':<>: 'Text prd'))
-                              : ctx)),
+  -> Reader (Proxy (AttDef att t prd nt : ctx),
              Fam ('Prd prd' nt) sc ip) t'
-  -> CRule (ctx) ('Prd prd nt) sc ip ic sp ic sp'
-syn att prd f = traceRule (mkMsg att prd) $ (syndef att prd . def) f
+  -> CRule ctx ('Prd prd nt) sc ip ic sp ic sp'
+syn att prd f = mapCRule (mkMsg att prd `consErr`) $ (syndef att prd . def) f
+
+--   traceRule (mkMsg att prd) $ (syndef att prd . def) f
 
 -- |synthesized poly rule
 --synP (att :: forall v. Label ('Att k v)) prd rul
@@ -636,9 +588,9 @@ synmodM
 synmodM att prd = synmod att prd . def
 
 
-type family Inhdef t t' ctx ctx' att r v2 prd nt chi ntch ic ic' n where
-  Inhdef t t' ctx ctx' att r v2 prd nt chi ntch ic ic' n =
-    ( RequireEq t t' ctx'
+type family Inhdef t t' ctx att r v2 prd nt chi ntch ic ic' n where
+  Inhdef t t' ctx att r v2 prd nt chi ntch ic ic' n =
+    ( RequireEq t t' ctx
     , RequireR  (OpExtend AttReco ('Att att t) t' r) ctx (Attribution v2)
     , RequireR (OpUpdate (ChiReco ('Prd prd nt))
                  ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
@@ -647,21 +599,22 @@ type family Inhdef t t' ctx ctx' att r v2 prd nt chi ntch ic ic' n where
                  ('Chi chi ('Prd prd nt) ntch) ic) ctx
                  (Attribution r)
     , ntch ~ ('Left n)
-    , ctx' ~ ((Text "inhdef("
-                :<>: ShowTE ('Att att t)  :<>: Text ", "
-                :<>: ShowTE ('Prd prd nt) :<>: Text ", "
-                :<>: ShowTE ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
-                ': ctx)
+    
     )
-  
+
+-- ((Text "inhdef("
+--                 :<>: ShowTE ('Att att t)  :<>: Text ", "
+--                 :<>: ShowTE ('Prd prd nt) :<>: Text ", "
+--                 :<>: ShowTE ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
+--                 ': ctx)
 
 inhdef
-  :: Inhdef t t' ctx ctx' att r v2 prd nt chi ntch ic ic' n
+  :: Inhdef t t' ctx att r v2 prd nt chi ntch ic ic' n
      =>
      Label ('Att att t)
      -> Label ('Prd prd nt)
      -> Label ('Chi chi ('Prd prd nt) ntch)
-     -> (Proxy ctx' -> Fam ('Prd prd nt) sc ip -> t')
+     -> (Proxy ctx -> Fam ('Prd prd nt) sc ip -> t')
      -> forall sp . CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
 inhdef  att prd chi f
   = CRule $ \ctx inp (Fam ic sp)
@@ -673,12 +626,12 @@ inhdef  att prd chi f
 
 
 inhdefM
-  :: Inhdef t t' ctx ctx' att r v2 prd nt chi ntch ic ic' n
+  :: Inhdef t t' ctx att r v2 prd nt chi ntch ic ic' n
   =>
   Label ('Att att t)
   -> Label ('Prd prd nt)
   -> Label ('Chi chi ('Prd prd nt) ntch)
-  -> Reader (Proxy ctx', Fam ('Prd prd nt) sc ip) t'
+  -> Reader (Proxy ctx, Fam ('Prd prd nt) sc ip) t'
   -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
 inhdefM att prd chi = inhdef att prd chi . def
 
@@ -1063,3 +1016,8 @@ type family NonTerminal s where
   NonTerminal s = 'Left s
 
 
+(+++) :: Proxy e1 -> Proxy e2 -> Proxy (e1 :$$: e2)
+Proxy +++ Proxy = Proxy
+
+consErr :: Proxy e -> Proxy es -> Proxy (e : es)
+consErr Proxy Proxy = Proxy

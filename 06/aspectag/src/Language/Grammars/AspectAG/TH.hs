@@ -27,10 +27,11 @@ Portability : POSIX
 {-# LANGUAGE FunctionalDependencies    #-}
 {-# LANGUAGE TemplateHaskell           #-}
 
+
 module Language.Grammars.AspectAG.TH where
 
 import Language.Haskell.TH
-import Language.Haskell.TH.Syntax (showName)
+import Language.Haskell.TH.Syntax (showName, location, Loc(..), Q, Exp, lift)
 import Data.Proxy
 import Data.Either
 import GHC.TypeLits
@@ -38,13 +39,16 @@ import Data.List
 import Data.Set (Set)
 import qualified Data.Set as S
 
-import Control.Monad
+import Control.Monad 
+import Language.Haskell.TH.Ppr (pprint)
 
 import Data.GenRec.Label
 import Data.GenRec
 import Language.Grammars.AspectAG
 import Language.Grammars.AspectAG.RecordInstances
 import qualified Data.Kind as DK
+
+import Debug.Trace.LocationTH
 
 
 -- * Attribute labels
@@ -268,3 +272,10 @@ mkSemFuncs :: [Name] -> Q [Dec]
 mkSemFuncs
   = liftM concat . sequence . map (mkSemFunc)
 
+
+here :: Q Exp
+here = location >>= \loc -> [e| Proxy @( Text $(str2Sym . ppLoc $ loc) ) |]
+ where
+   ppLoc (Loc file _pack mod (line, startcol) (_line', endcol)) =
+     "   location: (module: " ++ mod ++ ", line:" ++ show line
+     ++ " cols: " ++ show (startcol, endcol) ++ ")"
