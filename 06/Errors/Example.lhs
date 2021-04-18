@@ -42,18 +42,32 @@ All this information is given in the following lines of code:
 > import Language.Grammars.AspectAG hiding (syndefM)
 > import qualified Language.Grammars.AspectAG  as AAG
 > import Language.Grammars.AspectAG.TH
+> -- import Language.Grammars.AspectAG.THGen
 > import Data.Map as M
 > import GHC.TypeLits
+
+> import Debug.Trace.LocationTH
+
 
 > import Data.Proxy -- ocultar, should be exported by AspectAG
 
 
 > syndefM att prd def =
->   traceRule (mkMsg att prd) $
+>   -- traceRule (mkMsg att prd) $
 >    AAG.syndefM att prd def
 
+> mkMsgPos :: Label ('Att att v) -> Label ('Prd prd nt) -> Proxy pos
+>   -> Proxy (Text att :<>: Text " definition in production "
+>             :<>:Text prd :<>: Text "info:":<>: Text pos)
+> mkMsgPos Label Label Proxy = Proxy
+
+ > synLoc att prd def =
+ >   traceRule (mkMsgPos att prd $here) $
+ >    syndefM att prd def
+
+
 > mkMsg :: Label ('Att att v) -> Label ('Prd prd nt)
->   -> Proxy (Text att :<>: Text " definition in production ":<>:Text prd)
+>   -> Proxy (Text att :<>: Text " definition in prod ":<>:Text prd)
 > mkMsg Label Label = Proxy
 
 > type Nt_Expr = 'NT "Expr"
@@ -128,20 +142,21 @@ All this information is given in the following lines of code:
 
 > type Env = M.Map String Integer
 
-> add_eval'  = traceRule (Proxy @ ('Text "lala")) $
->   syn eval p_Add
+> add_eval  = 
+>   -- traceRule $here $
+>  syn eval p_Add
 >     $    (+) @Integer
 >     <$>  at ch_Add_l eval
 >     <*>  at ch_Add_r eval
 
-> add_eval = syndef eval p_Add (
->   \proxy fam ->
->     let sc = chi fam
->         l  = (sc .# ch_Add_l) #. eval
->         r  = (sc .# ch_Add_r) #. eval
->     in  (l + r :: Integer)
->    )
->   
+ > add_eval = syndef eval p_Add (
+ >   \proxy fam ->
+ >     let sc = chi fam
+ >         l  = (sc .# ch_Add_l) #. eval
+ >         r  = (sc .# ch_Add_r) #. eval
+ >     in  (l + r :: Integer)
+ >    )
+ >   
 
 
 > val_eval  =
@@ -160,12 +175,12 @@ All this information is given in the following lines of code:
 
 
 > asp_eval_num =
->     traceAspect (Proxy @ ('Text "definition of eval for numbers")) $
->     val_eval {- .+: var_eval -} .+: emptyAspect
+>     traceAspect (Proxy @ ('Text "definition of eval for numbers") +++ $here) $
+>     add_eval .+: val_eval .+: val_eval  .+: emptyAspect
 
 > asp_eval_nonum =
 >     traceAspect (Proxy @ ('Text "definition of eval for non numbers")) $
->     add_eval .+: var_eval
+>     var_eval
 >     .+: emptyAspect
 
 
@@ -183,7 +198,7 @@ All this information is given in the following lines of code:
 >   inhdefM env p_Add ch_Add_r (at lhs env)
 
 > asp_env = traceAspect (Proxy @('Text "env")) $
->         add_env_l  .+: add_env_r  .+: emptyAspect
+>         add_env_l .+: add_env_r  .+: emptyAspect
 
 
 > asp_sem = asp_eval .:+: asp_env
