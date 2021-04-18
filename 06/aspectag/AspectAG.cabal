@@ -59,6 +59,7 @@ library
   -- Modules exported by the library.
   exposed-modules:     Language.Grammars.AspectAG,
                        Language.Grammars.AspectAG.TH,
+                       Language.Grammars.AspectAG.THGen,
                        Language.Grammars.AspectAG.HList,
                        Language.Grammars.AspectAG.RecordInstances
 
@@ -93,7 +94,8 @@ library
                        mtl >= 2.0,
                        poly-rec >=0.6 && <0.7,
                        requirements >=0.6 && <0.7,
-                       template-haskell >= 2.13
+                       template-haskell >= 2.13,
+                       loch-th  >= 0.2.2
  
 
   -- Directories containing source files.

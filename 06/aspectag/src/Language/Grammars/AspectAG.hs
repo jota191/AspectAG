@@ -483,10 +483,19 @@ type family SP (rule :: Type) where
 
 type family Syndef t t' ctx att sp sp' prd prd' :: Constraint where
   Syndef t t' ctx att sp sp' prd prd' =
-     ( RequireEq t t' ctx
+     ( RequireEqWithMsg t t' AttTypeMatch ctx--
+     --, RequireEq t t' ctx
      , RequireEq prd prd' ctx
      , RequireR (OpExtend AttReco ('Att att t) t' sp) ctx (Attribution sp')
      )
+
+data AttTypeMatch (a::k)(b::k) where
+  AttTypeMatch :: a -> b -> AttTypeMatch a b
+type instance Eval (AttTypeMatch t1 t2) =
+    ( ShowTE t1 :<>: Text " /= " :<>: ShowTE t2 :$$:
+      Text "type mismatch in attribute definition" :$$:
+      Text "attribute type does not match with \
+          \the computation that defines it")
 
 -- | The function 'syndef' adds the definition of a synthesized
 --   attribute.  It takes an attribute label 'att' representing the
@@ -523,32 +532,35 @@ syndef att prd f
 --                                    return (sizeatchi + 1)
 -- @
 
-syndefM att prd def =
-  traceRule (mkMsg att prd) $
-   syn att prd def
 
-
-mkMsg :: Label ('Att att t) -> Label ('Prd prd nt)
-  -> Proxy (AttDef att t prd nt)
-mkMsg Label Label = Proxy
-
-type family AttDef att t prd nt where
-  AttDef att t prd nt =
-         Text "- syndef: definition of "
-    :<>: ShowTE ('Att att t) :$$: Text "   in "
+type family SyndefMsg att t prd nt where
+  SyndefMsg att t prd nt =
+         Text "- syndef: definition of attribute "
+    :<>: ShowTE ('Att att t) :$$: Text "   in production "
     :<>: ShowTE ('Prd prd nt)
+mkSyndefMsg :: Label ('Att att t) -> Label ('Prd prd nt)
+  -> Proxy (SyndefMsg att t prd nt)
+mkSyndefMsg Label Label = Proxy
+
 
 -- | This is simply an alias for 'syndef'
 syn
-  :: Syndef t t' (AttDef att t prd nt : ctx) att sp sp' prd prd'
+  :: Syndef t t' (SyndefMsg att t prd nt ': ctx) att sp sp' prd prd'
   => Label ('Att att t)
   -> Label ('Prd prd nt)
-  -> Reader (Proxy (AttDef att t prd nt : ctx),
+  -> Reader (Proxy (SyndefMsg att t prd nt ': ctx),
              Fam ('Prd prd' nt) sc ip) t'
   -> CRule ctx ('Prd prd nt) sc ip ic sp ic sp'
-syn att prd f = mapCRule (mkMsg att prd `consErr`) $ (syndef att prd . def) f
+syn att prd f = mapCRule (mkSyndefMsg att prd `consErr`) $ (syndef att prd . def) f
 
---   traceRule (mkMsg att prd) $ (syndef att prd . def) f
+syndefM
+  :: Syndef t t' (SyndefMsg att t prd nt ': ctx) att sp sp' prd prd'
+  => Label ('Att att t)
+  -> Label ('Prd prd nt)
+  -> Reader (Proxy (SyndefMsg att t prd nt ': ctx),
+             Fam ('Prd prd' nt) sc ip) t'
+  -> CRule ctx ('Prd prd nt) sc ip ic sp ic sp'
+syndefM att prd f = mapCRule (mkSyndefMsg att prd `consErr`) $ (syndef att prd . def) f
 
 -- |synthesized poly rule
 --synP (att :: forall v. Label ('Att k v)) prd rul
@@ -601,12 +613,6 @@ type family Inhdef t t' ctx att r v2 prd nt chi ntch ic ic' n where
     , ntch ~ ('Left n)
     
     )
-
--- ((Text "inhdef("
---                 :<>: ShowTE ('Att att t)  :<>: Text ", "
---                 :<>: ShowTE ('Prd prd nt) :<>: Text ", "
---                 :<>: ShowTE ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
---                 ': ctx)
 
 inhdef
   :: Inhdef t t' ctx att r v2 prd nt chi ntch ic ic' n
