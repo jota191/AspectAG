@@ -51,15 +51,25 @@ type instance Cmp ('Chi a _ _) ('Chi b _ _) =
   CmpSymbol a b
 
 
-type instance  ShowTE ('Att l t)   = Text  "Attribute (" :<>: Text l
-                                                         :<>: Text ":"
-                                                         :<>: ShowTE t
-                                                         :<>: Text ")"
-type instance  ShowTE ('Prd l nt)  = Text "Production "
-                                  :<>: Text l :<>: Text " of "
-                                  :<>: ShowTE nt
-type instance  ShowTE ('Chi l p s) = Text "Child " :<>: Text l 
-                                    :<>: Text " of producion " :<>: ShowTE p
+type instance  ShowTE ('Att l t)   =
+  Text "(" :<>:
+  Text l   :<>:
+  Text ":" :<>:
+  ShowTE t :<>:
+  Text ")"
+type instance  ShowTE ('Prd l nt)  =
+  Text "(" :<>:
+  Text l   :<>:
+  Text " of " :<>:
+  ShowTE nt :<>:
+  Text ")"
+
+type instance  ShowTE ('Chi l p s) =
+  Text "Child " :<>:
+  Text l  :<>:
+  Text " of producion " :<>:
+  ShowTE p
+  
 type instance  ShowTE ('Left l)    = ShowTE l
 type instance  ShowTE ('Right r)   = ShowTE r
 type instance  ShowTE ('NT l)      = Text "Non-Terminal " :<>: Text l
@@ -80,7 +90,7 @@ type instance  WrapField Reco     (v :: Type) = v
 
 -- | Type level show utilities
 type instance ShowRec Reco         = "Record"
-type instance ShowField Reco       = "field named "
+type instance ShowField Reco       = "field "
 
 
 type Tagged = TagField Reco
@@ -138,7 +148,7 @@ type instance  WrapField AttReco  (v :: Type) = v
 
 -- | type level utilities
 type instance ShowRec AttReco      = "Attribution"
-type instance ShowField AttReco       = "attribute named "
+type instance ShowField AttReco       = "attribute"
 
 -- | Pattern Synonyms
 -- pattern EmptyAtt :: Attribution '[]
