@@ -484,8 +484,7 @@ type family SP (rule :: Type) where
 type family Syndef t t' ctx att sp sp' prd prd' :: Constraint where
   Syndef t t' ctx att sp sp' prd prd' =
      ( RequireEqWithMsg t t' AttTypeMatch ctx--
-     --, RequireEq t t' ctx
-     , RequireEq prd prd' ctx
+     , RequireEqWithMsg prd prd' PrdTypeMatch ctx
      , RequireR (OpExtend AttReco ('Att att t) t' sp) ctx (Attribution sp')
      )
 
@@ -496,6 +495,14 @@ type instance Eval (AttTypeMatch t1 t2) =
       Text "type mismatch in attribute definition" :$$:
       Text "attribute type does not match with \
           \the computation that defines it")
+
+data PrdTypeMatch (a::k)(b::k) where
+  PrdTypeMatch :: a -> b -> PrdTypeMatch a b
+type instance Eval (PrdTypeMatch t1 t2) =
+    ( ShowTE t1 :<>: Text " /= " :<>: ShowTE t2 :$$:
+      Text "mismatch in production type. \
+           \Perhaps you are trying to get data from a \
+           \children of a wrong production?")
 
 -- | The function 'syndef' adds the definition of a synthesized
 --   attribute.  It takes an attribute label 'att' representing the
@@ -710,9 +717,9 @@ class At pos att m  where
 instance ( RequireR (OpLookup (ChiReco prd') ('Chi ch prd nt) chi) ctx
                     (Attribution r)
          , RequireR (OpLookup AttReco ('Att att t) r) ctx t'
-         , RequireEq prd prd' ctx
+         , RequireEqWithMsg prd prd' PrdTypeMatch ctx
          , RequireEq t t' ctx
-         , RequireEq ('Chi ch prd nt) ('Chi ch prd ('Left ('NT n)))  ctx
+         --, RequireEq ('Chi ch prd nt) ('Chi ch prd ('Left ('NT n)))  ctx
          , ReqR (OpLookup @Att @Type AttReco ('Att att t') (UnWrap @Att @Type (Rec AttReco r)))
                         ~ t'
          
@@ -732,7 +739,7 @@ instance ( RequireR (OpLookup (ChiReco prd') ('Chi ch prd nt) chi) ctx
 
 instance
          ( RequireR (OpLookup @Att @Type AttReco ('Att att t) par) ctx t
-         , RequireEq t t' ctx
+         , RequireEqWithMsg t t' AttTypeMatch ctx
          )
  => At Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))  where
  type ResAt Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))
@@ -747,7 +754,7 @@ def = curry . runReader
 ter :: ( RequireR (OpLookup (ChiReco prd) pos chi) ctx
                   (Attribution r)
        , RequireR (OpLookup AttReco ('Att "term" t) r) ctx t
-       , RequireEq prd prd' ctx
+       , RequireEqWithMsg prd prd' PrdTypeMatch ctx
        -- , RequireEq t t' ctx
        , ReqR (OpLookup AttReco ('Att "term" t) (UnWrap @Att @Type (Attribution r)))
                         ~ t
