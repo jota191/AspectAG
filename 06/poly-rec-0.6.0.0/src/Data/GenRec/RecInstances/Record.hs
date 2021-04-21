@@ -130,7 +130,9 @@ type TaggedRecord (l :: Nat) (r :: [(Symbol, Type)]) = TagField Mat l r
 pattern TaggedRecord :: forall l r. Record r -> TaggedRecord l r
 pattern TaggedRecord r = TagField Label Label r
 
-type instance Cmp (m :: Nat) (n :: Nat) = CmpNat m n
+
+instance OrdType Nat where
+  type Cmp (m :: Nat) (n :: Nat) = CmpNat m n
 
 
 --m = TaggedRecord @1 r .*. TaggedRecord @2 emptyRecord .*. EmptyRec 

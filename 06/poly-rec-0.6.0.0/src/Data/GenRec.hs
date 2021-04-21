@@ -86,6 +86,8 @@ module Data.GenRec
     (.=.),
     (#),
     (.*.),
+
+    OrdType,
     Cmp,
     ShowRec,
     ShowField,
@@ -173,11 +175,16 @@ untagField (TagField lc lv v) = v
 
 -- | comparisson of Labels, this family is polykinded, each record-like
 -- structure must implement this family for its labels
-type family Cmp (a :: k) (b :: k) :: Ordering
+--type family Cmp (a :: k) (b :: k) :: Ordering
 
 -- | Instance for Symbols
-type instance Cmp (a :: Symbol) (b :: Symbol) = CmpSymbol a b
+--type instance Cmp (a :: Symbol) (b :: Symbol) = CmpSymbol a b
 
+class OrdType k where
+  type Cmp (a :: k) (b :: k) :: Ordering
+
+instance OrdType Symbol where
+  type Cmp a b = CmpSymbol a b
 
 -- | Function to show the name of records (Record, Mapping, etc):
 type family ShowRec c :: Symbol
