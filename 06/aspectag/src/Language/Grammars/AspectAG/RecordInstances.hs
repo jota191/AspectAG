@@ -41,14 +41,16 @@ prdFromChi :: Label (Chi nam prd tnt) -> Label prd
 prdFromChi _ = Label
 
 
-type instance Cmp ('Att a _) ('Att b _) =
-  CmpSymbol a b
+instance OrdType Att where
+   type Cmp ('Att a _) ('Att b _)
+     = CmpSymbol a b
 
-type instance Cmp ('Prd a _) ('Prd b _) =
-  CmpSymbol a b
+instance OrdType Prod where 
+  type Cmp ('Prd a _) ('Prd b _)
+    = CmpSymbol a b
 
-type instance Cmp ('Chi a _ _) ('Chi b _ _) =
-  CmpSymbol a b
+instance OrdType Child where
+  type Cmp ('Chi a _ _) ('Chi b _ _) = CmpSymbol a b
 
 
 type instance  ShowTE ('Att l t)   =
