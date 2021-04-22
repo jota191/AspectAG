@@ -30,6 +30,7 @@ Portability : POSIX
 {-# LANGUAGE IncoherentInstances       #-}
 {-# LANGUAGE AllowAmbiguousTypes       #-}
 {-# LANGUAGE UnicodeSyntax             #-}
+{-# LANGUAGE ImpredicativeTypes        #-}
 
 module Language.Grammars.AspectAG
   (
@@ -540,34 +541,49 @@ syndef att prd f
 -- @
 
 
-type family SyndefMsg att t prd nt where
-  SyndefMsg att t prd nt =
+data SyndefMsg
+data InhdefMsg
+
+type family MkMsg msgtype att t prd nt where
+  MkMsg SyndefMsg att t prd nt =
          Text "- syndef: definition of attribute "
     :<>: ShowTE ('Att att t) :$$: Text "   in production "
     :<>: ShowTE ('Prd prd nt)
+  MkMsg InhdefMsg att t prd nt =
+         Text "- inhdef: definition of attribute "
+    :<>: ShowTE ('Att att t) :$$: Text "   in production "
+    :<>: ShowTE ('Prd prd nt)
+
 mkSyndefMsg :: Label ('Att att t) -> Label ('Prd prd nt)
-  -> Proxy (SyndefMsg att t prd nt)
+  -> Proxy (MkMsg SyndefMsg att t prd nt)
 mkSyndefMsg Label Label = Proxy
+
+mkMsg :: Proxy msg -> Label ('Att att t) -> Label ('Prd prd nt)
+  -> Proxy (MkMsg msg att t prd nt)
+mkMsg Proxy Label Label = Proxy
 
 
 -- | This is simply an alias for 'syndef'
 syn
-  :: Syndef t t' (SyndefMsg att t prd nt ': ctx) att sp sp' prd prd'
+  :: Syndef t t' (MkMsg SyndefMsg att t prd nt ': ctx) att sp sp' prd prd'
   => Label ('Att att t)
   -> Label ('Prd prd nt)
-  -> Reader (Proxy (SyndefMsg att t prd nt ': ctx),
+  -> Reader (Proxy (MkMsg SyndefMsg att t prd nt ': ctx),
              Fam ('Prd prd' nt) sc ip) t'
   -> CRule ctx ('Prd prd nt) sc ip ic sp ic sp'
-syn att prd f = mapCRule (mkSyndefMsg att prd `consErr`) $ (syndef att prd . def) f
+syn att prd f
+  = mapCRule (mkSyndefMsg att prd `consErr`) $ (syndef att prd . def) f
 
 syndefM
-  :: Syndef t t' (SyndefMsg att t prd nt ': ctx) att sp sp' prd prd'
+  :: Syndef t t' (MkMsg SyndefMsg att t prd nt ': ctx) att sp sp' prd prd'
   => Label ('Att att t)
   -> Label ('Prd prd nt)
-  -> Reader (Proxy (SyndefMsg att t prd nt ': ctx),
+  -> Reader (Proxy (MkMsg SyndefMsg att t prd nt ': ctx),
              Fam ('Prd prd' nt) sc ip) t'
   -> CRule ctx ('Prd prd nt) sc ip ic sp ic sp'
-syndefM att prd f = mapCRule (mkSyndefMsg att prd `consErr`) $ (syndef att prd . def) f
+syndefM att prd f
+  = mapCRule (mkMsg (Proxy @SyndefMsg) att prd `consErr`)
+    $ (syndef att prd . def) f
 
 -- |synthesized poly rule
 --synP (att :: forall v. Label ('Att k v)) prd rul
@@ -607,46 +623,47 @@ synmodM
 synmodM att prd = synmod att prd . def
 
 
-type family Inhdef t t' ctx att r v2 prd nt chi ntch ic ic' n where
-  Inhdef t t' ctx att r v2 prd nt chi ntch ic ic' n =
-    ( RequireEq t t' ctx
-    , RequireR  (OpExtend AttReco ('Att att t) t' r) ctx (Attribution v2)
-    , RequireR (OpUpdate (ChiReco ('Prd prd nt))
-                 ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
-                 (ChAttsRec ('Prd prd nt) ic')
-    , RequireR (OpLookup (ChiReco ('Prd prd nt))
-                 ('Chi chi ('Prd prd nt) ntch) ic) ctx
-                 (Attribution r)
-    , ntch ~ ('Left n)
-    
+type family Inhdef t t' ctx att r v2 prd prd' nt nt' chi ntch ic ic' n
+  where
+  Inhdef t t' ctx att r v2 prd prd' nt nt' chi ntch ic ic' n
+   = ( RequireEq t t'     ctx
+     , RequireEq prd prd' ctx
+     , RequireEq nt  nt'  ctx
+     , RequireR (OpExtend AttReco ('Att att t) t' r) ctx (Attribution v2)
+     , RequireR (OpUpdate (ChiReco ('Prd prd nt))
+                  ('Chi chi ('Prd prd' nt') ntch) v2 ic) ctx
+                    (ChAttsRec ('Prd prd' nt') ic')
+     , RequireR (OpLookup (ChiReco ('Prd prd nt))
+                  ('Chi chi ('Prd prd' nt') ntch) ic) ctx (Attribution r)
+    --, ntch ~ ('Left n)
     )
 
 inhdef
-  :: Inhdef t t' ctx att r v2 prd nt chi ntch ic ic' n
-     =>
-     Label ('Att att t)
-     -> Label ('Prd prd nt)
-     -> Label ('Chi chi ('Prd prd nt) ntch)
-     -> (Proxy ctx -> Fam ('Prd prd nt) sc ip -> t')
-     -> forall sp . CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
-inhdef  att prd chi f
-  = CRule $ \ctx inp (Fam ic sp)
-       -> let ic'   = req ctx (OpUpdate chi catts' ic)
-              catts = req ctx (OpLookup chi ic)
-              catts'= req ctx (OpExtend  att (f Proxy inp) catts)
-          in  Fam ic' sp
+  :: Inhdef t t' ctx att r v2 prd prd' nt nt' chi ntch ic ic' n
+  => Label ('Att att t)
+  -> Label ('Prd prd nt)
+  -> Label ('Chi chi ('Prd prd' nt') ntch)
+  -> (Proxy ctx -> Fam ('Prd prd nt) sc ip -> t')
+  -> forall sp . CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
 
+inhdef att prd chi f =
+  CRule $ \ctx inp (Fam ic sp) ->
+    let ic' = req ctx (OpUpdate chi catts' ic)
+        catts = req ctx (OpLookup chi ic)
+        catts' = req ctx (OpExtend att (f Proxy inp) catts)
+     in Fam ic' sp
 
 
 inhdefM
-  :: Inhdef t t' ctx att r v2 prd nt chi ntch ic ic' n
-  =>
-  Label ('Att att t)
+  :: Inhdef t t' (MkMsg InhdefMsg att t prd nt ': ctx)
+       att r v2 prd prd' nt nt' chi ntch ic ic' n
+  => Label ('Att att t)
   -> Label ('Prd prd nt)
-  -> Label ('Chi chi ('Prd prd nt) ntch)
-  -> Reader (Proxy ctx, Fam ('Prd prd nt) sc ip) t'
+  -> Label ('Chi chi ('Prd prd' nt') ntch)
+  -> Reader (Proxy (MkMsg InhdefMsg att t prd nt ': ctx), Fam ('Prd prd nt) sc ip) t'
   -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
-inhdefM att prd chi = inhdef att prd chi . def
+inhdefM att prd chi f = mapCRule (mkMsg (Proxy @InhdefMsg) att prd `consErr`)
+    $ (inhdef att prd chi . def) f
 
 
 
@@ -709,7 +726,7 @@ data Lhs
 lhs :: Label Lhs
 lhs = Label
 
-class At pos att m  where
+class At pos att m where
  type ResAt pos att m
  at :: Label pos -> Label att -> m (ResAt pos att m)
 
@@ -719,10 +736,9 @@ instance ( RequireR (OpLookup (ChiReco prd') ('Chi ch prd nt) chi) ctx
          , RequireR (OpLookup AttReco ('Att att t) r) ctx t'
          , RequireEqWithMsg prd prd' PrdTypeMatch ctx
          , RequireEq t t' ctx
-         --, RequireEq ('Chi ch prd nt) ('Chi ch prd ('Left ('NT n)))  ctx
-         , ReqR (OpLookup @Att @Type AttReco ('Att att t') (UnWrap @Att @Type (Rec AttReco r)))
-                        ~ t'
-         
+         , ReqR (OpLookup @Att @Type AttReco ('Att att t')
+                 (UnWrap @Att @Type (Rec AttReco r)))
+           ~ t'         
          , r ~ UnWrap (Attribution r)
          )
       => At ('Chi ch prd nt) ('Att att t)
@@ -738,24 +754,22 @@ instance ( RequireR (OpLookup (ChiReco prd') ('Chi ch prd nt) chi) ctx
 
 
 instance
-         ( RequireR (OpLookup @Att @Type AttReco ('Att att t) par) ctx t
-         , RequireEqWithMsg t t' AttTypeMatch ctx
-         )
- => At Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))  where
- type ResAt Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))
+  ( RequireR (OpLookup @Att @Type AttReco ('Att att t) par) ctx t
+  , RequireEqWithMsg t t' AttTypeMatch ctx
+  )
+  =>
+  At Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))  where
+  type ResAt Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))
     = ReqR (OpLookup @Att @Type AttReco ('Att att t) (UnWrap @Att @Type (Rec AttReco par)))
- at lhs att
-  = liftM (\(ctx, Fam _ par) -> req ctx (OpLookup att par)) ask
+  at lhs att
+    = liftM (\(ctx, Fam _ par) -> req ctx (OpLookup att par)) ask
 
---def :: Reader (Proxy ctx, Fam prd chi par) a
---    -> (Proxy ctx -> (Fam prd chi par) -> a)
 def = curry . runReader
 
 ter :: ( RequireR (OpLookup (ChiReco prd) pos chi) ctx
                   (Attribution r)
        , RequireR (OpLookup AttReco ('Att "term" t) r) ctx t
        , RequireEqWithMsg prd prd' PrdTypeMatch ctx
-       -- , RequireEq t t' ctx
        , ReqR (OpLookup AttReco ('Att "term" t) (UnWrap @Att @Type (Attribution r)))
                         ~ t
        , RequireEq pos ('Chi ch prd (Right ('T t))) ctx
@@ -768,8 +782,6 @@ ter (ch :: Label ('Chi ch prd (Right ('T t))))
 
 type instance (UnWrap (Attribution r)) = r
 type instance (UnWrap @Att @Type (Rec c r)) = r
---type instance (UnWrap @Att @(GHC.Types.Any @Type)
---               (Attribution (r :: [(Att, Type )]))) = (r :: [(Att,Type)])
 
 
 class Kn (fcr :: [(Child, Type)]) (prd :: Prod) where
@@ -782,11 +794,9 @@ instance Kn '[] prod where
   type SCh '[] = '[] 
   kn _ _ = emptyCh
 
-instance ( lch ~ 'Chi l prd nt
-         , Kn fc prd
-         -- , LabelSet ('(lch, sch) : SCh fc)
-         -- , LabelSet ('(lch, ich) : ICh fc)
-         ) =>
+instance
+  Kn fc prd
+  =>
   Kn ( '(lch , Attribution ich -> Attribution sch) ': fc) prd where
   type ICh ( '(lch , Attribution ich -> Attribution sch) ': fc)
     = '(lch , ich) ': ICh fc
@@ -828,7 +838,7 @@ instance Empties '[] prd where
 
 instance
   ( Empties fcr prd
-  , chi ~ 'Chi ch prd nt
+  -- , chi ~ 'Chi ch prd nt
   )
   =>
   Empties ( '(chi, Attribution e -> Attribution a) ': fcr) prd where

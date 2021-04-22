@@ -77,7 +77,7 @@ type instance  ShowTE ('Right r)   = ShowTE r
 type instance  ShowTE ('NT l)      = Text "Non-Terminal " :<>: Text l
 type instance  ShowTE ('T  l)      = Text "Terminal " :<>: ShowTE l
 
-
+type instance ShowLabel l = FromEM (ShowTE l)
 
 -- | * Records
 
@@ -92,7 +92,7 @@ type instance  WrapField Reco     (v :: Type) = v
 
 -- | Type level show utilities
 type instance ShowRec Reco         = "Record"
-type instance ShowField Reco       = "field "
+type instance ShowField Reco       = "field"
 
 
 type Tagged = TagField Reco

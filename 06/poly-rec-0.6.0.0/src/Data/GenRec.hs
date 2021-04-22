@@ -91,6 +91,8 @@ module Data.GenRec
     Cmp,
     ShowRec,
     ShowField,
+    ShowLabel,
+    
     OpLookup(OpLookup),
     lookup,
     OpExtend(OpExtend),
@@ -192,6 +194,7 @@ type family ShowRec c :: Symbol
 -- | Function to show the field of the record ("field named", "children", "tag:", etc)
 type family ShowField c :: Symbol
 
+type family ShowLabel (l :: k) :: Symbol
 
 -- * Operations
 
@@ -224,7 +227,7 @@ instance
 instance
   Require (OpError (Text "field not Found on " :<>: Text (ShowRec c)
                      :$$: Text "looking up the " :<>: Text (ShowField c)
-                           :<>: Text " " :<>: ShowTE l
+                           :<>: Text " " :<>: Text (ShowLabel l)
                           )) ctx
   =>
   Require (OpLookup c l ( '[] :: [(k,k')])) ctx where
@@ -411,7 +414,7 @@ instance
   (Require (OpError (Text "cannot extend " :<>: Text (ShowRec c)
                      -- :<>: Text " because the label (" :<>: ShowT l
                      -- :<>: Text ") already exists"
-                    :$$: Text "colision in " :<>: Text (ShowField c)
+                    :$$: Text "collision in " :<>: Text (ShowField c)
                      :<>: Text " ":<>: ShowTE l)) ctx)
   =>
   Require (OpExtend' 'EQ c l v ( '(l, v') ': r)) ctx where
