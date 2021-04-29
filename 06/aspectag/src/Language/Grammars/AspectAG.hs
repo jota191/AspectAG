@@ -45,7 +45,7 @@ module Language.Grammars.AspectAG
     
     synmod, synmodM, -- synP,
 
-    -- inh,
+    inh,
     inhdef, inhdefM,
 
     inhmod, inhmodM, 
@@ -489,21 +489,32 @@ type family Syndef t t' ctx att sp sp' prd prd' :: Constraint where
      , RequireR (OpExtend AttReco ('Att att t) t' sp) ctx (Attribution sp')
      )
 
-data AttTypeMatch (a::k)(b::k) where
-  AttTypeMatch :: a -> b -> AttTypeMatch a b
+data AttTypeMatch (a::k)(b::k) -- where
+  -- AttTypeMatch :: a -> b -> AttTypeMatch a b
 type instance Eval (AttTypeMatch t1 t2) =
     ( ShowTE t1 :<>: Text " /= " :<>: ShowTE t2 :$$:
       Text "type mismatch in attribute definition" :$$:
       Text "attribute type does not match with \
           \the computation that defines it")
 
-data PrdTypeMatch (a::k)(b::k) where
-  PrdTypeMatch :: a -> b -> PrdTypeMatch a b
+data PrdTypeMatch (a :: k)(b :: k)
 type instance Eval (PrdTypeMatch t1 t2) =
     ( ShowTE t1 :<>: Text " /= " :<>: ShowTE t2 :$$:
       Text "mismatch in production type. \
            \Perhaps you are trying to get data from a \
            \children of a wrong production?")
+
+data ChiPrdMatch (a :: Prod)(b :: Prod)
+type instance Eval (ChiPrdMatch ('Prd att nt) ('Prd att' nt')) =
+    ( ShowTE  ('Prd att nt) :<>: Text " /= " :<>: ShowTE ('Prd att' nt') :$$:
+      Text "production and child mismatch in inherited attribute definition")
+
+
+data GetAttTypeMatch (a::k)(b::k) where
+  GetAttTypeMatch :: a -> b -> GetAttTypeMatch a b
+type instance Eval (GetAttTypeMatch t1 t2) =
+    ( ShowTE t1 :<>: Text " /= " :<>: ShowTE t2 :$$:
+      Text "ill typed attribute computation")
 
 -- | The function 'syndef' adds the definition of a synthesized
 --   attribute.  It takes an attribute label 'att' representing the
@@ -626,9 +637,9 @@ synmodM att prd = synmod att prd . def
 type family Inhdef t t' ctx att r v2 prd prd' nt nt' chi ntch ic ic' n
   where
   Inhdef t t' ctx att r v2 prd prd' nt nt' chi ntch ic ic' n
-   = ( RequireEq t t'     ctx
-     , RequireEq prd prd' ctx
-     , RequireEq nt  nt'  ctx
+   = ( RequireEqWithMsg t t' AttTypeMatch ctx
+     , RequireEqWithMsg ('Prd prd nt) ('Prd prd' nt') ChiPrdMatch ctx
+     --, RequireEq nt  nt'  ctx
      , RequireR (OpExtend AttReco ('Att att t) t' r) ctx (Attribution v2)
      , RequireR (OpUpdate (ChiReco ('Prd prd nt))
                   ('Chi chi ('Prd prd' nt') ntch) v2 ic) ctx
@@ -665,7 +676,16 @@ inhdefM
 inhdefM att prd chi f = mapCRule (mkMsg (Proxy @InhdefMsg) att prd `consErr`)
     $ (inhdef att prd chi . def) f
 
-
+inh
+  :: Inhdef t t' (MkMsg InhdefMsg att t prd nt ': ctx)
+       att r v2 prd prd' nt nt' chi ntch ic ic' n
+  => Label ('Att att t)
+  -> Label ('Prd prd nt)
+  -> Label ('Chi chi ('Prd prd' nt') ntch)
+  -> Reader (Proxy (MkMsg InhdefMsg att t prd nt ': ctx), Fam ('Prd prd nt) sc ip) t'
+  -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
+inh att prd chi f = mapCRule (mkMsg (Proxy @InhdefMsg) att prd `consErr`)
+    $ (inhdef att prd chi . def) f
 
 
 inhmod
@@ -735,7 +755,7 @@ instance ( RequireR (OpLookup (ChiReco prd') ('Chi ch prd nt) chi) ctx
                     (Attribution r)
          , RequireR (OpLookup AttReco ('Att att t) r) ctx t'
          , RequireEqWithMsg prd prd' PrdTypeMatch ctx
-         , RequireEq t t' ctx
+         , RequireEqWithMsg t t' GetAttTypeMatch ctx
          , ReqR (OpLookup @Att @Type AttReco ('Att att t')
                  (UnWrap @Att @Type (Rec AttReco r)))
            ~ t'         

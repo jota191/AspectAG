@@ -77,7 +77,8 @@ type instance  ShowTE ('Right r)   = ShowTE r
 type instance  ShowTE ('NT l)      = Text "Non-Terminal " :<>: Text l
 type instance  ShowTE ('T  l)      = Text "Terminal " :<>: ShowTE l
 
-type instance ShowLabel l = FromEM (ShowTE l)
+--type instance ShowLabel (l :: Symbol) = l
+--type instance ShowLabel (c :: k) = FromEM (ShowTE c)
 
 -- | * Records
 
