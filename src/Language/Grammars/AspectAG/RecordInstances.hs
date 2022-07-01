@@ -20,94 +20,58 @@
              AllowAmbiguousTypes,
              TypeApplications,
              PatternSynonyms,
-             PartialTypeSignatures,
-             TemplateHaskell,
-             InstanceSigs,
-             EmptyCase,
-             StandaloneKindSignatures
+             PartialTypeSignatures
 #-}
 
 module Language.Grammars.AspectAG.RecordInstances where
 
-import Data.GenRec
 import Data.Type.Require
---import GHC.TypeLits
+import Data.GenRec
+import GHC.TypeLits
 import Data.Kind
 import Data.Proxy
-import GHC.TypeLits
-import Data.Type.Bool
--- import Data.Type.Equality
-import Data.Singletons
-import Data.Singletons.TH
-import Data.Singletons.TypeLits
-import Data.Singletons.Prelude.Ord
-import Data.Singletons.Prelude.Eq
-import Data.Singletons.CustomStar
-import Data.Singletons.TypeLits
 
-
-
-data Att   = Att Symbol Type                   -- deriving Eq
+data Att   = Att Symbol Type                -- deriving Eq
 data Prod  = Prd Symbol NT                  -- deriving Eq
 data Child = Chi Symbol Prod (Either NT T)  -- deriving Eq
 data NT    = NT Symbol                      -- deriving Eq
-data T     = T Type 
- 
-prdFromChi :: Sing (Chi nam prd tnt) -> Sing prd
-prdFromChi _ = undefined -- Label
+data T     = T Type                         -- deriving Eq
 
-data SAtt (att :: Att) where
-  SAtt :: Sing s -> Sing t ->  SAtt ('Att s t)
-data SProd (prod :: Prod) where
-  SPrd :: Sing s -> Sing nt -> SProd ('Prd s nt)
-data SChild (child :: Child) where
-  SChi :: Sing s -> Sing prd -> Sing (tnt :: Either NT T)
-       -> SChild ('Chi s prd tnt)
-data SNT (nt :: NT) where
-  SNT :: Sing s -> SNT ('NT s)
-data ST (nt :: T) where
-  ST :: Sing t -> ST ('T t )
-data Lhs = Lhs
-data SLhs (lhs :: Lhs) where
-  SLhs :: SLhs 'Lhs
+prdFromChi :: Label (Chi nam prd tnt) -> Label prd
+prdFromChi _ = Label
 
-type instance Sing @Att = SAtt
-type instance Sing @Prod = SProd
-type instance Sing @Child = SChild
-type instance Sing @NT = SNT
-type instance Sing @T = ST
-type instance Sing @Lhs = SLhs
 
-lhs = SLhs
+instance OrdType Att where
+   type Cmp ('Att a _) ('Att b _)
+     = CmpSymbol a b
 
-instance PEq Type where
-  type instance a == b = 'True
-instance POrd Type where
-  type Compare (a:: Type) (b :: Type) = 'EQ
-instance SEq Type where
-  _ %== _ = sing :: Sing 'True 
-instance SOrd Type where
-  sCompare (_ :: Sing t1) (_ :: Sing t2) =
-    sing :: Sing (Apply (Apply CompareSym0 t1) t2)
+instance OrdType Prod where 
+  type Cmp ('Prd a _) ('Prd b _)
+    = CmpSymbol a b
+
+instance OrdType Child where
+  type Cmp ('Chi a _ _) ('Chi b _ _) = CmpSymbol a b
+
+
+type instance ShowTE ('Att l t) = Text ("(" `AppendSymbol` l
+  `AppendSymbol` ":" `AppendSymbol` FromEM(ShowTE t) `AppendSymbol`
+  ")")
+
+type instance ShowTE ('Prd l nt) = Text ( "(" `AppendSymbol` l
+    `AppendSymbol` " of " `AppendSymbol` FromEM (ShowTE nt)
+    `AppendSymbol` ")")
+
+type instance ShowTE ('Chi l p s) = Text ("Child " `AppendSymbol` l
+  `AppendSymbol` " of producion " `AppendSymbol` FromEM (ShowTE p))
   
-$(singEqInstances [''Att, ''Prod, ''Child, ''NT, ''T])
-$(singOrdInstances [''Att, ''Prod, ''Child, ''NT, ''T])
-$(singDecideInstances [''Prod, ''NT])
-
-type instance  ShowTE ('Att l t)   = Text  "Attribute " :<>: Text l
-                                                        :<>: Text ":"
-                                                        :<>: ShowTE t 
-type instance  ShowTE ('Prd l nt)  = ShowTE nt :<>: Text "::Production "
-                                              :<>: Text l
-type instance  ShowTE ('Chi l p s) = ShowTE p :<>:  Text "::Child " :<>: Text l 
-                                            :<>:  Text ":" :<>: ShowTE s
 type instance  ShowTE ('Left l)    = ShowTE l
 type instance  ShowTE ('Right r)   = ShowTE r
-type instance  ShowTE ('NT l)      = Text "Non-Terminal " :<>: Text l
-type instance  ShowTE ('T  l)      = Text "Terminal " :<>: ShowTE l
+type instance  ShowTE ('NT l)      = Text ("Non-Terminal " `AppendSymbol` l)
+type instance  ShowTE ('T  l)
+  = Text ("Terminal " `AppendSymbol` FromEM (ShowTE l))
 
-
-
+--type instance ShowLabel (l :: Symbol) = l
+--type instance ShowLabel (c :: k) = FromEM (ShowTE c)
 
 -- | * Records
 
@@ -122,11 +86,49 @@ type instance  WrapField Reco     (v :: Type) = v
 
 -- | Type level show utilities
 type instance ShowRec Reco         = "Record"
-type instance ShowField Reco       = "field named "
+type instance ShowField Reco       = "field"
 
+
+type Tagged = TagField Reco
+pattern Tagged :: v -> Tagged l v
+pattern Tagged v = TagField Label Label v
 
 
 -- ** Constructors
+
+-- -- | Pretty Constructor
+-- infixr 4 .=.
+-- (.=.) :: Label l -> v -> Tagged l v
+-- l .=. v = Tagged v
+
+-- -- | For the empty Record
+-- emptyRecord :: Record '[]
+-- emptyRecord = EmptyRec
+
+-- unTagged :: Tagged l v -> v
+-- unTagged (TagField _ _ v) = v
+
+-- -- * Destructors
+-- -- | Get a label
+-- label :: Tagged l v -> Label l
+-- label _ = Label
+
+-- -- | Same, mnemonically defined
+-- labelTChAtt :: Tagged l v -> Label l
+-- labelTChAtt _ = Label
+
+
+-- -- | Show instance, used for debugging
+-- instance Show (Record '[]) where
+--   show _ = "{}"
+
+-- instance (Show v, Show (Record xs)) =>
+--          Show (Record ( '(l,v) ': xs ) ) where
+--   show (ConsRec lv xs) = let tail = show xs
+--                          in "{" ++ show (unTagged lv)
+--                             ++ "," ++ drop 1 tail
+
+
 
 -- | * Attribution
 -- | An attribution is a record constructed from attributes
@@ -142,7 +144,7 @@ type instance  WrapField AttReco  (v :: Type) = v
 
 -- | type level utilities
 type instance ShowRec AttReco      = "Attribution"
-type instance ShowField AttReco       = "attribute named "
+type instance ShowField AttReco       = "attribute"
 
 -- | Pattern Synonyms
 -- pattern EmptyAtt :: Attribution '[]
@@ -154,31 +156,16 @@ type instance ShowField AttReco       = "attribute named "
 -- | Attribute
 
 type Attribute (l :: Att) (v :: Type) = TagField AttReco l v
---pattern Attribute :: v -> TagField AttReco l v
---pattern Attribute v = TagField Proxy (SAtt SSym undefined) v
+pattern Attribute :: v -> TagField AttReco l v
+pattern Attribute v = TagField Label Label v
 
 -- ** Constructors
 -- | Apretty constructor for an attribute 
 infixr 4 =.
 
-(=.) :: Sing l -> v -> Attribute l v
-sing =. v = TagField Proxy sing v
+(=.) :: Label l -> v -> Attribute l v
+Label =. v = Attribute v
 
-
-{-
-
-before: 
-(*.)
-  :: Attribute att val -> Attribution atts
-     -> Attribution (ReqR (OpExtend AttReco att val atts) ctx)
-
-after:
-(*.)
-  :: Attribute att val
-     -> Attribution atts -> Rec AttReco (Extend AttReco att val atts)
-λ>
-
--}
 
 -- | Extending
 infixr 2 *.
@@ -190,12 +177,21 @@ infixr 2 *.
 emptyAtt :: Attribution '[]
 emptyAtt = EmptyRec
 
--- -- ** Destructors
+-- ** Destructors
 infixl 7 #.
-(attr :: Attribution r) #. (l :: Label l) =
-  attr # l
 
-
+(#.) ::
+  ( msg ~ '[Text "looking up attribute " :<>: ShowTE l :$$:
+            Text "on " :<>: ShowTE r
+           ]
+  , Require (OpLookup AttReco l r) msg
+  )
+  => Attribution r -> Label l -> ReqR (OpLookup AttReco l r)
+(attr :: Attribution r) #. (l :: Label l)
+  = let prctx = Proxy @'[ 'Text "looking up attribute " :<>: ShowTE l :$$:
+                          'Text "on " :<>: ShowTE r
+                         ]
+    in req prctx (OpLookup @_ @(AttReco) l attr)
 
 
 -- * Children
@@ -216,93 +212,73 @@ type instance  WrapField (ChiReco prd) v
 type instance ShowRec (ChiReco a)     = "Children Map"
 type instance ShowField (ChiReco a)   = "child labelled "
 
--- -- ** Pattern synonyms
+-- ** Pattern synonyms
 
--- -- |since now we implement ChAttsRec as a generic record, this allows us to
--- --   recover pattern matching
--- -- pattern EmptyCh :: ChAttsRec prd '[]
--- -- pattern EmptyCh = EmptyRec
--- -- pattern ConsCh :: (LabelSet ( '( 'Chi ch prd nt, v) ': xs)) =>
--- --   TaggedChAttr prd ( 'Chi ch prd nt) v -> ChAttsRec prd xs
--- --                          -> ChAttsRec prd ( '( 'Chi ch prd nt,v) ': xs)
--- -- pattern ConsCh h t = ConsRec h t
+-- |since now we implement ChAttsRec as a generic record, this allows us to
+--   recover pattern matching
+-- pattern EmptyCh :: ChAttsRec prd '[]
+-- pattern EmptyCh = EmptyRec
+-- pattern ConsCh :: (LabelSet ( '( 'Chi ch prd nt, v) ': xs)) =>
+--   TaggedChAttr prd ( 'Chi ch prd nt) v -> ChAttsRec prd xs
+--                          -> ChAttsRec prd ( '( 'Chi ch prd nt,v) ': xs)
+-- pattern ConsCh h t = ConsRec h t
 
--- -- | Attributions tagged by a child
+-- | Attributions tagged by a child
 type TaggedChAttr prd = TagField (ChiReco prd)
-pattern TaggedChAttr :: Sing l -> WrapField (ChiReco prd) v
+pattern TaggedChAttr :: Label l -> WrapField (ChiReco prd) v
                      -> TaggedChAttr prd l v
 pattern TaggedChAttr l v
-  = TagField (Proxy :: Proxy (ChiReco prd)) l v
+  = TagField (Label :: Label (ChiReco prd)) l v
 
 
--- -- ** Constructors
--- -- | Pretty constructor for tagging a child
+-- ** Constructors
+-- | Pretty constructor for tagging a child
 infixr 4 .=
-(.=) :: Sing l -> WrapField (ChiReco prd) v -> TaggedChAttr prd l v
+(.=) :: Label l -> WrapField (ChiReco prd) v -> TaggedChAttr prd l v
 (.=) = TaggedChAttr
 
--- -- | Pretty constructors
+-- | Pretty constructors
 infixr 2 .*
 (tch :: TaggedChAttr prd ch attrib) .* (chs :: ChAttsRec prd attribs) = tch .*. chs
--- -- TODO: error instances if different prds are used?
+-- TODO: error instances if different prds are used?
 
--- -- | empty
+-- | empty
 emptyCh :: ChAttsRec prd '[]
 emptyCh = EmptyRec
 
--- -- ** Destructors
+-- ** Destructors
 unTaggedChAttr :: TaggedChAttr prd l v -> WrapField (ChiReco prd) v
 unTaggedChAttr (TaggedChAttr _ a) = a
 
-labelChAttr :: TaggedChAttr prd ('Chi s p tnt) a -> Sing ('Chi s p tnt)
-labelChAttr (TagField proxy s _)= s
+labelChAttr :: TaggedChAttr prd l a -> Label l
+labelChAttr _ = Label
 
--- infixl 8 .#
--- (.#) ::
---   (  c ~ ('Chi ch prd nt)
---   ,  ctx ~ '[Text "looking up " :<>: ShowTE c :$$:
---             Text "on " :<>: ShowTE r :$$:
---             Text "producion: " :<>: ShowTE prd
---            ]
---   , Require (OpLookup (ChiReco prd) c r) ctx
---   ) =>
---      Rec (ChiReco prd) r -> Label c -> ReqR (OpLookup (ChiReco prd) c r)
-(chi :: Rec (ChiReco prd) r) .# (l :: Label c) =
-  chi # l
-
---   = let prctx = Proxy @ '[Text "looking up " :<>: ShowTE c :$$:
---                           Text "on " :<>: ShowTE r :$$:
---                           Text "producion: " :<>: ShowTE prd
---                          ]
---     in req prctx (OpLookup @_ @(ChiReco prd) l chi)
+infixl 8 .#
+(.#) ::
+  (  c ~ ('Chi ch prd nt)
+  ,  ctx ~ '[Text "looking up " :<>: ShowTE c :$$:
+            Text "on " :<>: ShowTE r :$$:
+            Text "producion: " :<>: ShowTE prd
+           ]
+  , Require (OpLookup (ChiReco prd) c r) ctx
+  ) =>
+     Rec (ChiReco prd) r -> Label c -> ReqR (OpLookup (ChiReco prd) c r)
+(chi :: Rec (ChiReco prd) r) .# (l :: Label c)
+  = let prctx = Proxy @'[Text "looking up " :<>: ShowTE c :$$:
+                         Text "on " :<>: ShowTE r :$$:
+                         Text "producion: " :<>: ShowTE prd
+                         ]
+    in req prctx (OpLookup @_ @(ChiReco prd) l chi)
 
 
 
--- -- * Productions
+-- * Productions
 
 data PrdReco
 
---type instance  WrapField PrdReco (CRule p a b c d e f :: Type)
---  = CRule p a b c d e f
+type instance  WrapField PrdReco (rule :: Type)
+  = rule
 
 type Aspect (asp :: [(Prod, Type)]) = Rec PrdReco asp
 type instance ShowRec PrdReco       = "Aspect"
 type instance ShowField PrdReco     = "production named "
-
-
--- * Productions
-type family Terminal s :: Either NT T where
-  Terminal s = 'Right ('T s)
-
-type family NonTerminal s where
-  NonTerminal s = 'Left s
-
-prodFromChi :: (KnownSymbol prd, SingI nt) => 
-  Sing (Chi ch ('Prd prd nt) (NonTerminal nt')) -> Sing ('Prd prd nt)
-prodFromChi _ = sing
-
-instance (KnownSymbol s, SingI nt) => SingI (Prd s nt :: Prod) where
-  sing = SPrd sing sing
-
-instance (KnownSymbol s) => SingI ('NT s :: NT) where
-  sing = SNT sing

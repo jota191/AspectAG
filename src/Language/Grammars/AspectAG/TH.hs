@@ -27,12 +27,11 @@ Portability : POSIX
 {-# LANGUAGE FunctionalDependencies    #-}
 {-# LANGUAGE TemplateHaskell           #-}
 
+
 module Language.Grammars.AspectAG.TH where
 
 import Language.Haskell.TH
-import Language.Haskell.TH.Syntax (showName)
-import Data.Singletons.TypeLits
-import Data.Singletons.Prelude.Either
+import Language.Haskell.TH.Syntax (showName, location, Loc(..), Q, Exp, lift)
 import Data.Proxy
 import Data.Either
 import GHC.TypeLits
@@ -40,12 +39,16 @@ import Data.List
 import Data.Set (Set)
 import qualified Data.Set as S
 
-import Control.Monad
+import Control.Monad 
+import Language.Haskell.TH.Ppr (pprint)
 
+import Data.GenRec.Label
 import Data.GenRec
 import Language.Grammars.AspectAG
 import Language.Grammars.AspectAG.RecordInstances
 import qualified Data.Kind as DK
+
+import Debug.Trace.LocationTH
 
 
 -- * Attribute labels
@@ -58,16 +61,16 @@ str2Sym s = litT$ strTyLit s -- th provides nametoSymbol, btw
 -- and a quoted type
 attLabel :: String -> Name -> DecsQ
 attLabel s t
-  = [d| $(varP (mkName s)) = SAtt SSym sing :: Sing ( 'Att $(str2Sym s)
+  = [d| $(varP (mkName s)) = Label :: Label ( 'Att $(str2Sym s)
                                             $(conT t)) |]
 
 -- | for completness, to have a name as the next one
 attMono = attLabel
 
 -- | TH function to define a polymorphic attribute
---attPoly :: String -> DecsQ
---attPoly s
---    = [d| $(varP (mkName s)) = Label :: forall a . Label ( 'Att $(str2Sym s) a) |]
+attPoly :: String -> DecsQ
+attPoly s
+    = [d| $(varP (mkName s)) = Label :: forall a . Label ( 'Att $(str2Sym s) a) |]
 
 -- | multiple monomorphic attributes at once
 attLabels :: [(String,Name)] -> Q [Dec]
@@ -82,13 +85,11 @@ addNont s
 
 addNTLabel :: String -> Q [Dec]
 addNTLabel s
-  = [d| $(varP (mkName ("nt_" ++ s))) = SNT SSym :: Sing ('NT $(str2Sym s)) |]
+  = [d| $(varP (mkName ("nt_" ++ s))) = Label :: Label ('NT $(str2Sym s)) |]
 
 addNTType :: String -> Q [Dec]
 addNTType s
   = return [TySynD (mkName ("Nt_"++ s)) [] (AppT (PromotedT 'NT) (LitT (StrTyLit s)))]
-
-
 
 
 data SymTH = Ter Name | NonTer Name | Poly
@@ -100,20 +101,17 @@ addChi  :: String -- chi name
         -> Q [Dec]
 addChi chi prd (Ter typ)
   = [d| $(varP (mkName ("ch_" ++chi)))
-           = SChi SSym $(varE (mkName ("p_" ++ drop 2 (nameBase prd)))) (SRight $ ST sing )
-             :: Sing ( 'Chi $(str2Sym chi)
-                       $(conT prd)
-                       (Terminal $(conT typ)))|]
+           = Label :: Label ( 'Chi $(str2Sym chi)
+                                   $(conT prd)
+                                    (Terminal $(conT typ)))|]
 addChi chi prd (NonTer typ)
   = [d| $(varP (mkName ("ch_" ++chi)))
-           = SChi SSym $(varE (mkName ("p_" ++ drop 2 (nameBase prd)))) (SLeft $ SNT SSym )
-             :: Sing ( 'Chi $(str2Sym chi)
-                       $(conT prd)
-                       (NonTerminal $(conT typ)))|]
+           = Label :: Label ( 'Chi $(str2Sym chi)
+                                   $(conT prd)
+                                    (NonTerminal $(conT typ)))|]
 addChi chi prd poly
   = [d| $(varP (mkName ("ch_" ++chi)))
-           = SChi SSym $(varE (mkName ("p_" ++ drop 2 (nameBase prd)))) (SRight $ ST sing )
-             :: forall a . Sing ( 'Chi $(str2Sym chi)
+           = Label :: forall a . Label ( 'Chi $(str2Sym chi)
                                    $(conT prd)
                                     ('Right ('T a)))|]
 
@@ -126,8 +124,7 @@ addPrd prd nt = liftM concat . sequence
 
 addPrdLabel prd nt
   = [d| $(varP (mkName ("p_" ++ prd)))
-         = SPrd SSym $(varE (mkName ("nt_" ++ drop 3 (nameBase nt))))
-           :: Sing ('Prd $(str2Sym prd) $(conT nt))|]
+         = Label :: Label ('Prd $(str2Sym prd) $(conT nt))|]
 
 addPrdType prd nt
   = return [TySynD (mkName ("P_"++ prd)) []
@@ -235,7 +232,7 @@ mkClause i
                          (LitT (StrTyLit prdname)))
                    tlist) _
     -> Clause [VarP (mkName "asp"),
-               ConP (mkName $ prdname) [ VarP a | a <- map fst (getTList tlist)]]
+               ConP (mkName $ prdname)[] [ VarP a | a <- map fst (getTList tlist)]]
     (NormalB ((AppE (AppE (AppE (VarE $ mkName "knitAspect")
                            (VarE $ mkName $ "p_"++ prdname))
                       (VarE $ mkName "asp"))
@@ -275,3 +272,10 @@ mkSemFuncs :: [Name] -> Q [Dec]
 mkSemFuncs
   = liftM concat . sequence . map (mkSemFunc)
 
+
+here :: Q Exp
+here = location >>= \loc -> [e| Proxy @( Text $(str2Sym . ppLoc $ loc) ) |]
+ where
+   ppLoc (Loc file _pack mod (line, startcol) (_line', endcol)) =
+     "   location: (module: " ++ mod ++ ", line:" ++ show line
+     ++ " cols: " ++ show (startcol, endcol) ++ ")"

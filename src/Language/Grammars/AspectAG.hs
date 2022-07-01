@@ -1,3 +1,4 @@
+
 {-|
 Module      : Language.Grammars.AspectAG
 Description : Main module, First-class attribute grammars
@@ -30,26 +31,30 @@ Portability : POSIX
 {-# LANGUAGE IncoherentInstances       #-}
 {-# LANGUAGE AllowAmbiguousTypes       #-}
 {-# LANGUAGE UnicodeSyntax             #-}
+{-# LANGUAGE ImpredicativeTypes        #-}
 
 module Language.Grammars.AspectAG
   (
 
     -- * Rules
     Rule, CRule(..),
+    Fam,
+    chi, par,
     
     -- ** Defining Rules
-    syndef, syndefM, syn,
+    syndef, syndefM, syn, -- syndefC,
     
-    --synmod, synmodM,
+    synmod, synmodM, -- synP,
 
+    inh,
+    inhdef, inhdefM,
 
-    inh, inhdef, inhdefM,
-
-    --inhmod, inhmodM, 
+    inhmod, inhmodM, 
 
     emptyRule,
     emptyRuleAtPrd,
-    ext,
+    emptyRuleInst,
+    ext, (.+.), extP,
     
     -- * Aspects 
     -- ** Building Aspects.
@@ -61,33 +66,37 @@ module Language.Grammars.AspectAG
     (.+:),(◃),
     (.:+.),(▹),
     (.:+:),(⋈),
-    (.+.), (⋄),
+    (.#..), 
     
-    Terminal, NonTerminal,
-    Label, Prod(..), T(..), NT(..), Child(..), Att(..),
+    CAspect(..),
+    Label(Label), Prod(..), T(..), NT(..), Child(..), Att(..),
     (.#), (#.), (=.), (.=), (.*), (*.),
     emptyAtt,
     ter,
     at, lhs,
     sem_Lit,
     knitAspect,
-    -- traceAspect,
-    -- traceRule,
+    knit,
+    traceAspect,
+    traceRule,
     copyAtChi,
-    copyAtChis,
     -- use,
-    -- emptyAspectC,
-    -- emptyAspectForProds,
-    -- module Data.GenRec,
-    -- module Language.Grammars.AspectAG.RecordInstances,
-    module Language.Grammars.AspectAG.HList
-    
- )
+    emptyAspectC,
+    emptyAspectForProds,
+    module Data.GenRec,
+    module Language.Grammars.AspectAG.HList,
+    Terminal,
+    NonTerminal,
+
+    (+++),
+    empties
+  )
   where
 
 
 import Language.Grammars.AspectAG.HList
 import Language.Grammars.AspectAG.RecordInstances
+
 
 import Data.Type.Require hiding (emptyCtx)
 
@@ -97,40 +106,28 @@ import Data.GenRec.Label
 import Data.Kind
 import Data.Proxy
 import GHC.TypeLits
-import Data.Functor.Identity
 
 import Data.Maybe
 import Data.Type.Equality
 import Control.Monad.Reader
-
-import Data.Singletons
-import Data.Singletons.TH
-import Data.Singletons.TypeLits
-import Data.Singletons.Prelude.Ord
-import Data.Singletons.Prelude.Eq
-import Data.Singletons.Prelude.Either
-import Data.Singletons.CustomStar
-import Data.Singletons.Decide
-
-import Data.Singletons.Prelude.List (SList(SNil,SCons))
-
+import Data.Functor.Identity
 import GHC.Types
-import Unsafe.Coerce
 
-instance SingI (a :: Type) where {}
+import Debug.Trace.LocationTH
+
+infixr 3 &&
+type family (a :: Bool) && (b :: Bool) where
+  True && True = True
+  _ && _ = False
 
 class SemLit a where
   sem_Lit :: a -> Attribution ('[] :: [(Att,Type)])
                -> Attribution '[ '( 'Att "term" a , a)]
-  lit     :: Sing ('Att "term" a)
+  lit     :: Label ('Att "term" a)
 instance SemLit a where
-  sem_Lit a _ = (SAtt (SSym :: Sing "term") sing =. a) *. emptyAtt
-  lit         = SAtt (SSym @ "term") sing
+  sem_Lit a _ = (Label =. a) *. emptyAtt
+  lit         = Label @('Att "term" a)
 
-
-
-type instance  WrapField PrdReco (CRule p a b c d e f :: Type)
-  = CRule p a b c d e f
 
 -- * Families and Rules
 
@@ -141,24 +138,23 @@ data Fam (prd :: Prod)
          (c :: [(Child, [(Att, Type)])])
          (p :: [(Att, Type)]) :: Type
  where
-  Fam :: Sing prd -> ChAttsRec prd c -> Attribution p -> Fam prd c p
+  Fam :: ChAttsRec prd c -> Attribution p -> Fam prd c p
 
 
 -- | getter
 chi :: Fam prd c p -> ChAttsRec prd c
-chi (Fam _ c _) = c
+chi (Fam c p) = c
 
 -- | getter
 par :: Fam prd c p -> Attribution p
-par (Fam _ _  p) = p
+par (Fam c p) = p
 
 -- | getter (extracts a 'Label')
-prd :: Fam prd c p -> Sing prd
-prd (Fam l _ _) = l
+prd :: Fam prd c p -> Label prd
+prd (Fam c p) = Label
 
 -- | Rules are a function from the input family to the output family,
--- with an extra arity to make them composable.
--- They are indexed by a production.
+-- with an extra arity to make them composable.  They are indexed by a production.
 type Rule
   (prd  :: Prod)
   (sc   :: [(Child, [(Att, Type)])])
@@ -170,162 +166,105 @@ type Rule
   = Fam prd sc ip -> Fam prd ic sp -> Fam prd ic' sp'
 
 -- | Rules with context (used to print domain specific type errors).
-data CRule prd sc ip ic sp ic' sp'
-  = CRule { prod :: Sing prd,
-            mkRule :: Rule prd sc ip ic sp ic' sp'}
+newtype CRule (ctx :: [ErrorMessage]) prd sc ip ic sp ic' sp'
+  = CRule { mkRule :: (Proxy ctx -> Rule prd sc ip ic sp ic' sp')}
 
---emptyRule :: SingI prd => CRule prd ic sp '[] '[] '[] '[]
 emptyRule =
-  CRule sing (\fam inp -> inp)
+  CRule $ \Proxy -> \fam inp -> inp
 
+emptyRuleInst :: KList sc -> CRule ctx prd sc ip ic sp ic sp
+emptyRuleInst _ =
+  CRule $ \Proxy -> \fam ->
+    case fam of
+      Fam _ _ -> \fam -> fam
 
-emptyRuleAtPrd :: Sing prd -> CRule prd sc ip ic' sp' ic' sp'
-emptyRuleAtPrd prd = CRule prd (\fam inp -> inp)
+emptyRuleAtPrd :: Label prd -> CRule ctx prd sc ip ic' sp' ic' sp'
+emptyRuleAtPrd Label = emptyRule
 
 -- | Aspects, tagged with context. 'Aspect' is a record instance having
 -- productions as labels, containing 'Rule's as fields.
---newtype CAspect (asp :: [(Prod, Type)] )
---  = CAspect { mkAspect :: Proxy ctx -> Aspect asp}
+newtype CAspect (ctx :: [ErrorMessage]) (asp :: [(Prod, Type)] )
+  = CAspect { mkAspect :: Proxy ctx -> Aspect asp}
 
 -- | Recall that Aspects are mappings from productions to rules. They
 -- have a record-like interface to build them. This is the constructor
 -- for the empty Aspect.
-emptyAspect :: Aspect '[]
-emptyAspect  = EmptyRec
+emptyAspect :: CAspect ctx '[]
+emptyAspect  = CAspect $ const EmptyRec
 
 -- | combination of two Aspects. It merges them. When both aspects
 -- have rules for a given production, in the resulting Aspect the rule
 -- at that field is the combination of the rules for the arguments
 -- (with 'ext').
--- comAspect ::
---   ( Require (OpComAsp al ar) ctx
---   , ReqR (OpComAsp al ar) ~ Aspect asp
---   )
---   =>  CAspect ctx al -> CAspect ctx ar -> CAspect ctx asp
--- comAspect al ar
---   = CAspect $ \ctx -> req ctx (OpComAsp (mkAspect al ctx) (mkAspect ar ctx))
+comAspect ::
+  ( Require (OpComAsp al ar) ctx
+  , ReqR (OpComAsp al ar) ~ Aspect asp
+  )
+  =>  CAspect ctx al -> CAspect ctx ar -> CAspect ctx asp
+comAspect al ar
+  = CAspect $ \ctx -> req ctx (OpComAsp (mkAspect al ctx) (mkAspect ar ctx))
 
 
+-- * Trace utils
 
--- | Given two rules for a given (the same) production, it combines
--- them. Note that the production equality is visible in the context,
--- not sintactically. This is a use of the 'Require' pattern.
--- ext :: CRule prd sc ip ic sp ic' sp'
---     -> CRule prd sce ipe a b ice spe
---     -> CRule prd sc ip a b ic' sp'
-ext :: RequireEq prd prd' '[]
-     => CRule prd sc ip ic sp ic' sp'
-     -> CRule prd' sc ip a r ic sp
-     -> CRule prd sc ip a r ic' sp'
-(CRule p f) `ext` (CRule _ g)
- = CRule p $ \input -> f input . g input
+-- | |traceAspect| adds context to an aspect.
+traceAspect (_ :: Proxy (e::ErrorMessage))
+  = mapCAspect $ \(_ :: Proxy ctx) ->
+                   Proxy @((Text "- traceAspect: " :<>: e) : ctx)
 
-------------------------------------------
---f :: RequireEq a b '[] => a -> b -> a
---f x y = x
---
---g = f
-
--- g True "" does NOT give the nice error, that's why we annotate all..
-------------------------------------------
-infixr 6 ⋄
-(⋄) :: RequireEq prd prd' '[]
-    => CRule prd sc ip ic sp ic' sp'
-    -> CRule prd' sc ip a r ic sp
-    -> CRule prd sc ip a r ic' sp'
-(⋄) = ext
-
-infixr 6 .+.
-(.+.) :: RequireEq prd prd' '[]
-      => CRule prd sc ip ic sp ic' sp'
-      -> CRule prd' sc ip a r ic sp
-      -> CRule prd sc ip a r ic' sp'
-(.+.) = ext
+traceRule (_ :: Proxy (e::ErrorMessage))
+  = mapCRule $ \(_ :: Proxy ctx) ->
+                 Proxy @(Text "- traceRule: " :<>: e : ctx)
 
 
-type family (r :: Type) :+. (r' :: Type) :: Type
-type instance
- (CRule prd sc ip ic sp ic' sp') :+.
- (CRule prd sc ip a  b  ic  sp ) =
-  CRule prd sc ip a  b  ic' sp'
+mapCRule :: (Proxy ctx -> Proxy ctx')
+          -> CRule ctx' prd sc ip ic sp ic' sp'
+          -> CRule ctx  prd sc ip ic sp ic' sp'
+mapCRule fctx (CRule frule) = CRule $ frule . fctx
 
-type family
- ComRA (rule :: Type) (r :: [(Prod, Type)]) :: [(Prod, Type)]
- where
-  ComRA (CRule prd sc ip ic sp ic' sp') '[] =
-    '[ '(prd, CRule prd sc ip ic sp ic' sp')]
-  ComRA (CRule prd sc ip ic sp ic' sp')
-        ( '(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': r) =
-    FoldOrdering (Compare prd prd')
-     {-LT-} (  '(prd, CRule prd sc ip ic sp ic' sp')
-            ': '(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1')
-            ': r)
-    
-     {-EQ-} ( '(prd, (CRule prd sc ip ic sp ic' sp')
-                 :+. CRule prd' sc1 ip1 ic1 sp1 ic1' sp1')
-            ': r)
+mapCAspect fctx (CAspect fasp) = CAspect $
+       mapCtxRec fctx . fasp . fctx
 
-     {-GT-} ('(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1')
-            ':  ComRA (CRule prd sc ip ic sp ic' sp') r)
-  ComRA anything asp = TypeError (Text "cannot combine rule with aspect")
+class MapCtxAsp (r :: [(Prod,Type)]) (ctx :: [ErrorMessage])
+                                     (ctx' :: [ErrorMessage])  where
+  type ResMapCtx r ctx ctx' :: [(Prod,Type)]
+  mapCtxRec :: (Proxy ctx -> Proxy ctx')
+            -> Aspect r -> Aspect (ResMapCtx r ctx ctx')
 
-class ExtAspect r a where
-  extAspect
-   :: r
-   -> Aspect (a :: [(Prod, Type)])
-   -> Aspect (ComRA r a)
-class ExtAspect' (ord :: Ordering) r a where
-  extAspect'
-   :: Sing ord
-   -> r
-   -> Aspect (a :: [(Prod, Type)])
-   -> Aspect (ComRA r a)
-
-instance ExtAspect (CRule prd sc ip ic sp ic' sp') '[] where
-  extAspect cr@(CRule p r) EmptyRec = ConsRec (TagField Proxy p cr) EmptyRec
-
-instance (ExtAspect' (Compare prd prd') (CRule prd sc ip ic sp ic' sp')
-            ('(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': a))
-  =>
-  ExtAspect (CRule prd sc ip ic sp ic' sp')
-            ('(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': a) where
-  extAspect cr@((CRule p r) :: CRule prd sc ip ic sp ic' sp')
-            re@(ConsRec lv@(TagField _ p' r') rs) =
-    let cmp = sCompare p p'
-    in extAspect' cmp cr re
-
-instance (Compare prd prd' ~ 'LT)
-  =>
-  ExtAspect' 'LT (CRule prd sc ip ic sp ic' sp')
-             ('(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': a) where
-  extAspect' prf cr@((CRule p r) :: CRule prd sc ip ic sp ic' sp')
-                 re@(ConsRec lv@(TagField _ p' r') rs) =
-    case prf of
-      SLT -> ConsRec (TagField Proxy p cr) re
 instance
-  (Compare prd prd' ~ 'GT
-  , ExtAspect (CRule prd sc ip ic sp ic' sp') a
+  ( MapCtxAsp r ctx ctx' 
+  , ResMapCtx r ctx ctx' ~ r'
   )
   =>
-  ExtAspect' 'GT (CRule prd sc ip ic sp ic' sp')
-             ('(prd', CRule prd' sc1 ip1 ic1 sp1 ic1' sp1') ': a) where
-  extAspect' prf cr@((CRule p r) :: CRule prd sc ip ic sp ic' sp')
-                 re@(ConsRec lv@(TagField _ p' r') rs) =
-    case prf of
-      SGT -> ConsRec lv $ extAspect cr rs
-instance
-  ( Compare prd prd' ~ EQ
-  , sc ~ sce , ip ~ ipe, ic ~ ice, sp ~ spe
-  )
-  =>
-  ExtAspect' 'EQ (CRule prd sc ip ic sp ic' sp')
-             ('(prd', CRule prd' sce ipe ic1 sp1 ice spe) ': a) where
-  extAspect' prf cr@((CRule p r) :: CRule prd sc ip ic sp ic' sp')
-                 re@(ConsRec lv@(TagField _ p' r') rs) =
-    case prf of
-      SEQ -> case decideEquality p p' of
-        Just Refl
-          -> ConsRec (TagField Proxy p (cr `ext` r')) rs
+  MapCtxAsp ( '(l, CRule ctx' prd sc ip ic sp ic' sp') ': r) ctx ctx' where
+  type ResMapCtx ( '(l, CRule ctx' prd sc ip ic sp ic' sp') ': r) ctx ctx'
+     =  '(l, CRule ctx prd sc ip ic sp ic' sp') ':  ResMapCtx r ctx ctx'
+  mapCtxRec fctx (ConsRec (TagField c l r) rs) = (ConsRec (TagField c l
+                                                            (mapCRule fctx r))
+                                                          (mapCtxRec fctx rs))
+
+instance MapCtxAsp ('[] :: [(Prod,Type)]) ctx ctx' where
+  type ResMapCtx ('[] :: [(Prod,Type)]) ctx ctx'
+     =  '[]
+  mapCtxRec _ EmptyRec = EmptyRec
+
+
+-- | The "cons" for 'CAspect's. It adds a 'Rule' `rule`
+-- to a 'CAspect'. If there is no rule for that production in the
+-- argument it is a record extension. If the production is there, the
+-- rules are combined.
+extAspect
+  :: ExtAspect ctx prd sc ip ic sp ic' sp' a asp =>
+     CRule ctx prd sc ip ic sp ic' sp'
+     -> CAspect ctx a -> CAspect ctx asp
+extAspect rule (CAspect fasp)
+  = CAspect $ \ctx -> req ctx (OpComRA rule (fasp ctx))
+
+type ExtAspect ctx prd sc ip ic sp ic' sp' a asp
+  = (Require
+        (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') a) ctx,
+      ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') a)
+      ~ Rec PrdReco asp) 
 
 -- | An operator, alias for 'extAspect'. It combines a rule with an
 -- aspect, to build a bigger one.
@@ -346,82 +285,6 @@ infixl 3 .:+.
 infixl 3 ▹
 
 
-type family
-  ComAsp (r1 :: [(Prod, Type)]) (r2 :: [(Prod, Type)]) :: [(Prod, Type)]
- where
-  ComAsp '[] r2 = r2
-  ComAsp r1 '[] = r1
-  ComAsp ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1)
-         ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2) =
-    FoldOrdering (Compare prd1 prd2)
-    {-LT-} ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1')
-           ': ComAsp r1 ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2)
-           ) 
-    {-EQ-} ( '(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1'
-                     :+. CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2')
-           ': ComAsp r1 r2
-           )
-    {-GT-} ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2')
-           ': ComAsp ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) r2
-           )
-
-class ComAspect (r1 :: [(Prod, Type)])(r2 :: [(Prod, Type)]) where
-  comAspect :: Aspect r1 -> Aspect r2 -> Aspect (ComAsp r1 r2)
-instance ComAspect '[] r2 where
-  comAspect _ r = r
-instance ComAspect r1 '[] where
-  comAspect r _= r
-
-instance
-  (ComAspect' (Compare prd1 prd2)
-       ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1)
-       ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2) )
-  => ComAspect
-       ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1)
-       ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2) where
-  comAspect r1@(ConsRec (TagField _ prd1 crule1) asp1) 
-            r2@(ConsRec (TagField _ prd2 crule2) asp2) =
-    comAspect' (sCompare prd1 prd2) r1 r2
-
-class
-  ComAspect' (ord :: Ordering)
-             (r1 :: [(Prod, Type)])
-             (r2 :: [(Prod, Type)]) where
-  comAspect' :: Sing ord -> Aspect r1 -> Aspect r2
-             -> Aspect (ComAsp r1 r2)
-
-instance
-  ( Compare prd1 prd2 ~ LT
-  , ComAspect r1 ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2))
-  => ComAspect' LT
-            ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) 
-            ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2) where
-  comAspect' _ r1@(ConsRec cr1@(TagField _ prd1 crule1) asp1) 
-               r2@(ConsRec cr2@(TagField _ prd2 crule2) asp2) =
-    ConsRec cr1 $ comAspect asp1 r2
-instance
-  ( Compare prd1 prd2 ~ EQ
-  , prd1 ~ prd2
-  , ComAspect r1 r2
-  , sc ~ sc1, ip ~ ip1, ic ~ ic1, sp ~ sp1
-  )
-  => ComAspect' EQ
-            ('(prd1, CRule prd1 sc  ip  ic  sp  ic1' sp1') ': r1) 
-            ('(prd2, CRule prd2 sc1 ip1 ic2 sp2 ic1  sp1) ': r2) where
-  comAspect' _ r1@(ConsRec cr1@(TagField p prd1 crule1) asp1) 
-               r2@(ConsRec cr2@(TagField _ prd2 crule2) asp2) =
-       ConsRec (TagField p prd1 (crule1 `ext` crule2))$ comAspect asp1 asp2
-instance
-  ( Compare prd1 prd2 ~ GT
-  , ComAspect ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) r2)
-  => ComAspect' GT
-            ('(prd1, CRule prd1 sc1 ip1 ic1 sp1 ic1' sp1') ': r1) 
-            ('(prd2, CRule prd2 sc2 ip2 ic2 sp2 ic2' sp2') ': r2) where
-  comAspect' _ r1@(ConsRec cr1@(TagField _ prd1 crule1) asp1) 
-               r2@(ConsRec cr2@(TagField _ prd2 crule2) asp2) =
-    ConsRec cr2 $ comAspect r1 asp2
-
-
 -- | Operator for 'comAspect'. It takes two 'CAspect's to build the
 -- combination of both.
 (.:+:) = comAspect
@@ -431,76 +294,571 @@ infixr 4 .:+:
 (⋈) = comAspect
 infixr 4 ⋈
 
+ext' ::  RequireEq prd prd' (Text "ext":ctx) =>
+         CRule ctx prd sc ip ic sp ic' sp'
+     ->  CRule ctx prd' sc ip a b ic sp
+     ->  CRule ctx prd sc ip a b ic' sp'
+(CRule f) `ext'` (CRule g)
+ = CRule $ \ctx input -> f ctx input . g ctx input
+
+type PCRule p ctx prd sc ip ic sp ic' sp'
+  = Reader p (CRule ctx prd sc ip ic sp ic' sp') 
+
+-- | extension of polymorphic rules
+extP l r = \(p ::Proxy p) -> l p `ext` r p
+
+
+-- | Given two rules for a given (the same) production, it combines
+-- them. Note that the production equality is visible in the context,
+-- not sintactically. This is a use of the 'Require' pattern.
+ext ::   RequireEq prd prd' (Text "ext":ctx) 
+     => CRule ctx prd sc ip ic sp ic' sp'
+     -> CRule ctx prd' sc ip a b ic sp
+     -> CRule ctx prd sc ip a b ic' sp'
+ext = ext'
+
 -- | Singleton Aspect. Wraps a rule to build an Aspect from it.
 singAsp r
-  = r  .+: emptyAspect
+  = r .+: emptyAspect
+
+infixr 6 .+.
+(.+.) = ext
 
 
+-- | combine a rule with an aspect (wrapper)
+data OpComRA (ctx  :: [ErrorMessage])
+             (prd  :: Prod)
+             (rule :: Type) -- TODO : doc this
+             (a    :: [(Prod, Type)]) where
+  OpComRA :: CRule ctx prd sc ip ic sp ic' sp'
+          -> Aspect a -> OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') a
+
+-- | combine a rule with an aspect (inner)
+data OpComRA' (cmp  :: Ordering)
+              (ctx  :: [ErrorMessage])
+              (prd  :: Prod)
+              (rule :: Type) -- TODO : doc this
+              (a    :: [(Prod, Type)]) where
+  OpComRA' :: Proxy cmp
+           -> CRule ctx prd sc ip ic sp ic' sp'
+           -> Aspect a
+           -> OpComRA' cmp ctx prd (CRule ctx prd sc ip ic sp ic' sp') a
+
+cRuleToTagField :: (CRule ctx prd sc ip ic sp ic' sp')
+                -> TagField PrdReco prd (CRule ctx prd sc ip ic sp ic' sp')
+cRuleToTagField =
+  TagField Label Label
+
+instance
+  Require (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') '[]) ctx where
+  type ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') '[]) =
+    Aspect '[ '(prd, CRule ctx prd sc ip ic sp ic' sp')]
+  req ctx (OpComRA rule EmptyRec) =
+    ConsRec (cRuleToTagField rule) EmptyRec
+
+instance
+  Require (OpComRA' (Cmp prd prd') ctx prd rule ( '(prd', rule') ': asp )) ctx
+  =>
+  Require (OpComRA ctx prd rule ( '(prd', rule') ': asp )) ctx where
+  type ReqR (OpComRA ctx prd rule ( '(prd', rule') ': asp )) =
+    ReqR (OpComRA' (Cmp prd prd') ctx prd rule ( '(prd', rule') ': asp ))
+  req ctx (OpComRA rule asp) =
+    req ctx (OpComRA' (Proxy @(Cmp prd prd')) rule asp)
+
+instance
+  ( Require (OpUpdate PrdReco prd (CRule ctx prd sc ip ic sp ic'' sp'') a) ctx
+  , Require (OpLookup PrdReco prd a) ctx
+  , ReqR (OpLookup PrdReco prd a) ~ CRule ctx prd sc ip ic sp ic' sp'
+  , (IC (ReqR (OpLookup PrdReco prd a))) ~ ic
+  , (SP (ReqR (OpLookup PrdReco prd a))) ~ sp
+  ) =>
+  Require
+   (OpComRA' 'EQ ctx prd (CRule ctx prd sc ip ic' sp' ic'' sp'') a) ctx where
+  type ReqR (OpComRA' 'EQ ctx prd (CRule ctx prd sc ip ic' sp' ic'' sp'') a) =
+    ReqR (OpUpdate PrdReco prd
+            (CRule ctx prd sc ip
+             (IC (ReqR (OpLookup PrdReco prd a)))
+             (SP (ReqR (OpLookup PrdReco prd a)))
+            ic'' sp'') a)
+  req ctx (OpComRA' _ crule asp) =
+    let prd     = Label @prd
+        oldRule = req ctx (OpLookup prd asp)
+        newRule = crule `ext` oldRule
+    in  req ctx (OpUpdate prd newRule asp)
+
+instance
+  ( Require (OpComRA ctx prd rule asp) ctx
+  , ReqR (OpComRA ctx prd rule asp) ~ Aspect a0
+  )
+  =>
+  Require (OpComRA' 'GT ctx prd rule ( '(prd' , rule') ': asp)) ctx where
+  type ReqR (OpComRA' 'GT ctx prd rule ( '(prd' , rule') ': asp)) =
+    Aspect ( '(prd' , rule') ': UnWrap (ReqR (OpComRA ctx prd rule asp)))
+  req ctx (OpComRA' _ crule (ConsRec crule' asp)) =
+    ConsRec crule' $ req ctx (OpComRA crule asp)
+
+instance 
+  Require (OpComRA' 'LT ctx prd rule ( '(prd' , rule') ': asp)) ctx where
+  type ReqR (OpComRA' 'LT ctx prd rule ( '(prd' , rule') ': asp)) =
+    Aspect ( '(prd, rule) ': '(prd' , rule') ': asp)
+  req ctx (OpComRA' _ crule asp) =
+    ConsRec (TagField Label Label crule) asp
+
+
+
+-- | extract Rule from Aspect
+-- data OpGetRule (prd :: Prod)
+--                (a   :: [(Prod, Type)]) where
+--   OpGetRule :: Label prd -> CAspect ctx a -> OpGetRule prd a
+
+-- instance
+--   (Require (OpLookup AttReco prd a) ctx,
+--    ReqR (OpLookup PrdReco prd a) ~ Rule prd sc ip ic sp ic' sp'
+--   )
+--   =>
+--   Require (OpGetRule prd a) ctx where
+--   type ReqR (OpGetRule prd a) = ReqR (OpLookup @Prod @Type AttReco prd a)
+--   req ctx (OpGetRule prd (CAspect ca)) =
+--     let rule = req ctx (OpLookup prd (ca Proxy))
+--     in CRule $ \ctx -> rule
+
+data OpGetRA (ctx  :: [ErrorMessage])
+             (prd  :: Prod)
+             (a    :: [(Prod, Type)]) where
+  OpGetRA :: Label prd -> Aspect a -> OpGetRA ctx prd a
+
+instance
+  (Require (OpLookup PrdReco prd a) ctx)
+  =>
+  Require (OpGetRA ctx prd a) ctx where
+  type ReqR (OpGetRA ctx prd a) = ReqR (OpLookup PrdReco prd a)
+  req ctx (OpGetRA prd a) = req ctx (OpLookup prd a)
+-- todo: do not return units when not found
+
+
+-- (.#..)
+--   :: (Require (OpLookup PrdReco prd r) (('ShowType r : ctx0)),
+--       ReqR (OpLookup PrdReco prd r) ~ CRule ctx prd sc ip ic sp ic' sp') =>
+--      CAspect ctx r -> Label prd -> CRule ctx prd sc ip ic sp ic' sp'
+ca .#.. prd
+  = (mkAspect ca Proxy) # prd
+
+
+
+
+-- | add rule to an aspect
+data OpComAsp  (al :: [(Prod, Type)])
+               (ar :: [(Prod, Type)]) where
+  OpComAsp :: Aspect al -> Aspect ar -> OpComAsp al ar
+
+instance
+  Require (OpComAsp '[] ar) ctx where
+  type ReqR (OpComAsp '[] ar) = Aspect ar
+  req ctx (OpComAsp _ ar) = ar
+
+instance
+ ( (ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') ar))
+   ~ (Rec PrdReco
+    (UnWrap
+      (ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') ar))))
+ , ReqR (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') ar)
+   ~ Rec PrdReco ar0
+ , (Require (OpComAsp al ar0) ctx)
+ , (Require
+     (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') ar) ctx)
+ ) =>
+  Require (OpComAsp
+           ('(prd, CRule ctx prd sc ip ic sp ic' sp') ': al) ar) ctx where
+  type ReqR (OpComAsp ('(prd, CRule ctx prd sc ip ic sp ic' sp') ': al) ar) =
+    ReqR (OpComAsp al
+      (UnWrap (ReqR
+                (OpComRA ctx prd (CRule ctx prd sc ip ic sp ic' sp') ar))))
+  req ctx (OpComAsp (ConsRec (TagField _ _ rul) al) ar)
+    = req ctx (OpComAsp al (req ctx (OpComRA rul ar)))
+
+type family IC (rule :: Type) where
+  IC (Rule prd sc ip ic sp ic' sp') = ic
+  IC (CRule ctx prd sc ip ic sp ic' sp') = ic
+type family SP (rule :: Type) where
+  SP (Rule prd sc ip ic sp ic' sp') = sp
+  SP (CRule ctx prd sc ip ic sp ic' sp') = sp
+   
+
+type family Syndef t t' ctx att sp sp' prd prd' :: Constraint where
+  Syndef t t' ctx att sp sp' prd prd' =
+     ( RequireEqWithMsg t t' AttTypeMatch ctx--
+     , RequireEqWithMsg prd prd' PrdTypeMatch ctx
+     , RequireR (OpExtend AttReco ('Att att t) t' sp) ctx (Attribution sp')
+     )
+
+data AttTypeMatch (a::k)(b::k) -- where
+  -- AttTypeMatch :: a -> b -> AttTypeMatch a b
+type instance Eval (AttTypeMatch t1 t2) =
+    ( ShowTE t1 :<>: Text " /= " :<>: ShowTE t2 :$$:
+      Text "type mismatch in attribute definition" :$$:
+      Text "attribute type does not match with \
+          \the computation that defines it")
+
+data PrdTypeMatch (a :: k)(b :: k)
+type instance Eval (PrdTypeMatch t1 t2) =
+    ( ShowTE t1 :<>: Text " /= " :<>: ShowTE t2 :$$:
+      Text "mismatch in production type. \
+           \Perhaps you are trying to get data from a \
+           \children of a wrong production?")
+
+data ChiPrdMatch (a :: Prod)(b :: Prod)
+type instance Eval (ChiPrdMatch ('Prd att nt) ('Prd att' nt')) =
+    ( ShowTE  ('Prd att nt) :<>: Text " /= " :<>: ShowTE ('Prd att' nt') :$$:
+      Text "production and child mismatch in inherited attribute definition")
+
+
+data GetAttTypeMatch (a::k)(b::k) where
+  GetAttTypeMatch :: a -> b -> GetAttTypeMatch a b
+type instance Eval (GetAttTypeMatch t1 t2) =
+    ( ShowTE t1 :<>: Text " /= " :<>: ShowTE t2 :$$:
+      Text "ill typed attribute computation")
+
+-- | The function 'syndef' adds the definition of a synthesized
+--   attribute.  It takes an attribute label 'att' representing the
+--   name of the new attribute; a production label 'prd' representing
+--   the production where the rule is defined; a value 't'' to be
+--   assigned to this attribute, given a context and an input
+--   family. It updates the output constructed thus far.
+syndef
+  :: Syndef t t' ctx att sp sp' prd prd' 
+  => forall sc ip ic .
+     Label ('Att att t)
+  -> Label prd
+  -> (Proxy ctx -> Fam prd' sc ip -> t')
+  -> CRule ctx prd sc ip ic sp ic sp'
 syndef att prd f
-  = CRule prd $ \inp (Fam prd' ic sp)
-   ->  Fam prd ic $ att .=. (f inp) .*. sp
+  = CRule $ \ctx inp (Fam ic sp)
+   ->  Fam ic $ req ctx (OpExtend att (f Proxy inp) sp)
 
 
-syndefM att prd = syndef att prd . runReader
-syn = syndefM
+data  SyndefT t t' (ctx :: [ErrorMessage])
+                   (att :: Symbol)
+                   (sp :: [(Att, Type)])
+                   (sp' :: [(Att, Type)]) prd prd'
 
--- inhdef
---   :: (Update (ChiReco prd) l
---              (Extend AttReco att val (Lookup (ChiReco prd) l r))
---              r ~ chis
---      , att ~ ('Att attsym val)
---      , prd ~ ('Prd prdsym nt)
---      , l ~ 'Chi chisym ('Prd prdsym nt) ntch -- ('Left n)
---      )
---   => Sing att
---   -> Sing prd
---   -> Sing l
---   -> (Fam prd sc ip -> val)
---   -> CRule prd sc ip r sp'
---           chis
---           sp'
-inhdef att prd chi f
-  = CRule prd $ \inp (Fam prd ic sp)
-       -> let ic'   = update chi Proxy catts' ic
-              catts = ic .# chi
-              catts'= att =. f inp *. catts
-          in  Fam prd ic' sp
-inhdefM att prd chi =
-  inhdef att prd chi . runReader
+class Syndef' a
+instance
+     ( RequireEqWithMsg t t' AttTypeMatch ctx--
+     , RequireEqWithMsg prd prd' PrdTypeMatch ctx
+     , RequireR (OpExtend AttReco ('Att att t) t' sp) ctx (Attribution sp')
+     )
+      => Syndef' (SyndefT t t' ctx att sp sp' prd prd' )
 
-inh = inhdefM
+data Dummy
+instance Syndef' Dummy
 
-class At pos att m where
+-- syndef'
+--   :: Syndef' (SyndefT t t' ctx att sp sp' prd prd') 
+--   => forall sc ip ic .
+--      Label ('Att att t)
+--   -> Label prd
+--   -> (Proxy ctx -> Fam prd' sc ip -> t')
+--   -> CRule ctx prd' sc ip ic sp ic sp'
+-- syndef' att prd f
+--   = CRule $ \ctx inp (Fam ic sp)
+--    ->  Fam ic $ req ctx (OpExtend att (f Proxy inp) sp)
+
+
+
+
+-- | As 'syndef', the function 'syndefM' adds the definition of a
+--   synthesized attribute.  It takes an attribute label 'att'
+--   representing the name of the new attribute; a production label
+--   'prd' representing the production where the rule is defined; a
+--   value 't'' to be assigned to this attribute, given a context and
+--   an input family. It updates the output constructed thus far. This
+--   function captures the monadic behaviour of the family
+--   updating. For instance, the following definition specifies a rule
+--   for an attribute `att_size :: Label (Att "size" Int)` at the
+--   prduction `p_cons :: Label (Prd "cons" (NT "List"))`. The value
+--   is computed from the very same attribute value at a child
+--   `ch_tail :: Chi "tail" (Prd "cons" (NT "List") (Left NT))`
+--
+-- @
+-- foo = syndefM att_size p_cons $ do sizeatchi <- at ch_tail att_size
+--                                    return (sizeatchi + 1)
+-- @
+
+
+data SyndefMsg
+data InhdefMsg
+
+type family MkMsg msgtype att t prd nt where
+  MkMsg SyndefMsg att t prd nt =
+         Text "- syndef: definition of attribute "
+    :<>: ShowTE ('Att att t) :$$: Text "   in production "
+    :<>: ShowTE ('Prd prd nt)
+  MkMsg InhdefMsg att t prd nt =
+         Text "- inhdef: definition of attribute "
+    :<>: ShowTE ('Att att t) :$$: Text "   in production "
+    :<>: ShowTE ('Prd prd nt)
+
+mkSyndefMsg :: Label ('Att att t) -> Label ('Prd prd nt)
+  -> Proxy (MkMsg SyndefMsg att t prd nt)
+mkSyndefMsg Label Label = Proxy
+
+mkMsg :: Proxy msg -> Label ('Att att t) -> Label ('Prd prd nt)
+  -> Proxy (MkMsg msg att t prd nt)
+mkMsg Proxy Label Label = Proxy
+
+
+-- | This is simply an alias for 'syndef'
+syn
+  :: Syndef t t' (MkMsg SyndefMsg att t prd nt ': ctx) att sp sp' prd prd'
+  => Label ('Att att t)
+  -> Label ('Prd prd nt)
+  -> Reader (Proxy (MkMsg SyndefMsg att t prd nt ': ctx),
+             Fam ('Prd prd' nt) sc ip) t'
+  -> CRule ctx ('Prd prd nt) sc ip ic sp ic sp'
+syn att prd f
+  = mapCRule (mkSyndefMsg att prd `consErr`) $ (syndef att prd . def) f
+
+syndefM
+  :: Syndef t t' (MkMsg SyndefMsg att t prd nt ': ctx) att sp sp' prd prd'
+  => Label ('Att att t)
+  -> Label ('Prd prd nt)
+  -> Reader (Proxy (MkMsg SyndefMsg att t prd nt ': ctx),
+             Fam ('Prd prd' nt) sc ip) t'
+  -> CRule ctx ('Prd prd nt) sc ip ic sp ic sp'
+syndefM att prd f
+  = mapCRule (mkMsg (Proxy @SyndefMsg) att prd `consErr`)
+    $ (syndef att prd . def) f
+
+-- |synthesized poly rule
+--synP (att :: forall v. Label ('Att k v)) prd rul
+--  = \(p :: Proxy p) -> syndefM (att @ p) prd rul
+
+-- | This is simply an alias for 'inhdefM'
+--inh = inhdefM
+
+--inhP (att :: forall v. Label ('Att k v)) prd chi rul
+--  = \(p :: Proxy p) -> inhdefM (att @ p) prd chi rul
+
+synmod
+  :: RequireR (OpUpdate AttReco ('Att att t) t r) ctx (Attribution sp')
+  => Label ('Att att t)
+     -> Label prd
+     -> (Proxy
+           ((('Text "synmod(" ':<>: ShowTE ('Att att t)) :<>: Text ", "
+                              ':<>: ShowTE prd :<>: Text ")")
+              : ctx)
+         -> Fam prd sc ip -> t)
+     -> CRule ctx prd sc ip ic' r ic' sp'
+synmod att prd f
+  = CRule $ \ctx  inp (Fam ic sp)
+           -> Fam ic $ req ctx (OpUpdate att (f Proxy inp) sp)
+
+
+synmodM
+  :: RequireR (OpUpdate AttReco ('Att att t) t r) ctx (Attribution sp')
+  => Label ('Att att t)
+     -> Label prd
+     -> Reader ( Proxy ((('Text "synmod(" ':<>: ShowTE ('Att att t)) :<>: Text ", "
+                                          ':<>: ShowTE prd :<>: Text ")")
+                       : ctx)
+               , Fam prd sc ip)
+               t
+     -> CRule ctx prd sc ip ic' r ic' sp'
+synmodM att prd = synmod att prd . def
+
+
+type family Inhdef t t' ctx att r v2 prd prd' nt nt' chi ntch ic ic' n
+  where
+  Inhdef t t' ctx att r v2 prd prd' nt nt' chi ntch ic ic' n
+   = ( RequireEqWithMsg t t' AttTypeMatch ctx
+     , RequireEqWithMsg ('Prd prd nt) ('Prd prd' nt') ChiPrdMatch ctx
+     --, RequireEq nt  nt'  ctx
+     , RequireR (OpExtend AttReco ('Att att t) t' r) ctx (Attribution v2)
+     , RequireR (OpUpdate (ChiReco ('Prd prd nt))
+                  ('Chi chi ('Prd prd' nt') ntch) v2 ic) ctx
+                    (ChAttsRec ('Prd prd' nt') ic')
+     , RequireR (OpLookup (ChiReco ('Prd prd nt))
+                  ('Chi chi ('Prd prd' nt') ntch) ic) ctx (Attribution r)
+    --, ntch ~ ('Left n)
+    )
+
+inhdef
+  :: Inhdef t t' ctx att r v2 prd prd' nt nt' chi ntch ic ic' n
+  => Label ('Att att t)
+  -> Label ('Prd prd nt)
+  -> Label ('Chi chi ('Prd prd' nt') ntch)
+  -> (Proxy ctx -> Fam ('Prd prd nt) sc ip -> t')
+  -> forall sp . CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
+
+inhdef att prd chi f =
+  CRule $ \ctx inp (Fam ic sp) ->
+    let ic' = req ctx (OpUpdate chi catts' ic)
+        catts = req ctx (OpLookup chi ic)
+        catts' = req ctx (OpExtend att (f Proxy inp) catts)
+     in Fam ic' sp
+
+
+inhdefM
+  :: Inhdef t t' (MkMsg InhdefMsg att t prd nt ': ctx)
+       att r v2 prd prd' nt nt' chi ntch ic ic' n
+  => Label ('Att att t)
+  -> Label ('Prd prd nt)
+  -> Label ('Chi chi ('Prd prd' nt') ntch)
+  -> Reader (Proxy (MkMsg InhdefMsg att t prd nt ': ctx), Fam ('Prd prd nt) sc ip) t'
+  -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
+inhdefM att prd chi f = mapCRule (mkMsg (Proxy @InhdefMsg) att prd `consErr`)
+    $ (inhdef att prd chi . def) f
+
+inh
+  :: Inhdef t t' (MkMsg InhdefMsg att t prd nt ': ctx)
+       att r v2 prd prd' nt nt' chi ntch ic ic' n
+  => Label ('Att att t)
+  -> Label ('Prd prd nt)
+  -> Label ('Chi chi ('Prd prd' nt') ntch)
+  -> Reader (Proxy (MkMsg InhdefMsg att t prd nt ': ctx), Fam ('Prd prd nt) sc ip) t'
+  -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
+inh att prd chi f = mapCRule (mkMsg (Proxy @InhdefMsg) att prd `consErr`)
+    $ (inhdef att prd chi . def) f
+
+
+inhmod
+  :: ( RequireEq t t' ctx'
+     , RequireR (OpUpdate AttReco ('Att att t) t' r) ctx
+                (Attribution v2)
+     , RequireR (OpUpdate (ChiReco ('Prd prd nt))
+                ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
+                (ChAttsRec ('Prd prd nt) ic')
+     , RequireR (OpLookup (ChiReco ('Prd prd nt))
+                ('Chi chi ('Prd prd nt) ntch) ic) ctx
+                (Attribution r)
+     , ntch ~ ('Left n)
+     , ctx' ~ ((Text "inhmod("
+                :<>: ShowTE ('Att att t)  :<>: Text ", "
+                :<>: ShowTE ('Prd prd nt) :<>: Text ", "
+                :<>: ShowTE ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
+                ': ctx))
+     =>
+     Label ('Att att t)
+     -> Label ('Prd prd nt)
+     -> Label ('Chi chi ('Prd prd nt) ntch)
+     -> (Proxy ctx' -> Fam ('Prd prd nt) sc ip -> t')
+     -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
+inhmod att prd chi f
+  = CRule $ \ctx inp (Fam ic sp)
+       -> let ic'   = req ctx (OpUpdate chi catts' ic)
+              catts = req ctx (OpLookup  chi ic)
+              catts'= req ctx (OpUpdate  att (f Proxy inp) catts)
+          in  Fam ic' sp
+
+
+inhmodM
+  :: ( RequireEq t t' ctx'
+     , RequireR (OpUpdate AttReco ('Att att t) t' r) ctx
+                (Attribution v2)
+     , RequireR (OpUpdate (ChiReco ('Prd prd nt))
+                ('Chi chi ('Prd prd nt) ntch) v2 ic) ctx
+                (ChAttsRec ('Prd prd nt) ic')
+     , RequireR (OpLookup (ChiReco ('Prd prd nt))
+                ('Chi chi ('Prd prd nt) ntch) ic) ctx
+                (Attribution r)
+     , ntch ~ ('Left n)
+     , ctx' ~ ((Text "inhmod("
+                :<>: ShowTE ('Att att t)  :<>: Text ", "
+                :<>: ShowTE ('Prd prd nt) :<>: Text ", "
+                :<>: ShowTE ('Chi chi ('Prd prd nt) ntch) :<>: Text ")")
+                ': ctx))
+     =>
+     Label ('Att att t)
+     -> Label ('Prd prd nt)
+     -> Label ('Chi chi ('Prd prd nt) ntch)
+     -> Reader (Proxy ctx', Fam ('Prd prd nt) sc ip) t'
+     -> CRule ctx ('Prd prd nt) sc ip ic sp ic' sp
+inhmodM att prd chi = inhmod att prd chi . def
+
+data Lhs
+lhs :: Label Lhs
+lhs = Label
+
+class Monad m => At pos att m where
  type ResAt pos att m
- at :: Sing pos -> Sing att -> m (ResAt pos att m)
+ at :: Label pos -> Label att -> m (ResAt pos att m)
 
 
-
-instance
-  At ('Chi ch prd nt) ('Att att t)
-        (Reader (Fam prd chi par))  where
-  type ResAt ('Chi ch prd nt) ('Att att t) (Reader (Fam prd chi par))
-    = Lookup AttReco ('Att att t) (Lookup (ChiReco prd) ('Chi ch prd nt) chi)
-  at ch att
-    = liftM (\(Fam _ chi _)  -> let atts = chi # ch
-                                in  atts # att)
-      ask
-
-instance
-  At 'Lhs ('Att att t) (Reader (Fam prd chi par))  where
-  type ResAt 'Lhs ('Att att t) (Reader (Fam prd chi par))
-    = Lookup AttReco ('Att att t) par
-  at lhs att
-    = liftM (\(Fam _ _ par) -> par #. att) ask
-
-ter :: Sing ('Chi ch prd (Right ('T t)))
-    -> Reader (Fam prd chi par)
-       (ResAt ('Chi ch prd (Right ('T t))) ('Att "term" t)
-         (Reader (Fam prd chi par))) 
-ter (ch :: Sing ('Chi ch prd (Right ('T t))))
-  = liftM (\(Fam _ chi _)  -> let atts = chi # ch
-                              in  atts # (lit @ t))
+instance ( RequireR (OpLookup (ChiReco prd') ('Chi ch prd nt) chi) ctx
+                    (Attribution r)
+         , RequireR (OpLookup AttReco ('Att att t) r) ctx t'
+         , RequireEqWithMsg prd prd' PrdTypeMatch ctx
+         , RequireEqWithMsg t t' GetAttTypeMatch ctx
+         , ReqR (OpLookup @Att @Type AttReco ('Att att t')
+                 (UnWrap @Att @Type (Rec AttReco r)))
+           ~ t'         
+         , r ~ UnWrap (Attribution r)
+         )
+      => At ('Chi ch prd nt) ('Att att t)
+            (Reader (Proxy ctx, Fam prd' chi par))  where
+ type ResAt ('Chi ch prd nt) ('Att att t) (Reader (Proxy ctx, Fam prd' chi par))
+         = ReqR (OpLookup AttReco ('Att att t)
+                 (UnWrap @Att @Type (ReqR (OpLookup (ChiReco prd) ('Chi ch prd nt) chi))))
+ at ch att
+  = liftM (\(ctx, Fam chi _)  -> let atts = req ctx (OpLookup ch chi)
+                                 in  req ctx (OpLookup att atts))
           ask
+
+
+
+instance
+  ( RequireR (OpLookup @Att @Type AttReco ('Att att t) par) ctx t
+  , RequireEqWithMsg t t' AttTypeMatch ctx
+  )
+  =>
+  At Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))  where
+  type ResAt Lhs ('Att att t) (Reader (Proxy ctx, Fam prd chi par))
+    = ReqR (OpLookup @Att @Type AttReco ('Att att t) (UnWrap @Att @Type (Rec AttReco par)))
+  at lhs att
+    = liftM (\(ctx, Fam _ par) -> req ctx (OpLookup att par)) ask
+
+def = curry . runReader
+
+ter :: ( RequireR (OpLookup (ChiReco prd) pos chi) ctx
+                  (Attribution r)
+       , RequireR (OpLookup AttReco ('Att "term" t) r) ctx t
+       , RequireEqWithMsg prd prd' PrdTypeMatch ctx
+       , ReqR (OpLookup AttReco ('Att "term" t) (UnWrap @Att @Type (Attribution r)))
+                        ~ t
+       , RequireEq pos ('Chi ch prd rtt) ctx
+       , RequireEq rtt (Right ('T t)) ctx)
+    =>  Label pos -> Reader (Proxy ctx, Fam prd' chi par) t
+ter (ch :: Label ('Chi ch prd rtt))
+  = liftM (\(ctx, Fam chi _)  ->
+    let atts = req ctx (OpLookup ch chi)
+    in  req ctx (OpLookup (lit @(FromT (FromRight rtt))) atts))
+          ask
+
+type family FromRight (t :: Either a b) :: b where
+     FromRight (Right t) = t
+
+type family FromT (t :: T) :: b where
+     FromT ('T t) = t
+
+
+-- ter :: ( RequireR (OpLookup (ChiReco prd) pos chi) ctx
+--                   (Attribution r)
+--        , RequireR (OpLookup AttReco ('Att "term" t) r) ctx t
+--        , RequireEqWithMsg prd prd' PrdTypeMatch ctx
+--        , ReqR (OpLookup AttReco ('Att "term" t) (UnWrap @Att @Type (Attribution r)))
+--                         ~ t
+--        , RequireEq pos ('Chi ch prd (Right ('T t))) ctx
+--        , m ~ Reader (Proxy ctx, Fam prd' chi par) )
+--     =>  Label pos -> m t -- (ResAt pos ('Att "term" t) m) 
+-- ter (ch :: Label ('Chi ch prd (Right ('T t))))
+--   = liftM (\(ctx, Fam chi _)  -> let atts = req ctx (OpLookup ch chi)
+--                                  in  req ctx (OpLookup (lit @ t) atts))
+--           ask
+
+
+type instance (UnWrap (Attribution r)) = r
+type instance (UnWrap @Att @Type (Rec c r)) = r
+
 
 class Kn (fcr :: [(Child, Type)]) (prd :: Prod) where
   type ICh fcr :: [(Child, [(Att, Type)])]
@@ -512,9 +870,9 @@ instance Kn '[] prod where
   type SCh '[] = '[] 
   kn _ _ = emptyCh
 
-instance (-- lch ~ 'Chi l prd nt
-          Kn fc prd
-         ) =>
+instance
+  Kn fc prd
+  =>
   Kn ( '(lch , Attribution ich -> Attribution sch) ': fc) prd where
   type ICh ( '(lch , Attribution ich -> Attribution sch) ': fc)
     = '(lch , ich) ': ICh fc
@@ -526,6 +884,26 @@ instance (-- lch ~ 'Chi l prd nt
           ich = unTaggedChAttr pich
       in ConsRec (TaggedChAttr lch
                (fch ich)) scr
+
+
+
+emptyCtx = Proxy @'[]
+
+knit'
+  :: ( Kn fc prd
+     , Empties fc prd)
+  => CRule '[] prd (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp
+  -> Record fc -> Attribution ip -> Attribution sp
+knit' (rule :: CRule '[] prd (SCh fc) ip
+              (EmptiesR fc) '[] (ICh fc) sp)
+              (fc :: Record fc) ip =
+  let (Fam ic sp) = mkRule rule emptyCtx
+                    (Fam sc ip) (Fam ec emptyAtt)
+      sc          = kn fc ic
+      ec          = empties fc
+  in  sp
+
+
 class Empties (fc :: [(Child,Type)]) (prd :: Prod) where
   type EmptiesR fc :: [(Child, [(Att, Type)])] 
   empties :: Record fc -> ChAttsRec prd (EmptiesR fc)
@@ -536,101 +914,209 @@ instance Empties '[] prd where
 
 instance
   ( Empties fcr prd
- --  , chi ~ 'Chi ch prd nt
+  -- , chi ~ 'Chi ch prd nt
   )
   =>
   Empties ( '(chi, Attribution e -> Attribution a) ': fcr) prd where
   type EmptiesR ( '(chi, Attribution e -> Attribution a) ': fcr) =
     '(chi, '[]) ': EmptiesR fcr
   empties (ConsRec (TagField labelc
-                   (labelch :: Sing chi) fch) r) =
-    ConsRec (TagField (Proxy @(ChiReco prd)) labelch emptyAtt) $ empties r
+                   (labelch :: Label chi) fch) r) =
+    ConsRec (TagField (Label @(ChiReco prd)) labelch emptyAtt) $ empties r
 
 
-knit (rule :: CRule prd (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp)
+knit (ctx  :: Proxy ctx)
+     (rule :: CRule ctx prd (SCh fc) ip (EmptiesR fc) '[] (ICh fc) sp)
      (fc   :: Record fc)
      (ip   :: Attribution ip)
-  = let (Fam p ic sp) = mkRule rule
-                        (Fam p sc ip) (Fam p ec emptyAtt)
-        sc            = kn fc ic
-        ec            = empties fc
+  = let (Fam ic sp) = mkRule rule ctx
+                       (Fam sc ip) (Fam ec emptyAtt)
+        sc          = kn fc ic
+        ec          = empties fc
     in  sp
 
 
-knitAspect (prd :: Sing prd) (asp :: Aspect asp) fc ip
-  = knit (asp # prd) fc ip
+knitAspect (prd :: Label prd) asp fc ip
+  = let ctx  = Proxy @'[]
+        ctx' = Proxy @'[Text ("knit:" `AppendSymbol` FromEM (ShowTE prd))]
+    in  knit ctx (req ctx' (OpLookup prd ((mkAspect asp) ctx))) fc ip
 
--- * common patterns
+-- | use
+class Use (att :: Att) (prd :: Prod) (nts :: [NT]) (a :: Type) sc
+ where
+  usechi :: Label att -> Label prd -> KList nts -> (a -> a -> a) -> ChAttsRec prd sc
+         -> Maybe a
 
-copyAtChi
-  :: (KnownSymbol prd, SingI nt)
-  => Sing ('Att att t)
-  -> Sing ('Chi ch ('Prd prd nt) ('Left nt'))
-  -> CopyAtChi ('Att att t) ('Chi ch ('Prd prd nt) ('Left nt')) sc ip ic sp'
-copyAtChi att chi = inh att (prodFromChi chi) chi (at lhs att) 
+class Use' (mnts :: Bool) (att :: Att) (prd :: Prod) (nts :: [NT])
+           (a :: Type) sc
+ where
+  usechi' :: Proxy mnts -> Label att -> Label prd -> KList nts
+   -> (a -> a -> a)
+   -> ChAttsRec prd sc -> Maybe a
 
-type family CopyAtChi att chi sc ip ic sp' where
-  CopyAtChi ('Att att t) ('Chi ch ('Prd prd nt) ('Left nt')) sc ip ic sp' =
-    CRule ('Prd prd nt) sc ip ic sp'
-            (Update
-              (ChiReco ('Prd prd nt))
-              ('Chi ch ('Prd prd nt) ('Left nt'))
-              (Extend AttReco ('Att att t)
-                (ResAt 'Lhs ('Att att t)
-                 (ReaderT (Fam ('Prd prd nt) sc ip) Identity))
-                (Lookup
-                   (ChiReco ('Prd prd nt))
-                   ('Chi ch ('Prd prd nt) ('Left nt')) ic))
-             ic) sp'
-
--- ** copy at chis
-
-class
-  SameShape4 chis polyArgs
-  => 
-  CopyAtChis (att  :: Att)
-             (chis :: [Child])
-             (polyArgs :: [([(Child, [(Att, Type)])], [(Att, Type)],
-                             [(Child, [(Att, Type)])], [(Att, Type)])])
-                      where
-  type CopyAtChisR att chis polyArgs :: [(Prod, Type)]
-  copyAtChis :: Sing att -> SList chis -> Proxy polyArgs
-             -> Aspect (CopyAtChisR att chis polyArgs)
-
-instance CopyAtChis att '[] '[] where
-  type CopyAtChisR att '[] '[] = '[]
-  copyAtChis _ _ _ = emptyAspect
+instance Use prd att nts a '[] where
+  usechi _ _ _ _ _ = Nothing
 
 instance
-  ( CopyAtChis ('Att att t) chis polys
-  , SingI nt
-  , ExtAspect (CopyAtChi ('Att att t) ('Chi ch ('Prd prd nt) tnt) sc ip ic sp')
-    (CopyAtChisR ('Att att t) chis polys)
+  ( HMember' nt nts
+  , HMemberRes' nt nts ~ mnts
+  , Use' mnts att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs))
+  =>
+  Use att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs) where
+  usechi att prd nts op ch
+    = usechi' (Proxy @mnts) att prd nts op ch
+
+instance
+  Use att prd nts a cs
+  =>
+  Use att prd nts a ( '( 'Chi ch prd ('Right t), attr) ': cs) where
+  usechi att prd nts op (ConsRec _ ch)
+    = usechi att prd nts op ch
+
+
+instance
+  Use att prd nts a cs
+  =>
+  Use' False att prd nts a ( '( 'Chi ch prd ('Left nt), attr) ': cs) where
+  usechi' _ att prd nts op (ConsRec _ cs) = usechi att prd nts op cs
+
+instance
+  ( Require (OpLookup AttReco att attr)
+            '[('Text "looking up attribute " ':<>: ShowTE att)
+              ':$$: ('Text "on " ':<>: ShowTE attr)]
+  , ReqR (OpLookup AttReco att attr) ~ a
+  , Use att prd nts a cs
+  , WrapField (ChiReco prd) attr ~ Attribution attr)  --ayudín
+  =>
+  Use' True att prd nts a ( '( 'Chi ch prd ('Left nt), attr) : cs) where
+  usechi' _ att prd nts op (ConsRec lattr scr) =
+    let attr = unTaggedChAttr lattr
+        val  = attr #. att
+    in  Just $ maybe val (op val) $ usechi att prd nts op scr
+
+
+-- | Defines a rule to compute an attribute 'att' in the production
+-- 'prd', by applying an operator to the values of 'att' in each non
+-- terminal in the list 'nts'.
+
+-- use
+--   :: UseC att prd nts t' sp sc sp' ctx
+--   => Label ('Att att t')
+--   -> Label prd
+--   -> KList nts
+--   -> (t' -> t' -> t')
+--   -> t'
+--   -> forall ip ic' . CRule ctx prd sc ip ic' sp ic' sp'
+-- use att prd nts op unit
+--   = syndef att prd
+--   $ \_ fam -> maybe unit id (usechi att prd nts op $ chi fam)
+
+
+type UseC att prd nts t' sp sc sp' ctx =
+  ( Require (OpExtend  AttReco ('Att att t') t' sp) ctx
+  ,  Use ('Att att t') prd nts t' sc
+  ,  ReqR (OpExtend AttReco ('Att att t') t' sp)
+     ~ Rec AttReco sp'
+  )
+
+class EmptyAspectSameShape (es1 :: [k]) (es2 :: [m])
+
+instance (es2 ~ '[]) => EmptyAspectSameShape '[] es2
+instance (EmptyAspectSameShape xs ys, es2 ~ ( '(y1,y2,y3,y4) ': ys))
+  => EmptyAspectSameShape (x ': xs) es2
+
+
+-- require KLIST de prods?, NO, eso está en el kind!
+class
+  EmptyAspectSameShape prds polyArgs
+  =>
+  EmptyAspect (prds :: [Prod])
+              (polyArgs :: [([(Child, [(Att, Type)])], [(Att, Type)],
+                             [(Child, [(Att, Type)])], [(Att, Type)] )])
+              ctx where
+  type EmptyAspectR prds polyArgs ctx :: [(Prod, Type)]
+  emptyAspectC :: KList prds -> Proxy polyArgs
+    -> CAspect ctx (EmptyAspectR prds polyArgs ctx)
+
+instance
+  EmptyAspect '[] '[] ctx where
+  type EmptyAspectR '[] '[] ctx = '[]
+  emptyAspectC _ _ = emptyAspect
+
+instance
+  ( EmptyAspect prds polys ctx
+  , ExtAspect ctx prd sc ip ic sp ic sp
+    (EmptyAspectR prds polys ctx)
+    (EmptyAspectR (prd ': prds) ( '(sc, ip, ic, sp) ': polys) ctx)
   )
   =>
-  CopyAtChis ('Att att t)
-             (Chi ch ('Prd prd nt) tnt ': chis)
-             ('(sc, ip, ic, sp') ': polys) where
-  type CopyAtChisR ('Att att t)
-                   (Chi ch ('Prd prd nt) tnt ': chis)
-                   ('(sc, ip, ic, sp') ': polys) =
-    ComRA (CopyAtChi ('Att att t) ('Chi ch ('Prd prd nt) tnt) sc ip ic sp')
-    (CopyAtChisR ('Att att t) chis polys)
-  copyAtChis att@(SAtt syatt st)
-            (SCons chi@(SChi SSym (SPrd SSym (nt :: Sing nt)) (SLeft t)) chis)
-            (proxy :: Proxy ( '(sc, ip, ic, sp') ': polys)) =
-    copyAtChi @_ @_ @_ @_ @_ @_ @sc @ip @ic @sp' (SAtt syatt st) chi
-    .+: copyAtChis att chis (Proxy @ polys)
+  EmptyAspect (prd ': prds) ( '(sc, ip, ic, sp) ': polys) ctx where
+  type EmptyAspectR (prd ': prds) ( '(sc, ip, ic, sp) ': polys) ctx =
+    UnWrap (ReqR (OpComRA '[] prd ((CRule '[] prd sc ip ic sp ic sp))
+                  (EmptyAspectR prds polys ctx)))
+  emptyAspectC (KCons prd prds) (p :: Proxy ( '(sc, ip, ic, sp) ': polys)) =
+    (emptyRule :: CRule ctx prd sc ip ic sp ic sp) 
+    .+: emptyAspectC @prds @polys prds (Proxy @polys)
 
--- | SameShape forces its second arg to have the same shape of first arg 
-class SameShape (es1 :: [k]) (es2 :: [m])
-instance (es2 ~ '[]) => SameShape '[] es2
-instance (SameShape xs ys, es2 ~ ( y ': ys))
-  => SameShape (x ': xs) es2
+emptyAspectForProds prdList = emptyAspectC prdList Proxy
 
--- | SameShape4 forces its second arg to have the same length of fitrst arg,
--- plus being a list of 4-tuples
-class SameShape4 (es1 :: [k]) (es2 :: [m])
-instance (es2 ~ '[]) => SameShape4 '[] es2
-instance (SameShape4 xs ys, es2 ~ ( '(y1, y2, y3, y4) ': ys))
-  => SameShape4 (x ': xs) es2
+-- ** copy rules
+
+-- | a rule to copy one attribute `att` from the parent to the children `chi`
+
+copyAtChi att chi
+  = inhdef att (prdFromChi chi) chi (at lhs att)
+
+--copyAtChiP (att :: forall t. Label ('Att "" t)) chi
+--  = \(p :: Proxy val) -> inhP (att @val) (prdFromChi chi) chi (at lhs att)
+
+
+-- | to copy at many children
+class CopyAtChiList (att :: Att)
+                    (chi :: [Child])
+                    (polyArgs :: [([(Child, [(Att, Type)])], [(Att, Type)],
+                                   [(Child, [(Att, Type)])], [(Att, Type)],
+                                   [(Child, [(Att, Type)])], [(Att, Type)] )])
+                     ctx where
+  type CopyAtChiListR att chi polyArgs ctx :: [(Prod, Type)]
+  copyAtChiList :: Label att -> KList chi -> Proxy polyArgs
+                -> CAspect ctx (CopyAtChiListR att chi polyArgs ctx)
+
+instance CopyAtChiList att '[] '[] ctx where
+  type CopyAtChiListR att '[] '[] ctx = '[]
+  copyAtChiList _ _ _ = emptyAspect
+
+-- instance
+--   ( CopyAtChiList ('Att att t) chi polys ctx
+--   , prd ~ Prd p nt
+--   , tnt ~ Left nc
+--   )
+--   =>
+--   CopyAtChiList ('Att att t) (Chi ch prd tnt ': chi)
+--    ('(sc, ip, ic, sp, ic', sp') ': polys) ctx where
+--   type CopyAtChiListR ('Att att t) (Chi ch prd tnt ': chi)
+--    ('(sc, ip, ic, sp, ic', sp') ': polys) ctx =
+--     UnWrap (ReqR (OpComRA '[] prd ((CRule '[] prd sc ip ic sp ic' sp'))
+--                   (CopyAtChiListR ('Att att t) chi polys ctx)))
+--   copyAtChiList att (KCons chi chs :: KList ('Chi ch prd tnt ': chs) )
+--    (p :: Proxy ( '(sc, ip, ic, sp, ic', sp') ': polys))
+--     = copyAtChi att chi
+--     .+: copyAtChiList @('Att att t) @chs att chs (Proxy @polys)
+
+
+
+
+-- * Productions
+--data Symbol = N String | Te Name
+type family Terminal s :: Either NT T where
+  Terminal s = 'Right ('T s)
+
+type family NonTerminal s where
+  NonTerminal s = 'Left s
+
+
+(+++) :: Proxy e1 -> Proxy e2 -> Proxy (e1 :$$: e2)
+Proxy +++ Proxy = Proxy
+
+consErr :: Proxy e -> Proxy es -> Proxy (e : es)
+consErr Proxy Proxy = Proxy

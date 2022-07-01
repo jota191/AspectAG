@@ -10,7 +10,8 @@ name:                AspectAG
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.7.0.0
+version:             0.7.0.2
+
 
 -- A short (one-line) description of the package.
 synopsis:            Strongly typed Attribute Grammars implemented using type-level programming.
@@ -36,22 +37,14 @@ author:              Juan García Garland, Marcos Viera
 -- patches.
 maintainer:          jpgarcia@fing.edu.uy
 
--- A copyright notice.
--- copyright:
-
-category:            Language
+category:            Language, Aspect Oriented Programming, 
 
 build-type:          Simple
 
 -- Extra files to be distributed with the package, such as examples or a
 -- README.
 extra-source-files:  ChangeLog.md,
-                     LICENSE,
-                     examples/ExprExt.hs,
-                     examples/Expr.hs,
-                     examples/List.hs,
-                     examples/RepminTHExt.lhs,
-                     examples/RepminTH.lhs
+                     LICENSE
 
 
 
@@ -67,6 +60,7 @@ library
   -- Modules exported by the library.
   exposed-modules:     Language.Grammars.AspectAG,
                        Language.Grammars.AspectAG.TH,
+                       Language.Grammars.AspectAG.THGen,
                        Language.Grammars.AspectAG.HList,
                        Language.Grammars.AspectAG.RecordInstances
 
@@ -95,20 +89,56 @@ library
                        InstanceSigs
 
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.11,
-                       containers >= 0.5,
-                       ghc-prim >= 0.6.1,
+  build-depends:       base >=4.11 && <=4.18,
+                       containers,
+                       ghc-prim,
                        mtl >= 2.0,
-                       poly-rec >=0.7,
-                       requirements >= 0.6.0.0,
-                       singletons >= 2.5.1,
-                       tagged >=0.8,
+                       poly-rec >=0.7.0.2 && <0.7.1,
+                       requirements >=0.7.0.2 && <0.7.1,
                        template-haskell >= 2.13,
-                       type-errors >= 0.2
+                       loch-th
  
 
   -- Directories containing source files.
-  hs-source-dirs:      src, examples
+  hs-source-dirs:      src
 
   -- Base language which the package is written in.
   default-language:    Haskell2010
+
+-- Test-Suite test-Repmin
+--     type:             exitcode-stdio-1.0
+--     main-is:          test/Repmin.hs
+--     build-depends:    base >=4.11 && <4.12,
+--                       tagged >=0.8 && <0.9,
+--                       AspectAG >= 0.4,
+--                       QuickCheck
+--     default-language: Haskell2010
+
+-- Test-Suite test-Repmin-TH
+--     type:             exitcode-stdio-1.0
+--     main-is:          test/RepminTH.hs
+--     build-depends:    base >=4.11 && <4.12,
+--                       tagged >=0.8 && <0.9,
+--                       AspectAG >= 0.4,
+--                       QuickCheck
+--     default-language: Haskell2010
+    
+-- Test-Suite test-Arith
+--     type:             exitcode-stdio-1.0
+--     main-is:          test/Arith.hs
+--     build-depends:    base >=4.11 && <4.12,
+--                       containers >= 0.5,
+--                       tagged >=0.8 && <0.9,
+--                       AspectAG >= 0.4,
+--                       QuickCheck
+--     default-language: Haskell2010
+
+-- Test-Suite test-Graphs
+--     type:             exitcode-stdio-1.0
+--     main-is:          test/Graphs.hs
+--     build-depends:    base >=4.11 && <4.12,
+--                       tagged >=0.8 && <0.9,
+--                       AspectAG >= 0.4,
+--                       containers >= 0.5,
+--                       QuickCheck
+--     default-language: Haskell2010
