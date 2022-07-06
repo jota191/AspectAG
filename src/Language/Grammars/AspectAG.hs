@@ -512,7 +512,7 @@ type instance Eval (ChiPrdMatch ('Prd att nt) ('Prd att' nt')) =
       Text "production and child mismatch in inherited attribute definition")
 
 
-data GetAttTypeMatch (a::k)(b::k) where
+data GetAttTypeMatch a b  where
   GetAttTypeMatch :: a -> b -> GetAttTypeMatch a b
 type instance Eval (GetAttTypeMatch t1 t2) =
     ( ShowTE t1 :<>: Text " /= " :<>: ShowTE t2 :$$:
@@ -837,7 +837,7 @@ ter (ch :: Label ('Chi ch prd rtt))
 type family FromRight (t :: Either a b) :: b where
      FromRight (Right t) = t
 
-type family FromT (t :: T) :: b where
+type family FromT (t :: T) :: Type where
      FromT ('T t) = t
 
 
