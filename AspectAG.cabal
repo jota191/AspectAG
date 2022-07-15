@@ -63,6 +63,8 @@ library
                        Language.Grammars.AspectAG.THGen,
                        Language.Grammars.AspectAG.HList,
                        Language.Grammars.AspectAG.RecordInstances
+                       --temporal
+                       , Language.Grammars.AAG2
 
 -- LANGUAGE extensions used by modules in this package.
   other-extensions:    TypeInType,
@@ -96,7 +98,7 @@ library
                        poly-rec >=0.7.0.2 && <0.7.1,
                        requirements >=0.7.0.2 && <0.7.1,
                        template-haskell >= 2.13,
-                       loch-th
+                       loch-th, singletons-base
  
 
   -- Directories containing source files.
