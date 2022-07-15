@@ -1026,7 +1026,6 @@ instance (EmptyAspectSameShape xs ys, es2 ~ ( '(y1,y2,y3,y4) ': ys))
   => EmptyAspectSameShape (x ': xs) es2
 
 
--- require KLIST de prods?, NO, eso está en el kind!
 class
   EmptyAspectSameShape prds polyArgs
   =>
